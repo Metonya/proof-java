@@ -5,8 +5,9 @@ Short entries; newest last. Reversals get a new entry, never an edit.
 ## Decided
 
 **D-01 · CLI first, single executable jar** (2026-08)
-Every other surface (IDE plugin, CI bot, AI skill) consumes the CLI's JSON.
-No surface work starts before the JSON schema is stable.
+Every surface consumes the CLI's JSON. The schema precedes renderers and is
+explicitly experimental during 0.x; breaking changes increment its major and
+need a decision. No IDE/CI/agent surface starts before v1 schema stability.
 
 **D-02 · Verdict layer over engines, never own engines** (2026-08)
 JaCoCo for coverage, git for diffs, PIT/Descartes for mutation. coverdict parses
@@ -15,20 +16,15 @@ scope permanently.
 
 **D-03 · Core in Java 17** (2026-08)
 Measured: per-test analysis by shelling out to `jacococli` costs ~309 ms/test
-(JVM startup); 5 000 tests ≈ 25 min. In-process use of the JaCoCo Java API
-removes the startup cost (~60×). A JVM core also makes the Maven/Gradle plugin
-natural. The Python prototype is reference only.
+(JVM startup); 5 000 tests ≈ 25 min by extrapolation. In-process JaCoCo removes
+that process boundary; the earlier ~60× estimate is not measured (D-18). A JVM
+core also fits future build plugins. The Python prototype is reference only.
 
 **D-04 · Explicit metric modes with parity requirements** (2026-08, renamed 2026-08)
-`jacoco-line` (a line counts if any instruction ran), `strict` (partial lines
-don't count), `sonar-compatible` (`(cb + LC) / (cb + mb + EL)`, SonarQube's
-blended formula). Verified on the prototype: same data yields 78.9 / 56.3 /
-72.8 — so every reported number must name its mode. Parity: `jacoco-line` ==
-JaCoCo's own counter, `sonar-compatible` == Sonar UI ±0.1.
-Mode name is `sonar-compatible`, never bare `sonar` — SonarSource trademark
-policy requires the mark be used only as an adjectival modifier next to a
-descriptive noun, never as a standalone parameter value or noun. See
-RESEARCH.md §6.
+Modes are `jacoco-line`, `strict` (corrected to `strict-line` by D-19), and
+`sonar-compatible` (`(cb + LC) / (cb + mb + EL)`). Every percentage names its
+mode. Parity: `jacoco-line` equals JaCoCo's LINE counter; `sonar-compatible`
+matches the same-scope SonarQube UI within ±0.1. Never use bare `sonar`.
 
 **D-05 · Single exclusion layer** (2026-08)
 Exclusions filter the dataset once; all metrics are recomputed from it.
@@ -36,11 +32,10 @@ Exclusion globs use SonarQube's `sonar.coverage.exclusions` syntax so teams
 maintain one list.
 
 **D-06 · Redundancy semantics** (2026-08)
-Identical coverage sets → duplicate cluster; keep the strongest oracle, flag
-the rest. Strict subset → the *superset* test is flagged (eager test), never
-the subset. Confidence tiers: HIGH only when the removed test's assertions are
-a subset of the kept test's. Rationale: the naive subset heuristic flagged
-well-designed focused tests in the prototype.
+Strict subset never makes the subset a deletion candidate; the superset is the
+eager candidate. Identical sets were originally called duplicate clusters, but
+D-21 limits them to coverage-equivalent candidates. The prototype proved that
+the naive subset heuristic flags well-designed focused tests.
 
 **D-07 · No auto-delete, ever** (2026-08)
 Default posture is report. Deletion suggestions require HIGH confidence and
@@ -53,17 +48,10 @@ on HIGH findings. Shipping the riskiest feature first is the likeliest way to
 lose user trust permanently.
 
 **D-09 · Descartes runs as a separate process, never as a declared dependency** (2026-08, tightened 2026-08)
-Descartes is LGPL-3.0; coverdict targets Apache-2.0. Confirmed via licensing
-research: ASF Category X forbids LGPL in binary releases even at
-`<optional>true</optional>` or `<scope>test</scope>` — the prohibition is on
-the artifact reaching a binary distribution at all, not on how it's scoped.
-Rule: pitest-descartes never appears in `pom.xml`, in any scope. coverdict shells
-out to a user-installed `pitest`+`descartes` on PATH and parses its report
-files. JaCoCo (EPL-2.0) as a binary dependency is standard ASF Category B
-practice — in-process linking is fine, but jacocoagent.jar must be excluded
-from the *source* release (Maven POM reference only) and may only appear in
-the binary release zip, appropriately labelled. Ship a NOTICE file per the
-template in RESEARCH.md §6.
+Descartes is LGPL-3.0; coverdict targets Apache-2.0 and adopts the conservative
+policy clarified in D-20. It never appears in a build descriptor at any scope;
+coverdict invokes a user-installed process and parses reports. JaCoCo EPL-2.0
+distribution obligations and the full dependency inventory apply at release.
 
 **D-10 · Static analysis uses JavaParser, not regex** (2026-08)
 The prototype's regex scanner is demo-grade. Real code (custom assertion
@@ -71,33 +59,64 @@ DSLs, parameterized tests, nested classes, Lombok) requires an AST.
 
 **D-12 · Diff-scoped mutation testing is not free from open-source PIT** (2026-08)
 Correction to earlier assumption: PIT's `scmMutationCoverage` goal was
-deprecated and removed from core pitest — mapping bytecode mutations back to
-source-level SCM diffs proved too complex to maintain upstream. Diff-scoped
-mutation testing now exists only in ArcMutate (commercial, by the pitest
-author). For L3, coverdict must either (a) build its own git-diff → PIT
-`targetClasses`/`targetTests` mapping, or (b) treat ArcMutate as an optional
-paid integration. Decide which in M5 planning, not before — L3 is two
-milestones away.
+removed. L3 must either build git-diff to PIT target mapping or treat ArcMutate
+as an optional paid integration. Decide in M5 planning; until then L3 is not
+advertised as diff-scoped.
 
 **D-13 · Per-test coverage: dual-profile sequential analysis run** (2026-08)
-Resolves O-03. JaCoCo's probe array is process-global by design (a single
-static array per loaded class, written by direct assignment for speed);
-thread-local probes were evaluated and rejected as infeasible (JIT
-intrinsification loss, memory blow-up, thread-pool context loss). Teamscale's
-own testwise agent has the same limitation and explicitly refuses overlapping
-tests. Adopted architecture: normal builds keep full parallelism; a separate
-Maven/Gradle profile (`forkCount=1`, parallel execution disabled) runs L2
-analysis sequentially in one long-lived JVM. Modelled on a 5 000-test suite:
-~18–22 min, exact method-level attribution — competitive with process-per-class
-isolation (~18–25 min) but with correct attribution instead of class-level
-only. L2 is therefore an opt-in "analysis run," not part of every build.
+JaCoCo probe state is process-global; overlapping tests race resets. The
+candidate is an opt-in sequential analysis profile while normal builds remain
+parallel. Thread-local probes are rejected. D-18 makes attribution and timing
+provisional until a real-repo spike covers lifecycle and contamination risks.
 
 **D-11 · Output contract designed for two readers** (2026-08)
 Humans get text/HTML; agents get JSON with stable rule ids
 (`NO_ORACLE`, `TAUTOLOGICAL_ORACLE`, `ORACLE_IN_CATCH`, `NULL_CHECK_ONLY`,
-`DUPLICATE`, `EAGER_TEST`), file/line locations, confidence, and a one-line
-suggested action per finding. An AI-assistant skill is a thin wrapper over
-this JSON, not a separate capability.
+`DUPLICATE`, `EAGER_TEST`), locations, confidence, and suggested actions.
+D-15/D-17/D-21 revise timing and names. Every surface renders the same JSON.
+
+**D-14 · M0 readiness gate before production code** (2026-08-23)
+M1 does not start until the primary workflow, three dogfood repositories,
+input/error contract, JSON Schema, compatibility matrix, and validation
+protocol are written. Until then only bounded contract spikes are allowed.
+
+**D-15 · v0.1 is an evidence wedge, not the full mission** (2026-08-23)
+M1/v0.1 delivers changed-code coverage plus a conservative static oracle
+critic. It cannot quantify how much coverage is “real” or fuse per-test
+evidence; those claims require L2/L3. v0.1 ships JSON and text; HTML is later.
+
+**D-16 · Diff and source identity are explicit** (2026-08-23)
+M1 uses merge-base diff semantics and records resolved commits and dirty state.
+Each report binds a module root; identity is module id plus repo-relative path.
+Missing/ambiguous mappings or nonexcluded untracked Java make the run incomplete
+and non-zero, never silently absent. Other untracked files are warnings.
+
+**D-17 · Static findings state only observed evidence** (2026-08-23)
+D-11's `NO_ORACLE` becomes `NO_RECOGNIZED_ORACLE`; `ORACLE_IN_CATCH` becomes
+`CATCH_ORACLE_WITHOUT_FAIL`. Confidence is detector certainty, separate from
+severity. Unresolved symbols/helpers cannot produce HIGH absence findings;
+supported and custom oracle APIs are explicit configuration.
+
+**D-18 · D-13 attribution and timing are provisional** (2026-08-23)
+Sequential execution removes overlapping probe resets; it does not prove exact
+attribution across lifecycle, static state, async work, retries, or child JVMs.
+The 18–22 minute and ~60× figures are models, not in-process measurements. M2
+requires a recorded real-repo spike before D-13 becomes an architecture.
+
+**D-19 · `strict` corrected to `strict-line`** (2026-08-23)
+D-04's intended “no partial instruction coverage” mode is `ci > 0 && mi == 0`.
+The prototype also required `mb == 0`, silently adding branch completeness; its
+56.3% result does not validate `strict-line`. Recompute before publishing it.
+
+**D-20 · D-09 is project policy, not ASF jurisdiction** (2026-08-23)
+coverdict is not an ASF project; ASF Category X is not governing law here. We
+voluntarily adopt its conservative distribution boundary: no LGPL dependency
+at any scope, and Descartes remains user-installed and out of process.
+
+**D-21 · Coverage identity is a candidate, not equivalence** (2026-08-23)
+D-06's identical-coverage clusters become `COVERAGE_EQUIVALENT_CANDIDATE`.
+Identical probe sets and syntactic oracle subsets do not prove behavioral or
+oracle equivalence and cannot suggest deletion without stronger evidence.
 
 ## Rejected
 
@@ -109,18 +128,11 @@ instrumentation, experimental Java 17 support, no parallel execution.
 
 ## Open
 
-**O-01 · Project name.** Resolved — **coverdict**. `tqa` was the working name used during research; DECISIONS/RESEARCH history references to `tqa` refer to the same project.
 **O-02 · SARIF as an additional output format** — would give GitHub code
-scanning and IDE problem-panel integration nearly free. Evaluate in M1.
+scanning and IDE problem-panel integration nearly free. Evaluate with CI work.
 **O-04 · Maven plugin first or Gradle first** — decide from the maintainer's
 real target repositories.
 **O-05 · Build our own diff-scoped mutation mapping, or make ArcMutate an
 optional integration** — see D-12. Decide at M5.
-**O-06 · Metric mode name — `sonar-compatible` vs. a fully neutral term**
-(e.g. `blended`, `combined`) for the line+branch formula. Not urgent, decide
-by M1. Either way, DECISIONS.md and RESEARCH.md keep stating plainly that
-the formula and the local new-code coverage concept are directly inspired
-by SonarQube's own "new code" quality gate — the name can be neutral, the
-attribution shouldn't be hidden.
 
-~~O-03 · Per-test coverage under parallel execution~~ — resolved, see D-13.
+Resolved: O-01 is **coverdict**; O-03 is D-13/D-18; O-06 is D-04.

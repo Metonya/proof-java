@@ -25,6 +25,11 @@ the AI agent that wrote it has moved on.
 3. **Maintainers receiving AI-written PRs** — a fast verdict on whether the
    included tests verify anything.
 
+These are three candidate audiences, not three validated buyers. M0 must name
+one primary persona and observe one canonical workflow on three real dogfood
+repositories before production development starts. Today, user demand and
+setup tolerance are hypotheses; the prototype validates mechanisms only.
+
 ## Why existing tools don't answer
 
 Each question below has an engine that produces the *evidence*, and no tool
@@ -33,9 +38,9 @@ that produces the *verdict*:
 | Question | Engine that has the evidence | Gap |
 |---|---|---|
 | How much of my *changed* code is tested, computed the way my quality gate computes it? | JaCoCo (coverage) + git (diff) | Neither combines them; SonarQube does, but only server-side, post-push, with its own blended formula |
-| Which tests assert nothing real? | Static analysis (partially: SonarQube S2699, PMD) | Existing rules miss tautologies, oracles in dead catch blocks, and helper-based assertions |
+| Which tests contain no recognized oracle? | Static analysis (partially: SonarQube S2699, PMD) | Framework and helper recognition is incomplete; absence is heuristic, not proof |
 | Which tests verify nothing even though they execute code? | PIT/Descartes (mutation) | Output is mutant-centric ("this mutant survived"), not test-centric ("this test verifies nothing") |
-| Which tests are duplicates I could delete? | Per-test coverage | No production-ready tool for Java exists; the naive coverage-subset heuristic deletes the wrong tests |
+| Which tests have suspiciously equivalent execution evidence? | Per-test coverage | Identity is a review candidate, not behavioral proof; subset heuristics target the wrong tests |
 
 The 2025–2026 wave of "test quality" tools (≈20 repos surveyed) is
 Python/TypeScript/Go/Rust only — none target Java — and most delegate the
@@ -58,6 +63,11 @@ rendered as terminal text, HTML, IDE annotations, or fed to an AI agent.
 Findings use a small, fixed vocabulary (rule ids with plain-language names,
 confidence tiers, suggested action), in the way SonarQube made "code smell"
 and "quality gate" legible to non-experts.
+
+The long-term product fuses these evidence layers. v0.1 does not: it places
+aggregate changed-code coverage and conservative static oracle findings in one
+contract, but cannot link a weak test to the production lines it covered. Until
+L2/L3 are validated, "how much is real" is the mission, not a release claim.
 
 ## What coverdict is not
 

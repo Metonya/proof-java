@@ -7,8 +7,8 @@ Guidance for AI agents working on this repository.
 **coverdict** is a test-verdict tool for Java. It consumes evidence
 produced by existing engines — JaCoCo coverage data, git diffs, PIT/Descartes
 reports — and turns it into verdicts a developer or an AI agent can act on:
-which changed lines are untested, which tests verify nothing, which tests are
-duplicates of each other.
+which changed lines are untested, which tests lack a recognized oracle, and
+which tests are suspiciously coverage-equivalent.
 
 Mission in one sentence: **coverage says 80%; coverdict says how much of that is real.**
 
@@ -41,9 +41,10 @@ that the distilled summary doesn't cover it.
    answer as a finding.
 2. **Subset is not redundant.** A test whose coverage is a strict subset of
    another test's is never a deletion candidate — the superset test is the
-   suspicious one (eager test). Only identical coverage sets form duplicate
-   clusters, and the member with the strongest oracle is kept. This rule was
-   learned by making the opposite mistake; see RESEARCH.md §4.
+   suspicious one (eager test). Identical probe sets form coverage-equivalent
+   candidates, not proof of duplicate behavior; coverage identity alone never
+   suggests deletion. This rule was learned by making the opposite mistake;
+   see RESEARCH.md §4 and D-21.
 2a. **Real code will break a naive parser — assume it from day one.**
    `@Nested` classes, `@ParameterizedTest`/`@TestFactory` (many runtime
    events → one source method), Lombok/Mockito synthetic bytecode with no
@@ -52,17 +53,20 @@ that the distilled summary doesn't cover it.
    naive-AST scanner will misfire on all four and burn trust on first real
    run — this is why D-10 (JavaParser) is not optional, and why ROADMAP M1's
    validation repos were picked specifically to force each of these
-   (RESEARCH.md §9). Treat a false positive here as more costly than a false
+   (RESEARCH.md §11). Treat a false positive here as more costly than a false
    negative: better to miss a bad test than to wrongly flag a good one.
 3. **Never auto-delete.** Findings carry confidence (`HIGH`/`MEDIUM`/`LOW`);
    the default posture is report, not remove. Nothing below `HIGH` may even
    suggest deletion.
+3a. **Unknown is never green.** Missing, stale, unresolved, unsupported, or
+   ambiguous evidence is reported as incomplete. It is never silently dropped
+   from a denominator or converted into a coverage or oracle success.
 4. **One filtered dataset.** Exclusions apply at a single layer; every metric
    is recomputed from the filtered data. No number is ever read from a raw
    report counter (this desyncs the headline from the details — see
    RESEARCH.md §5).
 5. **Metric names are explicit.** Every reported percentage states its
-   definition (`jacoco-line`, `strict`, `sonar-compatible` — never bare
+   definition (`jacoco-line`, `strict-line`, `sonar-compatible` — never bare
    `sonar`, see rule 9). Parity requirements: `jacoco-line` must equal
    JaCoCo's own LINE counter exactly; `sonar-compatible` must match the
    SonarQube UI within ±0.1 on the same analysis scope.
@@ -73,11 +77,11 @@ that the distilled summary doesn't cover it.
    need a DECISIONS entry.
 8. **Stay inside the milestone.** Ideas beyond it go into ROADMAP.md's backlog
    as one line, not into code.
-9. **LGPL never enters a pom.xml, at any scope.** Descartes and anything else
-   LGPL-licensed is invoked as an external process the user installs
-   themselves — never declared as a Maven/Gradle dependency, not even
-   `optional` or `test` scope, because ASF Category X forbids the artifact
-   reaching a binary release regardless of scope. Third-party trademarks
+9. **LGPL never enters a pom.xml, at any scope.** As a conservative project
+   distribution policy, coverdict adopts the ASF Category X boundary even
+   though it is not an ASF project. Descartes and other LGPL components are
+   user-installed external processes, never declared dependencies. Third-party
+   trademarks
    (Sonar, JaCoCo, ...) are used only as adjectival modifiers next to a
    descriptive noun in docs, never as standalone CLI parameter values,
    subcommands, package names, or repo names.

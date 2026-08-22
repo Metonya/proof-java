@@ -1,17 +1,30 @@
 # coverdict — test verdict layer for Java
 
-Coverage says 80%. coverdict says how much of that is real.
+Long-term mission: coverage says 80%; coverdict explains how much confidence
+that evidence deserves.
 
 A verdict layer for Java test suites: it consumes evidence from existing
 engines (JaCoCo coverage, git diffs, PIT/Descartes mutation reports) and
 produces actionable findings — which changed lines are untested, which tests
-assert nothing, which tests duplicate each other. Deterministic, local-first,
-no LLM in the loop, output designed to be read by humans and consumed by AI
-agents.
+contain no recognized oracle, and which tests are suspiciously
+coverage-equivalent. Deterministic, local-first, no LLM in the loop, output
+designed to be read by humans and consumed by AI agents.
 
-**Status:** pre-development. The approach is validated by a working prototype
-(`prototype/`); production code has not started. Current milestone: M1
-(`docs/ROADMAP.md`).
+**Status:** pre-development. A planted demo validates several mechanisms, not
+the product on real repositories. Production code is behind the M0 readiness
+gate; the current milestone is M0 (`docs/ROADMAP.md`).
+
+## Capability boundary
+
+| Stage | Honest claim |
+|---|---|
+| Prototype | Demonstrates formulas, diff intersection, heuristic oracle scans, and per-test probe resets on a mini harness |
+| v0.1 / M1 | Changed-code coverage plus conservative static oracle findings; no per-test evidence fusion |
+| L2/L3 | Candidate execution equivalence and mutation evidence; only here can the long-term “real coverage” mission be tested |
+
+v0.1 will not claim that a coverage percentage is “real,” that two tests are
+behaviorally identical, or that an individual test verifies nothing. Missing or
+ambiguous evidence is an incomplete result, never a green result.
 
 ## Why
 
@@ -29,7 +42,7 @@ gate (SonarQube) answers too late and only partially. Full argument:
   evidence into per-test findings.
 - **Topics:** `java`, `testing`, `jacoco`, `code-coverage`,
   `mutation-testing`, `test-quality`, `static-analysis`, `developer-tools`
-- **License:** Apache-2.0 (D-09/RESEARCH.md §8a for why, and what the NOTICE
+- **License:** Apache-2.0 (D-09/D-20 and RESEARCH.md §8 for the policy; the NOTICE
   file must contain before the first release)
 
 ## Repository map
@@ -39,8 +52,8 @@ gate (SonarQube) answers too late and only partially. Full argument:
 | `AGENTS.md` | rules for AI agents working here — read first |
 | `docs/VISION.md` | problem, audience, gap analysis |
 | `docs/DECISIONS.md` | settled decisions, rejected alternatives, open questions |
-| `docs/ROADMAP.md` | current milestone in detail, later ones as sketches, kill criteria |
-| `docs/RESEARCH.md` | measured facts: metric formulas, timings, licenses, competitive scan |
+| `docs/ROADMAP.md` | M0 readiness gate, next milestone, later sketches, kill criteria |
+| `docs/RESEARCH.md` | distilled evidence: measurements, models, licenses, competitive scan |
 | `docs/research-raw/` | full deep-research source reports (~120 KB) — reference only, not for routine reading; see AGENTS.md |
 | `prototype/` | validated proof of concept (reference only, not the foundation) |
 
@@ -57,5 +70,5 @@ JACOCO_HOME=/path/to/jacoco ./run.sh
 ```
 
 The demo repo contains deliberately planted test smells; the analyzer finds
-them and computes coverage in three metric modes. Details in
-`prototype/demo-bank/README.md`.
+them and computes coverage in three metric modes. It is feasibility evidence,
+not a production validation corpus. Details in `prototype/demo-bank/README.md`.
