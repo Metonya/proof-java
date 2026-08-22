@@ -10,7 +10,9 @@ reports — and turns it into verdicts a developer or an AI agent can act on:
 which changed lines are untested, which tests lack a recognized oracle, and
 which tests are suspiciously coverage-equivalent.
 
-Mission in one sentence: **coverage says 80%; coverdict says how much of that is real.**
+Long-term mission: **coverage says 80%; coverdict says how much of that is
+real.** This is the destination, not a v0.1 claim — see D-15 and the
+capability boundary in README.md.
 
 coverdict is a verdict layer, not an engine. It never re-implements coverage
 measurement or mutation testing.
@@ -29,10 +31,10 @@ code is written fresh (see D-03 and D-11 in DECISIONS); do not extend the
 prototype's Python analyzer or its mini test harness.
 
 `docs/research-raw/` holds the full deep-research reports RESEARCH.md was
-distilled from (~120 KB total). Do not read them by default — everything
-that mattered was already extracted into RESEARCH.md and DECISIONS.md. Open
-one only when you need a citation, a source URL, or a detail specific enough
-that the distilled summary doesn't cover it.
+distilled from (~120 KB total). Do not read them by default — RESEARCH.md
+carries everything a decision needs. Open one when you need a citation, a
+source URL, or the full evidence behind a licensing, competitive or
+parallel-coverage position, which now lives only in the raw reports.
 
 ## Hard rules
 

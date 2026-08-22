@@ -16,9 +16,10 @@ Same test run, three definitions, three numbers:
 | `sonar-compatible` | 72.8% (91/125) | `(CT + CF + LC) / (2B + EL)`; in JaCoCo terms `(cb + LC) / (cb + mb + EL)` |
 
 SonarQube's headline "Coverage" blends line and condition coverage. Local
-JaCoCo percentages therefore never match Sonar — different formula, not
-version drift. Where `cb`/`mb` = covered/missed branches per JaCoCo XML line
-attributes, `LC` = lines with `ci > 0`, `EL` = executable lines.
+JaCoCo percentages therefore never match the SonarQube figure — different
+formula, not version drift. Where `cb`/`mb` = covered/missed branches per
+JaCoCo XML line attributes, `LC` = lines with `ci > 0`, `EL` = executable
+lines.
 
 ## 2. Per-test coverage mechanism
 
@@ -67,7 +68,7 @@ from one filtered dataset.
 | diff-cover | Apache-2.0 | concept reference only; coverdict implements diff-intersection natively |
 
 Target license for coverdict: Apache-2.0. The conservative distribution and
-trademark posture is summarized in §8a and D-20; release artifacts still require
+trademark posture is summarized in §8 and D-20; release artifacts still require
 an actual dependency/license inventory.
 
 ## 7. Competitive scan (Aug 2026, updated with Deep-Dive research)
@@ -92,7 +93,10 @@ license if EPL notices, source availability, and the actual transitive license
 inventory are shipped. JavaParser is used under its Apache-2.0 option. Descartes
 stays external under the voluntary policy in D-09/D-20. ASF policy is guidance,
 not jurisdiction over coverdict. Trademark conclusions remain project policy,
-not legal advice. Full evidence: `docs/research-raw/02-licensing.md`.
+not legal advice: third-party marks stay adjectival next to a descriptive noun
+and never become a CLI value, subcommand, package or repo name — which is why
+the metric mode is `sonar-compatible`. Full evidence:
+`docs/research-raw/02-licensing.md`.
 
 ## 9. Per-test coverage under parallel execution
 

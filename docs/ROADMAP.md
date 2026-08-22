@@ -106,9 +106,10 @@ M1 is done when all of these hold on the pinned M0 corpus:
    rename, missing merge base, unsupported Java syntax, and Windows/POSIX path
    normalization have automated negative tests and structured failures.
 
-M1 exit codes: `0` complete analysis regardless of findings; `2` invalid
+M1 exit codes: `0` complete analysis regardless of findings; `1` reserved for
+the M3 finding-based quality gate and never emitted by v0.1; `2` invalid
 invocation/input; `3` incomplete or unverified-required evidence; `4` internal
-failure. Finding-based quality gates are M3 work.
+failure.
 
 ## Later (sketches)
 

@@ -39,7 +39,7 @@ that produces the *verdict*:
 |---|---|---|
 | How much of my *changed* code is tested, computed the way my quality gate computes it? | JaCoCo (coverage) + git (diff) | Neither combines them; SonarQube does, but only server-side, post-push, with its own blended formula |
 | Which tests contain no recognized oracle? | Static analysis (partially: SonarQube S2699, PMD) | Framework and helper recognition is incomplete; absence is heuristic, not proof |
-| Which tests verify nothing even though they execute code? | PIT/Descartes (mutation) | Output is mutant-centric ("this mutant survived"), not test-centric ("this test verifies nothing") |
+| Which methods are executed but not actually verified? | PIT/Descartes (mutation) | Output is mutant-centric ("this mutant survived"); translating it into a per-test verdict needs evidence mutation alone does not give |
 | Which tests have suspiciously equivalent execution evidence? | Per-test coverage | Identity is a review candidate, not behavioral proof; subset heuristics target the wrong tests |
 
 The 2025–2026 wave of "test quality" tools (≈20 repos surveyed) is

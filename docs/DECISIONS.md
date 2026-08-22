@@ -1,6 +1,8 @@
 # Decisions
 
-Short entries; newest last. Reversals get a new entry, never an edit.
+Short entries; newest last. A reversal or correction gets a new entry, never a
+silent rewrite. A superseded entry may be condensed and given a forward pointer
+to the entry that revises it; its full original text stays in git history.
 
 ## Decided
 
