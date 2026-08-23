@@ -1,0 +1,9 @@
+diff --git a/src/main/java/com/example/Calc.java b/src/main/java/com/example/Calc.java
+index 8133c0b..b51843a 100644
+--- a/src/main/java/com/example/Calc.java
++++ b/src/main/java/com/example/Calc.java
+@@ -8,4 +7,0 @@ public class Calc {
+-    public int mul(int a, int b) {
+-        return a * b;
+-    }
+-

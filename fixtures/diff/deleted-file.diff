@@ -1,0 +1,13 @@
+diff --git a/src/main/java/com/example/New.java b/src/main/java/com/example/New.java
+deleted file mode 100644
+index 86181cc..0000000
+--- a/src/main/java/com/example/New.java
++++ /dev/null
+@@ -1,7 +0,0 @@
+-package com.example;
+-
+-public class New {
+-    public void hi() {
+-        System.out.println("hi");
+-    }
+-}

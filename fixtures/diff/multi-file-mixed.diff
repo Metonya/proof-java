@@ -1,0 +1,29 @@
+diff --git a/src/main/java/com/example/Calc.java b/src/main/java/com/example/Calc.java
+index b51843a..8133c0b 100644
+--- a/src/main/java/com/example/Calc.java
++++ b/src/main/java/com/example/Calc.java
+@@ -7,0 +8,4 @@ public class Calc {
++    public int mul(int a, int b) {
++        return a * b;
++    }
++
+diff --git a/src/main/java/com/example/New.java b/src/main/java/com/example/New.java
+new file mode 100644
+index 0000000..86181cc
+--- /dev/null
++++ b/src/main/java/com/example/New.java
+@@ -0,0 +1,7 @@
++package com.example;
++
++public class New {
++    public void hi() {
++        System.out.println("hi");
++    }
++}
+diff --git a/src/main/java/com/example/Old.java b/src/main/java/com/example/Renamed.java
+similarity index 100%
+rename from src/main/java/com/example/Old.java
+rename to src/main/java/com/example/Renamed.java
+diff --git a/src/main/java/com/example/blob.bin b/src/main/java/com/example/blob.bin
+index 9c3941f..f5a91e4 100644
+Binary files a/src/main/java/com/example/blob.bin and b/src/main/java/com/example/blob.bin differ

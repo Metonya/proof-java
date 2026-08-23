@@ -1,0 +1,7 @@
+diff --git a/src/main/java/com/example/One.java b/src/main/java/com/example/One.java
+index aaaaaaa..bbbbbbb 100644
+--- a/src/main/java/com/example/One.java
++++ b/src/main/java/com/example/One.java
+@@ -3 +3 @@ public class One {
+-    private int x = 1;
++    private int x = 2;

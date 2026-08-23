@@ -146,6 +146,15 @@ module to satisfy `minItems: 1` would violate hard rule 3a. The schema's
 `inputs.modules` minItems constraint is removed; existing goldens still
 validate since relaxing a constraint cannot break a previously-valid document.
 
+**D-26 · Diff acquisition is config-independent and never guesses staleness** (2026-08-24)
+`GitClient` passes `--find-renames`, `--no-color`, and explicit
+`--src-prefix=a/ --dst-prefix=b/` on every diff call so output never depends
+on the caller's own `~/.gitconfig`. `dirty` (D-16) means tracked changes only
+(`git diff --quiet HEAD --`); untracked files are a separate, always-reported
+concern. A changed line absent from an otherwise-mapped file's report (stale
+report) is counted and warned, never inferred from file mtime — a timestamp
+would break byte-determinism across checkouts and is easy to spoof.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

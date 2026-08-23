@@ -1,0 +1,4 @@
+diff --git a/src/main/java/com/example/Old.java b/src/main/java/com/example/Renamed.java
+similarity index 100%
+rename from src/main/java/com/example/Old.java
+rename to src/main/java/com/example/Renamed.java
