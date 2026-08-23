@@ -41,6 +41,8 @@ Deliverables:
 4. Specify every L0 rule with positive, negative, and unresolved fixtures;
    recognized oracle APIs, custom-oracle configuration, severity, confidence,
    suppression, and stable finding fingerprints.
+   **Done** (2026-08-23): `docs/rules/` (shared contract + 4 rule specs),
+   `fixtures/rules/` (3 fixtures per rule).
 5. Check in a reproducible validation manifest: repository commit, JDK, build
    command, report command, fixture hashes, labeling protocol, benchmark machine,
    and cold/warm measurement commands.
