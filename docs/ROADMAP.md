@@ -13,9 +13,10 @@ Levels used throughout the project:
 - **L3 — mutation evidence:** method-centric PIT/Descartes findings; a surviving
   mutant does not by itself prove that an individual test verifies nothing.
 
-## M0 — Product and contract readiness (current)
+## M0 — Product and contract readiness (complete, 2026-08-23)
 
-Production analyzer work is a no-go until this gate is complete (D-14).
+Production analyzer work was a no-go until this gate closed (D-14). All seven
+deliverables are checked in; M1 is now the current milestone.
 
 Deliverables:
 
@@ -60,7 +61,7 @@ M0 is done only when all seven artifacts are reviewable and no required product 
 input decision remains implicit. Contract spikes may be discarded; they are not
 the production foundation (D-03).
 
-## M1 — Trustworthy CLI wedge (next, v0.1)
+## M1 — Trustworthy CLI wedge (current, v0.1)
 
 M1 is L0 + L1 only. It is deliberately described as changed-code coverage plus
 a conservative static oracle critic, not as a measurement of “real coverage”

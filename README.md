@@ -10,9 +10,10 @@ contain no recognized oracle, and which tests are suspiciously
 coverage-equivalent. Deterministic, local-first, no LLM in the loop, output
 designed to be read by humans and consumed by AI agents.
 
-**Status:** pre-development. A planted demo validates several mechanisms, not
-the product on real repositories. Production code is behind the M0 readiness
-gate; the current milestone is M0 (`docs/ROADMAP.md`).
+**Status:** early development. The M0 readiness gate closed 2026-08-23 (all
+seven contract artifacts checked in); the current milestone is M1 — the v0.1
+CLI wedge (`docs/ROADMAP.md`). A planted demo validates several mechanisms,
+not the product on real repositories.
 
 ## Capability boundary
 
@@ -52,8 +53,14 @@ gate (SonarQube) answers too late and only partially. Full argument:
 | `AGENTS.md` | rules for AI agents working here — read first |
 | `docs/VISION.md` | problem, audience, gap analysis |
 | `docs/DECISIONS.md` | settled decisions, rejected alternatives, open questions |
-| `docs/ROADMAP.md` | M0 readiness gate, next milestone, later sketches, kill criteria |
+| `docs/ROADMAP.md` | milestones, exit criteria, later sketches, kill criteria |
 | `docs/RESEARCH.md` | distilled evidence: measurements, models, licenses, competitive scan |
+| `docs/M0-*.md` | closed M0 gate artifacts: persona/dogfood, CLI input model, validation manifest |
+| `docs/SECURITY-POLICY.md`, `docs/RELEASE-CONTRACT.md` | untrusted-input policy; what a release ships |
+| `docs/rules/` | L0 rule specifications (shared contract + one file per rule) |
+| `schema/` | verdict JSON Schema, golden examples, validation spike |
+| `fixtures/` | per-rule positive/negative/unresolved Java fixtures |
+| `validation/` | checksums pinning fixtures and schema files |
 | `docs/research-raw/` | full deep-research source reports (~120 KB) — reference only, not for routine reading; see AGENTS.md |
 | `prototype/` | validated proof of concept (reference only, not the foundation) |
 
