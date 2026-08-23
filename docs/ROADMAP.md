@@ -37,10 +37,7 @@ Deliverables:
    suppression, and stable finding fingerprints.
 5. Check in a reproducible validation manifest: repository commit, JDK, build
    command, report command, fixture hashes, labeling protocol, benchmark machine,
-   and cold/warm measurement commands. `sonar-compatible` parity (D-04) is
-   measured against a local, self-hosted SonarQube instance (Docker,
-   `localhost:9001`; token via `SONAR_TOKEN` env var, never committed) —
-   record its image tag/version here once M1c parity runs start.
+   and cold/warm measurement commands.
 6. Write the untrusted-input policy: secure XML parsing, resource limits, safe
    process invocation, output escaping/path handling, and no network or telemetry
    by default.
@@ -71,6 +68,11 @@ a conservative static oracle critic, not as a measurement of “real coverage”
   detail from the same filtered dataset.
 - Emit schema-valid JSON and terminal text. Standalone HTML is deferred until
   dogfood proves a need.
+- Once a Maven build skeleton exists, coverdict's own codebase is scanned by
+  a local, self-hosted SonarQube (Docker, `localhost:9001`; token via
+  `SONAR_TOKEN` env var, never committed) as coverdict's own quality gate —
+  separate from the `sonar-compatible` parity ground truth mentioned in the
+  kill criteria below, which targets the M1c validation corpus, not our code.
 
 ### M1b — Conservative static oracle critic
 
