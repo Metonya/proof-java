@@ -44,6 +44,29 @@ class MainTest {
     }
 
     @Test
+    void noArgsRunsWithoutErrorAndPrintsNothing() {
+        // Exercises Main.run() itself (the no-subcommand path): it is a no-op,
+        // not a usage screen - that requires an explicit --help. main()/System.exit
+        // is intentionally not unit-tested here - see class-level exclusion in pom.xml.
+        assertEquals(ExitCode.COMPLETE.value(), run());
+        assertEquals("", out.toString());
+        assertEquals("", err.toString());
+    }
+
+    @Test
+    void executionExceptionMapsToInternalErrorExitCode() throws Exception {
+        // No wired command throws today, so the handler is exercised directly:
+        // this is the real exit-4 contract path (hard rule 3a: a run that
+        // crashed must never exit 0), not a hypothetical.
+        CommandLine cmd = Main.commandLine();
+        cmd.setErr(new PrintWriter(err));
+        int exitCode = cmd.getExecutionExceptionHandler()
+            .handleExecutionException(new RuntimeException("boom"), cmd, null);
+        assertEquals(ExitCode.INTERNAL_ERROR.value(), exitCode);
+        assertTrue(err.toString().contains("boom"), err.toString());
+    }
+
+    @Test
     void exitCodeOneIsReservedAndUnused() {
         // M3 reserves 1 for the quality gate; v0.1 must never emit it.
         for (ExitCode code : ExitCode.values()) {
