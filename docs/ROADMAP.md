@@ -70,24 +70,31 @@ a conservative static oracle critic, not as a measurement of “real coverage”
 ### M1a — Evidence-safe diff coverage
 
 Skeleton done (2026-08-23): Maven multi-module build on Java 17, picocli CLI,
-exit-code contract wired and tested, self-scan green. Remaining work below.
+exit-code contract wired and tested, self-scan green.
 
-- Parse one or more JaCoCo XML reports. Every report is explicitly bound to a
-  module; overlapping class identities are rejected rather than counter-merged.
-- Compute overall and new-code results in `jacoco-line`, `strict-line`, and
-  `sonar-compatible` modes. `strict-line` means `ci > 0 && mi == 0`; branch
-  completeness is not silently folded into a line metric.
-- Use merge-base semantics from D-16. Missing refs, shallow-history failure,
-  unmapped/ambiguous changed Java files, and missing module evidence produce a
-  structured incomplete result and non-zero exit, never a false green.
-- Apply exclusions once and recompute every numerator, denominator, range, and
-  detail from the same filtered dataset.
-- Emit schema-valid JSON and terminal text. Standalone HTML is deferred until
-  dogfood proves a need.
-- Once a Maven build skeleton exists, coverdict's own codebase is scanned by
-  a local, self-hosted SonarQube (Docker, `localhost:9001`; token via
-  `SONAR_TOKEN` env var, never committed) as coverdict's own quality gate —
-  separate from the `sonar-compatible` parity ground truth mentioned in the
+**`--no-vcs` vertical slice done (2026-08-23):** `analyze --no-vcs` runs
+end to end - JaCoCo XML parsing (secure StAX, D-16 duplicate-class
+rejection), module/source-root binding with on-disk verification, the D-05
+single-exclusion-layer, all three metric modes, and schema-valid JSON/text
+output, all real (not stubbed). Verified against coverdict's own real
+`jacoco.xml`: `jacoco-line` matches JaCoCo's report-level LINE counter
+exactly (518/549, D-04 parity), two runs are byte-identical. Still open below.
+
+- Add the `--base`/`--uncommitted` diff modes (D-16 merge-base semantics).
+  Missing refs, shallow-history failure, and unmapped/ambiguous changed Java
+  files must produce a structured incomplete result and non-zero exit, never
+  a false green - the `--no-vcs` slice already establishes this pattern for
+  bad JaCoCo/module evidence; diff evidence needs the same treatment.
+- Compute new-code results in the same three modes once a diff exists;
+  `coverage.newCode` currently always reports `unavailable_no_vcs`.
+- Standalone HTML is deferred until dogfood proves a need.
+- coverdict's own codebase is scanned by a local, self-hosted SonarQube
+  (Docker, `localhost:9001`; token via `SONAR_TOKEN` env var, never
+  committed) as coverdict's own quality gate — run via
+  `mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar ...`
+  (`mvn sonar:sonar` fails, plugin prefix isn't registered); currently 0 open
+  issues, ~95% real line coverage. Separate from the `sonar-compatible`
+  parity ground truth mentioned in the
   kill criteria below, which targets the M1c validation corpus, not our code.
 
 ### M1b — Conservative static oracle critic
