@@ -1,0 +1,3 @@
+# Golden examples are compared byte-for-byte against tool output (M1c
+# criterion 1); the tool emits LF, so git must never rewrite these to CRLF.
+schema/** text eol=lf
