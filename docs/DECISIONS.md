@@ -138,6 +138,14 @@ The A4 allowlist covers JUnit 5 (Jupiter) and JUnit 4 (`org.junit.Test`,
 JUnit 4-heavy suite is a dogfood target, so JUnit 4 is in scope from the
 start. TestNG stays out until a dogfood repo forces it.
 
+**D-25 · Schema fix: `inputs.modules` may be empty** (2026-08-23)
+Building the M1a JSON writer surfaced a real gap: a run that fails before any
+module's evidence is usable (e.g. every declared report is malformed) must
+still emit a schema-valid incomplete document. Fabricating a placeholder
+module to satisfy `minItems: 1` would violate hard rule 3a. The schema's
+`inputs.modules` minItems constraint is removed; existing goldens still
+validate since relaxing a constraint cannot break a previously-valid document.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not
