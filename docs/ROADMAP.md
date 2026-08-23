@@ -30,6 +30,7 @@ Deliverables:
    coverage fails closed per hard rule 3a), report to module binding,
    main/test source roots, language level, classpath, exclusions, and
    supported/unsupported input matrix.
+   **Done** (2026-08-23): `docs/M0-CLI-INPUT.md`.
 3. Check in a draft JSON Schema and golden examples containing schema/tool
    versions, evidence provenance, analysis status, module/source identity,
    named metric numerators and denominators, findings, warnings, and stable

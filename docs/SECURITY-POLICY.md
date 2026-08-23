@@ -9,9 +9,12 @@ hang unboundedly, or inject content into coverdict's own output.
 
 ## 1. Secure XML parsing
 
-- JAXP secure processing ON; DTDs rejected outright (any `<!DOCTYPE` is a
-  structured parse failure, not a warning), external general/parameter
-  entities disabled, XInclude off, no schema/DTD fetching.
+- JAXP secure processing ON; external general/parameter entities disabled,
+  external DTD loading disabled, XInclude off, no schema/DTD fetching.
+  Note: JaCoCo reports legitimately carry a `<!DOCTYPE report PUBLIC ...>`
+  line, so DOCTYPE presence is tolerated — but it is never *processed*: no
+  external fetch, no entity definition/expansion (internal-subset entities
+  included), and any entity reference in content is a structured failure.
 - Applies to every XML input (JaCoCo reports now; PIT/Descartes reports later).
 - Obligated negative test: an XXE fixture must yield a structured failure and
   exit 2/3 — never a file read, never a network attempt (M1c criterion 7).
