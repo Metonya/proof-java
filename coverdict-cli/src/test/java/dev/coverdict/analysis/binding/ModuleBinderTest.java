@@ -85,8 +85,10 @@ class ModuleBinderTest {
         JacocoReport a = parser.parse(FIXTURES.resolve("duplicate-a.xml"));
         JacocoReport b = parser.parse(FIXTURES.resolve("duplicate-b.xml"));
 
-        AnalysisException e = assertThrows(AnalysisException.class, () ->
-            new ModuleBinder(repoRoot).bind(List.of(demo), Map.of("demo", List.of(a, b))));
+        ModuleBinder binder = new ModuleBinder(repoRoot);
+        List<ModuleDefinition> modules = List.of(demo);
+        Map<String, List<JacocoReport>> reportsByModuleId = Map.of("demo", List.of(a, b));
+        AnalysisException e = assertThrows(AnalysisException.class, () -> binder.bind(modules, reportsByModuleId));
 
         assertEquals("DUPLICATE_CLASS_IDENTITY", e.code());
         assertTrue(e.getMessage().contains("Dup.java"), e.getMessage());
@@ -96,8 +98,10 @@ class ModuleBinderTest {
     void rejectsAReportBoundToAnUndeclaredModule() {
         JacocoReport report = parser.parse(FIXTURES.resolve("mixed-coverage.xml"));
 
-        AnalysisException e = assertThrows(AnalysisException.class, () ->
-            new ModuleBinder(repoRoot).bind(List.of(), Map.of("ghost", List.of(report))));
+        ModuleBinder binder = new ModuleBinder(repoRoot);
+        List<ModuleDefinition> noModules = List.of();
+        Map<String, List<JacocoReport>> reportsByModuleId = Map.of("ghost", List.of(report));
+        AnalysisException e = assertThrows(AnalysisException.class, () -> binder.bind(noModules, reportsByModuleId));
 
         assertEquals("UNDECLARED_MODULE", e.code());
     }

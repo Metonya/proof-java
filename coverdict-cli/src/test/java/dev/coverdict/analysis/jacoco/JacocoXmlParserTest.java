@@ -8,6 +8,8 @@ import java.nio.file.Path;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import dev.coverdict.analysis.AnalysisException;
 
@@ -67,35 +69,34 @@ class JacocoXmlParserTest {
         assertEquals(0, report.totalLineCovered());
     }
 
-    @Test
-    void rejectsMalformedXmlStructurally() {
-        AnalysisException e = assertThrows(AnalysisException.class,
-            () -> parser.parse(FIXTURES.resolve("malformed.xml")));
-        assertEquals("MALFORMED_JACOCO_XML", e.code());
-    }
-
-    @Test
-    void rejectsExternalEntityReferenceWithoutFetchingOrExpandingIt() {
-        // xxe.xml's <report name="&xxe;"> references an external entity
-        // pointing at a local file, in an attribute value - which XML 1.0
-        // forbids outright, so Xerces rejects it as a well-formedness error
-        // before any fetch attempt (never reaching IS_SUPPORTING_EXTERNAL_
-        // ENTITIES). The parser reclassifies that failure to this specific
-        // code per SECURITY-POLICY.md #1, instead of a generic parse error.
-        AnalysisException e = assertThrows(AnalysisException.class,
-            () -> parser.parse(FIXTURES.resolve("xxe.xml")));
-        assertEquals("XML_ENTITY_REFERENCE_REJECTED", e.code());
-    }
-
-    @Test
-    void rejectsEntityReferenceEncounteredInSkippedElementContent() {
-        // xxe-content.xml exercises the actual ENTITY_REFERENCE event check
-        // in skipSubtree - the code path xxe.xml's attribute-value case
-        // never reaches, since that one fails during XML well-formedness
-        // parsing before any stream event is even emitted for the element.
-        AnalysisException e = assertThrows(AnalysisException.class,
-            () -> parser.parse(FIXTURES.resolve("xxe-content.xml")));
-        assertEquals("XML_ENTITY_REFERENCE_REJECTED", e.code());
+    /**
+     * Three fixtures, three distinct rejection mechanisms, same observable
+     * contract (structured failure, never a partial parse):
+     * <ul>
+     *   <li>{@code malformed.xml} - plain XML well-formedness failure.</li>
+     *   <li>{@code xxe.xml} - {@code <report name="&xxe;">} puts the external
+     *       entity reference in an ATTRIBUTE value, which XML 1.0 forbids
+     *       outright; Xerces rejects it before parsing ever reaches
+     *       IS_SUPPORTING_EXTERNAL_ENTITIES, let alone fetches anything.</li>
+     *   <li>{@code xxe-content.xml} - the same entity in ELEMENT CONTENT
+     *       instead, which XML 1.0 does allow syntactically; this is the
+     *       fixture that actually exercises the ENTITY_REFERENCE event check
+     *       in {@link JacocoXmlParser#skipSubtree}, not just XML's own
+     *       attribute-value rule.</li>
+     * </ul>
+     * Per SECURITY-POLICY.md #1, both entity cases are reclassified from the
+     * generic parse-failure code to the more specific one.
+     */
+    @ParameterizedTest
+    @CsvSource({
+        "malformed.xml,    MALFORMED_JACOCO_XML",
+        "xxe.xml,           XML_ENTITY_REFERENCE_REJECTED",
+        "xxe-content.xml,   XML_ENTITY_REFERENCE_REJECTED"
+    })
+    void rejectsBadXmlStructurallyWithoutFetchingOrExpandingEntities(String fixtureName, String expectedCode) {
+        Path file = FIXTURES.resolve(fixtureName.trim());
+        AnalysisException e = assertThrows(AnalysisException.class, () -> parser.parse(file));
+        assertEquals(expectedCode.trim(), e.code());
     }
 
     @Test

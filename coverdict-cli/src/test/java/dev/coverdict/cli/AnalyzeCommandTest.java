@@ -59,18 +59,18 @@ class AnalyzeCommandTest {
     void singleModuleShorthandProducesASchemaValidCompleteVerdict() throws IOException {
         Files.createDirectories(repoRoot.resolve("src/main/java/com/example"));
         Files.writeString(repoRoot.resolve("src/main/java/com/example/Calc.java"), "class Calc {}\n");
-        Path out = repoRoot.resolve("verdict.json");
+        Path outFile = repoRoot.resolve("verdict.json");
 
         int exitCode = run("analyze", "--no-vcs",
             "--repo", repoRoot.toString(),
             "--report", FIXTURES.resolve("mixed-coverage.xml").toString(),
-            "--out", out.toString());
+            "--out", outFile.toString());
 
         assertEquals(ExitCode.COMPLETE.value(), exitCode);
-        assertTrue(Files.exists(out));
-        assertTrue(validate(out).isEmpty(), validate(out).toString());
+        assertTrue(Files.exists(outFile));
+        assertTrue(validate(outFile).isEmpty(), validate(outFile).toString());
 
-        JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(out));
+        JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(outFile));
         assertEquals("complete", doc.at("/analysis/status").asText());
         assertEquals(80.0, doc.at("/coverage/overall/jacoco-line/percent").asDouble());
         assertEquals("unavailable_no_vcs", doc.at("/coverage/newCode/status").asText());
@@ -79,34 +79,34 @@ class AnalyzeCommandTest {
 
     @Test
     void malformedReportProducesASchemaValidIncompleteVerdictAndExitThree() throws IOException {
-        Path out = repoRoot.resolve("verdict.json");
+        Path outFile = repoRoot.resolve("verdict.json");
 
         int exitCode = run("analyze", "--no-vcs",
             "--repo", repoRoot.toString(),
             "--report", FIXTURES.resolve("malformed.xml").toString(),
-            "--out", out.toString());
+            "--out", outFile.toString());
 
         assertEquals(ExitCode.INCOMPLETE.value(), exitCode);
-        assertTrue(Files.exists(out), "hard rule 3a: an incomplete analysis still writes a structured document");
-        assertTrue(validate(out).isEmpty(), validate(out).toString());
+        assertTrue(Files.exists(outFile), "hard rule 3a: an incomplete analysis still writes a structured document");
+        assertTrue(validate(outFile).isEmpty(), validate(outFile).toString());
 
-        JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(out));
+        JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(outFile));
         assertEquals("incomplete", doc.at("/analysis/status").asText());
         assertEquals("MALFORMED_JACOCO_XML", doc.at("/analysis/incompleteReasons/0/code").asText());
     }
 
     @Test
     void bareReportCombinedWithModuleIsInvalidInvocationAndWritesNoJson() {
-        Path out = repoRoot.resolve("verdict.json");
+        Path outFile = repoRoot.resolve("verdict.json");
 
         int exitCode = run("analyze", "--no-vcs",
             "--repo", repoRoot.toString(),
             "--module", "demo=.",
             "--report", FIXTURES.resolve("mixed-coverage.xml").toString(), // bare, no id=
-            "--out", out.toString());
+            "--out", outFile.toString());
 
         assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
-        assertFalse(Files.exists(out), "exit 2 must never write a verdict document (schema note)");
+        assertFalse(Files.exists(outFile), "exit 2 must never write a verdict document (schema note)");
     }
 
     @Test
@@ -119,19 +119,19 @@ class AnalyzeCommandTest {
     void moduleWithoutAnyReportIsExcludedWithAWarningNotAnError() throws IOException {
         Files.createDirectories(repoRoot.resolve("src/main/java/com/example"));
         Files.writeString(repoRoot.resolve("src/main/java/com/example/Calc.java"), "class Calc {}\n");
-        Path out = repoRoot.resolve("verdict.json");
+        Path outFile = repoRoot.resolve("verdict.json");
 
         int exitCode = run("analyze", "--no-vcs",
             "--repo", repoRoot.toString(),
             "--module", "used=.",
             "--module", "unused=.",
             "--report", "used=" + FIXTURES.resolve("mixed-coverage.xml"),
-            "--out", out.toString());
+            "--out", outFile.toString());
 
         assertEquals(ExitCode.COMPLETE.value(), exitCode);
-        assertTrue(validate(out).isEmpty(), validate(out).toString());
+        assertTrue(validate(outFile).isEmpty(), validate(outFile).toString());
 
-        JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(out));
+        JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(outFile));
         assertEquals(1, doc.at("/inputs/modules").size(), "module without a report must not appear as evidence");
         boolean warned = false;
         for (JsonNode w : doc.at("/warnings")) {
