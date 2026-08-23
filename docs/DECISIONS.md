@@ -120,6 +120,12 @@ D-06's identical-coverage clusters become `COVERAGE_EQUIVALENT_CANDIDATE`.
 Identical probe sets and syntactic oracle subsets do not prove behavioral or
 oracle equivalence and cannot suggest deletion without stronger evidence.
 
+**D-22 · coverdict is OS-independent by design** (2026-08-23)
+Java CLI jar, JaCoCo XML, git, and JavaParser have no OS-specific code path;
+Windows/macOS/Linux are all first-class. The one known platform-sensitive
+area is path handling, already required as an automated test in M1c
+criterion 7. No decision changes this unless a real OS-specific blocker appears.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not
