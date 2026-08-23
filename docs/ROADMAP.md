@@ -37,7 +37,10 @@ Deliverables:
    suppression, and stable finding fingerprints.
 5. Check in a reproducible validation manifest: repository commit, JDK, build
    command, report command, fixture hashes, labeling protocol, benchmark machine,
-   and cold/warm measurement commands.
+   and cold/warm measurement commands. `sonar-compatible` parity (D-04) is
+   measured against a local, self-hosted SonarQube instance (Docker,
+   `localhost:9001`; token via `SONAR_TOKEN` env var, never committed) —
+   record its image tag/version here once M1c parity runs start.
 6. Write the untrusted-input policy: secure XML parsing, resource limits, safe
    process invocation, output escaping/path handling, and no network or telemetry
    by default.
@@ -130,8 +133,11 @@ failure.
 - **M5 — Mutation integration.** Start method-centric with
   `PSEUDO_TESTED_METHOD`; covering tests are context, not proof that one test is
   worthless. Resolve diff scoping first (O-05/D-12). IDE surfaces render JSON.
-- **Backlog:** standalone HTML · AI-assistant skill · second build integration
-  if not justified in M3 · non-Java languages.
+- **Backlog:** standalone HTML · AI-assistant skill (agent reads verdict JSON,
+  writes tests for gaps it names, reruns, interprets the result through
+  coverdict again) · VS Code extension (inline per-line coverage gutter
+  annotations, toggleable) · second build integration if not justified in M3 ·
+  non-Java languages. Each gets its own design pass at its milestone, not now.
 
 ## Kill and pivot criteria
 
