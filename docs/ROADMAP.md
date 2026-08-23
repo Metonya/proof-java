@@ -43,8 +43,10 @@ Deliverables:
 6. Write the untrusted-input policy: secure XML parsing, resource limits, safe
    process invocation, output escaping/path handling, and no network or telemetry
    by default.
+   **Done** (2026-08-23): `docs/SECURITY-POLICY.md`.
 7. Define the release contract: Apache-2.0 `LICENSE`, generated `NOTICE` and
    dependency inventory, distribution channel, checksums, and support window.
+   **Done** (2026-08-23): `LICENSE` + `docs/RELEASE-CONTRACT.md`.
 
 M0 is done only when all seven artifacts are reviewable and no required product or
 input decision remains implicit. Contract spikes may be discarded; they are not
