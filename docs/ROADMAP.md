@@ -22,6 +22,8 @@ Deliverables:
 1. Name one primary persona and one canonical pre-push workflow. Record three
    real dogfood repositories, their build tools, current workaround, and setup
    tolerance. Resolve O-04 from this evidence.
+   **Done** (2026-08-23): `docs/M0-PERSONA.md` — AI-agent-loop persona, three
+   public Maven proxies (no in-house repos available), O-04 → D-23.
 2. Specify the CLI input model: repository, an explicit base-branch diff mode
    *and* an uncommitted working-tree diff mode (both first-class, not
    either/or), the no-`.git`/no-VCS fallback (overall coverage only; new-code
