@@ -1,3 +1,7 @@
 # Golden examples are compared byte-for-byte against tool output (M1c
 # criterion 1); the tool emits LF, so git must never rewrite these to CRLF.
 schema/** text eol=lf
+
+# Fixtures are pinned by content hash in the validation manifest (D-22:
+# the same hash must hold on Windows, macOS, and Linux checkouts).
+fixtures/** text eol=lf
