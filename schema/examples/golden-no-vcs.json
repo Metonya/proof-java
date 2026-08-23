@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "0.1.0",
+  "tool": { "name": "coverdict", "version": "0.1.0" },
+  "analysis": { "status": "complete", "exitCode": 0, "incompleteReasons": [] },
+  "inputs": {
+    "diffMode": "no-vcs",
+    "languageLevel": 17,
+    "encoding": "UTF-8",
+    "exclusions": [],
+    "modules": [
+      {
+        "id": "root",
+        "root": ".",
+        "sourceRoots": ["src/main/java"],
+        "testRoots": ["src/test/java"],
+        "reports": [
+          { "path": "build/reports/jacoco/test/jacocoTestReport.xml", "freshness": "unverified" }
+        ]
+      }
+    ]
+  },
+  "coverage": {
+    "overall": {
+      "jacoco-line": { "numeratorName": "coveredLines", "numerator": 120, "denominatorName": "executableLines", "denominator": 150, "percent": 80.0 },
+      "strict-line": { "numeratorName": "fullyCoveredLines", "numerator": 100, "denominatorName": "executableLines", "denominator": 150, "percent": 66.7 },
+      "sonar-compatible": { "numeratorName": "coveredBranchesPlusCoveredLines", "numerator": 160, "denominatorName": "branchesPlusExecutableLines", "denominator": 210, "percent": 76.2 }
+    },
+    "newCode": { "status": "unavailable_no_vcs" }
+  },
+  "changedFiles": [],
+  "findings": [
+    {
+      "rule": "TAUTOLOGICAL_ORACLE",
+      "severity": "WARNING",
+      "confidence": "HIGH",
+      "module": "root",
+      "path": "src/test/java/com/example/util/MathUtilTest.java",
+      "startLine": 18,
+      "endLine": 18,
+      "testMethod": "com.example.util.MathUtilTest#alwaysTrue()",
+      "message": "assertEquals(2, 1 + 1) compares two constants; the assertion holds for any implementation.",
+      "suggestedAction": "Assert on a value produced by the code under test.",
+      "fingerprint": "c4d5e6f708192a3b"
+    }
+  ],
+  "warnings": []
+}

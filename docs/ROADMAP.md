@@ -35,6 +35,9 @@ Deliverables:
    versions, evidence provenance, analysis status, module/source identity,
    named metric numerators and denominators, findings, warnings, and stable
    deterministic ordering. Paths are normalized repo-relative paths.
+   **Done** (2026-08-23): `schema/coverdict-verdict.schema.json` + three
+   goldens; `schema/validate-goldens.py` (discardable spike) passes and six
+   invalid variants are rejected.
 4. Specify every L0 rule with positive, negative, and unresolved fixtures;
    recognized oracle APIs, custom-oracle configuration, severity, confidence,
    suppression, and stable finding fingerprints.

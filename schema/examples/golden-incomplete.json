@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "0.1.0",
+  "tool": { "name": "coverdict", "version": "0.1.0" },
+  "analysis": {
+    "status": "incomplete",
+    "exitCode": 3,
+    "incompleteReasons": [
+      {
+        "code": "MISSING_MERGE_BASE",
+        "message": "No merge base between origin/main and HEAD; history is shallow. Run 'git fetch --unshallow' and retry."
+      }
+    ]
+  },
+  "inputs": {
+    "diffMode": "base-ref",
+    "baseRef": "origin/main",
+    "resolved": {
+      "head": "0f1e2d3c4b5a69788796a5b4c3d2e1f001234567",
+      "dirty": false
+    },
+    "languageLevel": 17,
+    "encoding": "UTF-8",
+    "exclusions": [],
+    "modules": [
+      {
+        "id": "core",
+        "root": ".",
+        "sourceRoots": ["src/main/java"],
+        "testRoots": ["src/test/java"],
+        "reports": [
+          { "path": "target/site/jacoco/jacoco.xml", "freshness": "unverified" }
+        ]
+      }
+    ]
+  },
+  "coverage": {
+    "overall": {
+      "jacoco-line": { "numeratorName": "coveredLines", "numerator": 56, "denominatorName": "executableLines", "denominator": 71, "percent": 78.9 },
+      "strict-line": { "numeratorName": "fullyCoveredLines", "numerator": 48, "denominatorName": "executableLines", "denominator": 71, "percent": 67.6 },
+      "sonar-compatible": { "numeratorName": "coveredBranchesPlusCoveredLines", "numerator": 91, "denominatorName": "branchesPlusExecutableLines", "denominator": 125, "percent": 72.8 }
+    },
+    "newCode": { "status": "unavailable_incomplete" }
+  },
+  "changedFiles": [],
+  "findings": [],
+  "warnings": []
+}
