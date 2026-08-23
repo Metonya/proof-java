@@ -63,29 +63,39 @@ public final class ExclusionFilter {
         while (i < n) {
             char c = glob.charAt(i);
             if (c == '*') {
-                if (i + 1 < n && glob.charAt(i + 1) == '*') {
-                    if (i + 2 < n && glob.charAt(i + 2) == '/') {
-                        regex.append("(?:.*/)?"); // "**/" - zero or more whole directories
-                        i += 3;
-                    } else {
-                        regex.append(".*"); // trailing "**" - anything, including "/"
-                        i += 2;
-                    }
-                } else {
-                    regex.append("[^/]*"); // single "*" - confined to one path segment
-                    i += 1;
-                }
+                i = appendStar(regex, glob, i);
             } else if (c == '?') {
                 regex.append("[^/]");
                 i += 1;
             } else {
-                if (REGEX_METACHARS.indexOf(c) >= 0) {
-                    regex.append('\\');
-                }
-                regex.append(c);
+                appendLiteral(regex, c);
                 i += 1;
             }
         }
         return Pattern.compile(regex.toString());
+    }
+
+    /** @return the index just past the run of {@code *}/{@code **} that was consumed. */
+    private static int appendStar(StringBuilder regex, String glob, int i) {
+        int n = glob.length();
+        boolean isDoubleStar = i + 1 < n && glob.charAt(i + 1) == '*';
+        if (!isDoubleStar) {
+            regex.append("[^/]*"); // single "*" - confined to one path segment
+            return i + 1;
+        }
+        boolean hasTrailingSlash = i + 2 < n && glob.charAt(i + 2) == '/';
+        if (hasTrailingSlash) {
+            regex.append("(?:.*/)?"); // "**/" - zero or more whole directories
+            return i + 3;
+        }
+        regex.append(".*"); // trailing "**" - anything, including "/"
+        return i + 2;
+    }
+
+    private static void appendLiteral(StringBuilder regex, char c) {
+        if (REGEX_METACHARS.indexOf(c) >= 0) {
+            regex.append('\\');
+        }
+        regex.append(c);
     }
 }

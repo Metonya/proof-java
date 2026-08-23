@@ -48,41 +48,46 @@ public final class ModuleBinder {
 
         List<ResolvedSourceFile> resolved = new ArrayList<>();
         List<AnalysisReason> warnings = new ArrayList<>();
-
         for (ModuleDefinition module : modules) {
-            // repoRelativePath -> which report (by index) first claimed it,
-            // so a later report claiming the same path can be reported as a
-            // rejected overlap rather than silently overwriting.
-            Map<String, Integer> claimedBy = new LinkedHashMap<>();
-            List<JacocoReport> reports = reportsByModuleId.getOrDefault(module.id(), List.of());
+            bindModule(module, reportsByModuleId.getOrDefault(module.id(), List.of()), resolved, warnings);
+        }
+        return new BindingResult(resolved, warnings);
+    }
 
-            for (int reportIndex = 0; reportIndex < reports.size(); reportIndex++) {
-                JacocoReport report = reports.get(reportIndex);
-                for (SourceFileReport sf : report.sourceFiles()) {
-                    ResolvedPath resolvedPath = resolvePath(module, sf.packageQualifiedPath());
-                    if (!resolvedPath.foundOnDisk()) {
-                        warnings.add(new AnalysisReason("MISSING_SOURCE_FILE",
-                            "Coverage reported for '" + resolvedPath.path()
-                                + "' but the file was not found on disk under any declared source root.",
-                            resolvedPath.path(), module.id()));
-                    }
-
-                    Integer previousReportIndex = claimedBy.get(resolvedPath.path());
-                    if (previousReportIndex != null && previousReportIndex != reportIndex) {
-                        throw new AnalysisException("DUPLICATE_CLASS_IDENTITY",
-                            "'" + resolvedPath.path() + "' in module '" + module.id()
-                                + "' is reported by more than one JaCoCo XML file; overlapping class"
-                                + " identities are rejected rather than counter-merged (D-16).");
-                    }
-                    claimedBy.put(resolvedPath.path(), reportIndex);
-
-                    resolved.add(new ResolvedSourceFile(module.id(), resolvedPath.path(), sf.lines(),
-                        sf.reportedLineMissed(), sf.reportedLineCovered(), resolvedPath.foundOnDisk()));
-                }
+    private void bindModule(ModuleDefinition module, List<JacocoReport> reports,
+                             List<ResolvedSourceFile> resolved, List<AnalysisReason> warnings) {
+        // repoRelativePath -> which report (by index) first claimed it, so a
+        // later report claiming the same path can be reported as a rejected
+        // overlap rather than silently overwriting.
+        Map<String, Integer> claimedBy = new LinkedHashMap<>();
+        for (int reportIndex = 0; reportIndex < reports.size(); reportIndex++) {
+            for (SourceFileReport sf : reports.get(reportIndex).sourceFiles()) {
+                bindSourceFile(module, sf, reportIndex, claimedBy, resolved, warnings);
             }
         }
+    }
 
-        return new BindingResult(resolved, warnings);
+    private void bindSourceFile(ModuleDefinition module, SourceFileReport sf, int reportIndex,
+                                 Map<String, Integer> claimedBy, List<ResolvedSourceFile> resolved,
+                                 List<AnalysisReason> warnings) {
+        ResolvedPath resolvedPath = resolvePath(module, sf.packageQualifiedPath());
+        if (!resolvedPath.foundOnDisk()) {
+            warnings.add(new AnalysisReason("MISSING_SOURCE_FILE",
+                "Coverage reported for '" + resolvedPath.path()
+                    + "' but the file was not found on disk under any declared source root.",
+                resolvedPath.path(), module.id()));
+        }
+
+        Integer previousReportIndex = claimedBy.put(resolvedPath.path(), reportIndex);
+        if (previousReportIndex != null && previousReportIndex != reportIndex) {
+            throw new AnalysisException("DUPLICATE_CLASS_IDENTITY",
+                "'" + resolvedPath.path() + "' in module '" + module.id()
+                    + "' is reported by more than one JaCoCo XML file; overlapping class"
+                    + " identities are rejected rather than counter-merged (D-16).");
+        }
+
+        resolved.add(new ResolvedSourceFile(module.id(), resolvedPath.path(), sf.lines(),
+            sf.reportedLineMissed(), sf.reportedLineCovered(), resolvedPath.foundOnDisk()));
     }
 
     private ResolvedPath resolvePath(ModuleDefinition module, String packageQualifiedPath) {

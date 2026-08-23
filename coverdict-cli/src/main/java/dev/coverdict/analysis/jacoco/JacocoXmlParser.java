@@ -92,45 +92,51 @@ public final class JacocoXmlParser {
     }
 
     private JacocoReport readReport(XMLStreamReader r, String sourceLabel) throws XMLStreamException {
-        String reportName = null;
-        List<SourceFileReport> sourceFiles = new ArrayList<>();
-        int totalMissed = 0;
-        int totalCovered = 0;
-        boolean sawReportElement = false;
-
+        ReportAccumulator acc = new ReportAccumulator();
         while (r.hasNext()) {
             int event = r.next();
-            switch (event) {
-                case XMLStreamConstants.ENTITY_REFERENCE -> throw entityReferenceRejected(r, sourceLabel);
-                case XMLStreamConstants.START_ELEMENT -> {
-                    String local = r.getLocalName();
-                    if (!sawReportElement) {
-                        if (!"report".equals(local)) {
-                            throw new AnalysisException("MALFORMED_JACOCO_XML",
-                                "Expected root element <report> in " + sourceLabel + ", found <" + local + ">");
-                        }
-                        sawReportElement = true;
-                        reportName = attr(r, "name");
-                    } else if ("package".equals(local)) {
-                        sourceFiles.addAll(readPackage(r, attrOrEmpty(r, "name"), sourceLabel));
-                    } else if ("counter".equals(local) && "LINE".equals(attr(r, "type"))) {
-                        totalMissed = intAttr(r, "missed");
-                        totalCovered = intAttr(r, "covered");
-                    } else {
-                        skipSubtree(r, sourceLabel);
-                    }
-                }
-                default -> {
-                    // whitespace, comments, sessioninfo start/end already
-                    // consumed via skipSubtree when encountered as a child
-                }
+            if (event == XMLStreamConstants.ENTITY_REFERENCE) {
+                throw entityReferenceRejected(r, sourceLabel);
             }
+            if (event == XMLStreamConstants.START_ELEMENT) {
+                acc.handleStartElement(r, sourceLabel);
+            }
+            // other events (whitespace, comments, sessioninfo start/end) are
+            // consumed via skipSubtree when encountered as a child - nothing
+            // to do for them at the top level.
         }
-
-        if (!sawReportElement) {
+        if (!acc.sawReportElement) {
             throw new AnalysisException("MALFORMED_JACOCO_XML", "No <report> root element found in " + sourceLabel);
         }
-        return new JacocoReport(reportName == null ? "" : reportName, sourceFiles, totalMissed, totalCovered);
+        return new JacocoReport(acc.reportName == null ? "" : acc.reportName, acc.sourceFiles, acc.totalMissed, acc.totalCovered);
+    }
+
+    /** Mutable accumulator for {@link #readReport}, so the read loop itself stays a flat dispatch instead of nested state-tracking. */
+    private final class ReportAccumulator {
+        private String reportName;
+        private final List<SourceFileReport> sourceFiles = new ArrayList<>();
+        private int totalMissed;
+        private int totalCovered;
+        private boolean sawReportElement;
+
+        void handleStartElement(XMLStreamReader r, String sourceLabel) throws XMLStreamException {
+            String local = r.getLocalName();
+            if (!sawReportElement) {
+                if (!"report".equals(local)) {
+                    throw new AnalysisException("MALFORMED_JACOCO_XML",
+                        "Expected root element <report> in " + sourceLabel + ", found <" + local + ">");
+                }
+                sawReportElement = true;
+                reportName = attr(r, "name");
+            } else if ("package".equals(local)) {
+                sourceFiles.addAll(readPackage(r, attrOrEmpty(r, "name"), sourceLabel));
+            } else if ("counter".equals(local) && "LINE".equals(attr(r, "type"))) {
+                totalMissed = intAttr(r, "missed");
+                totalCovered = intAttr(r, "covered");
+            } else {
+                skipSubtree(r, sourceLabel);
+            }
+        }
     }
 
     private List<SourceFileReport> readPackage(XMLStreamReader r, String packageName, String sourceLabel) throws XMLStreamException {
