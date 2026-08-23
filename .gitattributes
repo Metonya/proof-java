@@ -5,3 +5,4 @@ schema/** text eol=lf
 # Fixtures are pinned by content hash in the validation manifest (D-22:
 # the same hash must hold on Windows, macOS, and Linux checkouts).
 fixtures/** text eol=lf
+validation/** text eol=lf

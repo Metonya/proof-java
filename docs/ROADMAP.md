@@ -46,6 +46,8 @@ Deliverables:
 5. Check in a reproducible validation manifest: repository commit, JDK, build
    command, report command, fixture hashes, labeling protocol, benchmark machine,
    and cold/warm measurement commands.
+   **Done** (2026-08-23): `docs/M0-VALIDATION-MANIFEST.md` +
+   `validation/SHA256SUMS`.
 6. Write the untrusted-input policy: secure XML parsing, resource limits, safe
    process invocation, output escaping/path handling, and no network or telemetry
    by default.
