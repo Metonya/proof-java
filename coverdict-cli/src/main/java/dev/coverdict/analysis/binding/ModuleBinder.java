@@ -12,6 +12,7 @@ import dev.coverdict.analysis.jacoco.JacocoReport;
 import dev.coverdict.analysis.jacoco.SourceFileReport;
 import dev.coverdict.analysis.model.AnalysisReason;
 import dev.coverdict.analysis.model.ModuleDefinition;
+import dev.coverdict.analysis.model.RepoPaths;
 import dev.coverdict.analysis.model.ResolvedSourceFile;
 
 /**
@@ -87,20 +88,12 @@ public final class ModuleBinder {
     private ResolvedPath resolvePath(ModuleDefinition module, String packageQualifiedPath) {
         List<String> sourceRoots = module.sourceRoots().isEmpty() ? List.of(module.root()) : module.sourceRoots();
         for (String sourceRoot : sourceRoots) {
-            String candidate = join(sourceRoot, packageQualifiedPath);
+            String candidate = RepoPaths.join(sourceRoot, packageQualifiedPath);
             if (Files.exists(repoRoot.resolve(candidate))) {
                 return new ResolvedPath(candidate, true);
             }
         }
-        return new ResolvedPath(join(sourceRoots.get(0), packageQualifiedPath), false);
-    }
-
-    private static String join(String base, String suffix) {
-        if (base == null || base.isEmpty() || base.equals(".")) {
-            return suffix;
-        }
-        String trimmed = base.endsWith("/") ? base.substring(0, base.length() - 1) : base;
-        return trimmed + "/" + suffix;
+        return new ResolvedPath(RepoPaths.join(sourceRoots.get(0), packageQualifiedPath), false);
     }
 
     private record ResolvedPath(String path, boolean foundOnDisk) {

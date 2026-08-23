@@ -37,10 +37,12 @@ class MainTest {
     }
 
     @Test
-    void unimplementedAnalysisIsIncompleteNotSuccess() {
-        // Hard rule 3a: absent evidence must never exit 0.
-        assertEquals(ExitCode.INCOMPLETE.value(), run("analyze"));
-        assertTrue(err.toString().contains("incomplete"), err.toString());
+    void analyzeWithoutADiffModeIsInvalidInvocation() {
+        // M0-CLI-INPUT.md: exactly one diff mode is required; none is exit 2,
+        // not a passing/incomplete analysis. Deep behavior of --no-vcs itself
+        // (parsing, binding, the incomplete-verdict contract) lives in
+        // AnalyzeCommandTest - this only proves Main dispatches into it.
+        assertEquals(ExitCode.INVALID_INPUT.value(), run("analyze"));
     }
 
     @Test
