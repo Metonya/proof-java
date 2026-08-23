@@ -1,3 +1,8 @@
 prototype/demo-bank/build/
+target/
+.scannerwork/
 *.class
 *.exec
+.idea/
+*.iml
+.vscode/
