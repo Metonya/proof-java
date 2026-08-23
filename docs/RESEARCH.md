@@ -1,9 +1,9 @@
 # Research notes
 
 Facts, measurements, models, and external observations the project relies on.
-Prototype measurements are reproducible with `prototype/demo-bank/run.sh`;
-modeled and externally sourced numbers are labeled separately. Floating market
-claims are research context, not product acceptance evidence.
+Prototype numbers reproduce via `prototype/demo-bank/run.sh`; modeled and
+externally sourced numbers are labeled separately and are research context,
+not product acceptance evidence.
 
 ## 1. Coverage metric formulas
 
@@ -77,14 +77,31 @@ an actual dependency/license inventory.
   architectural gap is local diff/runtime evidence, not absence of AST rules.
 - JNose Test is the closest open-source detector: Java AST + JaCoCo, but a GPLv3
   research web app without local diff or mutation fusion. Never copy its source.
-- Teamscale is the closest overall commercial capability and already provides
-  testwise coverage/minimization behind its platform.
+- Teamscale is the closest overall commercial capability; deep-dive in §7a.
 - ArcMutate owns commercial diff-scoped mutation. Open-source PIT removed
   `scmMutationCoverage` and requires caller-supplied targets (D-12).
 - Diffblue Cover and Qodo Cover generate tests; they do not provide this audit
   workflow. Pricing and version details are volatile and stay in raw research.
 
 Full evidence and dated URLs: `docs/research-raw/01-competitive-landscape.md`.
+
+### 7a. Teamscale deep-dive
+
+Per-contributor pricing, no public list price: `Licensed Contributors =
+max(active 180-day UI/API users, 180-day committers on analyzed paths)` — a
+max of two counts, not a union. `teamscale-java-profiler` (open-source JVM
+agent, embeds JaCoCo) attributes per-test coverage via explicit
+`POST /test/start|end` lifecycle calls rather than automatic detection, and
+runs fully offline in `exec-file`/`disk` mode; only the intelligence layer
+(Test Gap Analysis, Pareto ranking, diff-coverage) needs the server. TGA's
+new-code metric is method-level: `(untested new+changed methods) /
+(total new+changed methods) × 100%`, computed server-side only. Pareto test
+ranking combines coverage-efficiency, term-similarity, **and LLM-embedding
+clustering** — the third heuristic is exactly what AGENTS.md hard rule 1
+rules out for coverdict; never an auto-delete suggestion either way. No
+mutation engine. Weak-oracle/tautology detection is undocumented (treat as
+absent, not confirmed absent). Full evidence:
+`docs/research-raw/05-teamscale-deep-dive.md`.
 
 ## 8. Release licensing and trademarks
 
@@ -123,3 +140,14 @@ XML vs. child-node AST), dynamic-test source constructs, inheritance, generated
 code, and multi-module path resolution. Runtime-event aggregation belongs to
 M2, not M1. M0 pins a small canary plus AssertJ Core, JUnit 5, and Dropwizard;
 full rationale and alternatives: `docs/research-raw/04-repo-selection.md`.
+
+## 12. Non-Java landscape (context, not a product boundary)
+
+The "no tool fuses coverage + diff-scope + static oracle-quality + mutation +
+redundancy" gap holds outside Java too: checked across Python, JS/TS, .NET,
+iOS/Swift, and six SaaS platforms (Codecov, Coveralls, DeepSource,
+CodeClimate, Qlty, GitHub CodeQL). Stryker (JS and .NET) is the closest
+multi-axis tool anywhere — native diff-scoped mutation — but still has no
+static oracle-quality check, and its per-test coverage data skips irrelevant
+mutants rather than flagging redundant tests. Full evidence:
+`docs/research-raw/06-non-java-landscape.md`.

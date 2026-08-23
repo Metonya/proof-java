@@ -22,9 +22,12 @@ Deliverables:
 1. Name one primary persona and one canonical pre-push workflow. Record three
    real dogfood repositories, their build tools, current workaround, and setup
    tolerance. Resolve O-04 from this evidence.
-2. Specify the CLI input model: repository, explicit base/head mode, report to
-   module binding, main/test source roots, language level, classpath, exclusions,
-   and supported/unsupported input matrix.
+2. Specify the CLI input model: repository, an explicit base-branch diff mode
+   *and* an uncommitted working-tree diff mode (both first-class, not
+   either/or), the no-`.git`/no-VCS fallback (overall coverage only; new-code
+   coverage fails closed per hard rule 3a), report to module binding,
+   main/test source roots, language level, classpath, exclusions, and
+   supported/unsupported input matrix.
 3. Check in a draft JSON Schema and golden examples containing schema/tool
    versions, evidence provenance, analysis status, module/source identity,
    named metric numerators and denominators, findings, warnings, and stable

@@ -132,9 +132,19 @@ instrumentation, experimental Java 17 support, no parallel execution.
 
 **O-02 · SARIF as an additional output format** — would give GitHub code
 scanning and IDE problem-panel integration nearly free. Evaluate with CI work.
-**O-04 · Maven plugin first or Gradle first** — decide from the maintainer's
-real target repositories.
+**O-04 · Maven plugin first or Gradle first** — leaning Maven-first for the
+M3 build-plugin and M1c's real-repo validation; M1's CLI itself needs no
+build-tool support since source roots and XML are supplied explicitly
+(D-01/D-02), so a Gradle-built validation repo (e.g. JUnit 5, for its AST
+edge cases) is not "Gradle support." Gradle plugin work waits until dogfood
+evidence needs it. Still open until M0 item 1 names the dogfood repos.
 **O-05 · Build our own diff-scoped mutation mapping, or make ArcMutate an
 optional integration** — see D-12. Decide at M5.
+**O-07 · Kotlin/Android as a supported target** — D-10 (JavaParser) does not
+extend to Kotlin syntax; would need its own AST/symbol-resolution frontend.
+JaCoCo reads Kotlin bytecode fine, but inline functions copy code to call
+sites and break line attribution; Android adds its own report layout,
+flavor/variant matrix, and generated sources. Out of scope unless a dogfood
+repo (M0 item 1) forces it.
 
 Resolved: O-01 is **coverdict**; O-03 is D-13/D-18; O-06 is D-04.
