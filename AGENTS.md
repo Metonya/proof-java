@@ -92,6 +92,15 @@ parallel-coverage position, which now lives only in the raw reports.
 
 - A new decision, a rejected alternative, or a reversal gets a DECISIONS.md
   entry — 5 lines maximum, dated.
+- **Commit as work lands, in small scoped commits with terse messages** —
+  one area of change per commit, no batching unrelated edits. Do not wait
+  for a whole phase to finish before committing.
+- **The repo is the handoff, not the conversation.** Work here regularly
+  passes to a different agent/session with no access to this chat. Progress,
+  status, and rationale that matters later must live in the repo itself
+  (ROADMAP status, a DECISIONS entry, code/commit messages) — never only in
+  a chat reply. Update existing docs in place; do not spawn new status files
+  per session.
 - Any numeric claim in docs must be reproducible: include the command or
   reference the RESEARCH.md section that does.
 - Keep docs short enough to load into an AI context without waste. If a doc
