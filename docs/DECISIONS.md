@@ -126,6 +126,18 @@ Windows/macOS/Linux are all first-class. The one known platform-sensitive
 area is path handling, already required as an automated test in M1c
 criterion 7. No decision changes this unless a real OS-specific blocker appears.
 
+**D-23 · O-04 resolved: Maven-first** (2026-08-23)
+All three M0 dogfood proxies (commons-lang, Gson, Dropwizard — see
+`docs/M0-PERSONA.md`) are Maven, as is the M1c corpus's multi-module member.
+M3's first build integration is Maven; Gradle waits for demand evidence.
+M1's CLI stays build-tool-agnostic (D-01/D-02).
+
+**D-24 · Recognized oracle APIs include JUnit 4 and JUnit 5 from v0.1** (2026-08-23)
+The A4 allowlist covers JUnit 5 (Jupiter) and JUnit 4 (`org.junit.Test`,
+`org.junit.Assert`) plus AssertJ, Mockito verification, and Hamcrest. Gson's
+JUnit 4-heavy suite is a dogfood target, so JUnit 4 is in scope from the
+start. TestNG stays out until a dogfood repo forces it.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not
@@ -138,12 +150,6 @@ instrumentation, experimental Java 17 support, no parallel execution.
 
 **O-02 · SARIF as an additional output format** — would give GitHub code
 scanning and IDE problem-panel integration nearly free. Evaluate with CI work.
-**O-04 · Maven plugin first or Gradle first** — leaning Maven-first for the
-M3 build-plugin and M1c's real-repo validation; M1's CLI itself needs no
-build-tool support since source roots and XML are supplied explicitly
-(D-01/D-02), so a Gradle-built validation repo (e.g. JUnit 5, for its AST
-edge cases) is not "Gradle support." Gradle plugin work waits until dogfood
-evidence needs it. Still open until M0 item 1 names the dogfood repos.
 **O-05 · Build our own diff-scoped mutation mapping, or make ArcMutate an
 optional integration** — see D-12. Decide at M5.
 **O-07 · Kotlin/Android as a supported target** — D-10 (JavaParser) does not
@@ -153,4 +159,4 @@ sites and break line attribution; Android adds its own report layout,
 flavor/variant matrix, and generated sources. Out of scope unless a dogfood
 repo (M0 item 1) forces it.
 
-Resolved: O-01 is **coverdict**; O-03 is D-13/D-18; O-06 is D-04.
+Resolved: O-01 is **coverdict**; O-03 is D-13/D-18; O-04 is D-23; O-06 is D-04.
