@@ -1,6 +1,7 @@
 package dev.coverdict.cli;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.PrintWriter;
@@ -39,13 +40,14 @@ class MainTest {
     void unimplementedAnalysisIsIncompleteNotSuccess() {
         // Hard rule 3a: absent evidence must never exit 0.
         assertEquals(ExitCode.INCOMPLETE.value(), run("analyze"));
+        assertTrue(err.toString().contains("incomplete"), err.toString());
     }
 
     @Test
     void exitCodeOneIsReservedAndUnused() {
         // M3 reserves 1 for the quality gate; v0.1 must never emit it.
         for (ExitCode code : ExitCode.values()) {
-            assertTrue(code.value() != 1, "v0.1 must not define exit code 1: " + code);
+            assertNotEquals(1, code.value(), "v0.1 must not define exit code 1: " + code);
         }
     }
 }
