@@ -20,8 +20,18 @@
       <artifactId>picocli</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <!-- Test-only: asserts real analyzer output against schema/coverdict-verdict.schema.json -->
+      <groupId>com.networknt</groupId>
+      <artifactId>json-schema-validator</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Deliberately truncated/invalid: an unclosed <package> and a stray tag.
+     Must fail structurally (exit 3), never a silent partial read. -->
+<report name="malformed-fixture">
+  <package name="com/example">
+    <sourcefile name="Broken.java">
+      <line nr="10" mi="0" ci="1"
+    </sourcefile>

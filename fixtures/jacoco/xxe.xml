@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!DOCTYPE report [
+  <!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<!--
+  Classic XXE: if the parser resolves external entities, &xxe; below would be
+  expanded to local file contents. SECURITY-POLICY.md #1 requires this to be
+  rejected with no read attempt. This is NOT a DOCTYPE-presence test (JaCoCo's
+  own DOCTYPE is tolerated, see mixed-coverage.xml) - it is an entity-resolution
+  test.
+-->
+<report name="&xxe;">
+  <package name="com/example">
+    <sourcefile name="Evil.java">
+      <line nr="1" mi="0" ci="1"/>
+      <counter type="LINE" missed="0" covered="1"/>
+    </sourcefile>
+  </package>
+</report>

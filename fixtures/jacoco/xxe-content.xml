@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!DOCTYPE report [
+  <!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<!--
+  Companion to xxe.xml: that fixture puts the reference in an ATTRIBUTE value
+  (rejected by XML 1.0 itself, before parsing reaches our code). This one
+  puts &xxe; in ELEMENT CONTENT, inside a subtree our parser structurally
+  skips (<injected> is not part of JaCoCo's real schema) - this is the path
+  that actually exercises the ENTITY_REFERENCE event check in
+  JacocoXmlParser#skipSubtree, not just XML 1.0's own attribute-value rule.
+-->
+<report name="ok">
+  <injected>&xxe;</injected>
+  <package name="com/example">
+    <sourcefile name="Fine.java">
+      <line nr="1" mi="0" ci="1"/>
+      <counter type="LINE" missed="0" covered="1"/>
+    </sourcefile>
+  </package>
+</report>

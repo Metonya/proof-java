@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!DOCTYPE report PUBLIC "-//JACOCO//DTD Report 1.1//EN" "report.dtd">
+<!--
+  D-22 / M1c criterion 7: package and source file names with Unicode and
+  spaces must resolve to a normalized, forward-slash, repo-relative path
+  without garbling.
+-->
+<report name="unicode-fixture">
+  <package name="com/exämple/wëird pkg">
+    <sourcefile name="Ünïcödé File.java">
+      <line nr="1" mi="0" ci="1"/>
+      <line nr="2" mi="1" ci="0"/>
+      <counter type="LINE" missed="1" covered="1"/>
+    </sourcefile>
+    <counter type="LINE" missed="1" covered="1"/>
+  </package>
+  <counter type="LINE" missed="1" covered="1"/>
+</report>

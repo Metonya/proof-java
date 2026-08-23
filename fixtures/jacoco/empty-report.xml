@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!DOCTYPE report PUBLIC "-//JACOCO//DTD Report 1.1//EN" "report.dtd">
+<!--
+  Zero executable lines (e.g. a module with only interfaces/records with no
+  bodies). Schema convention: percent is null when denominator is 0, never
+  reported as 100 or 0 by convention (hard rule 3a).
+-->
+<report name="empty-report-fixture">
+  <package name="com/example/empty">
+    <sourcefile name="MarkerInterface.java">
+      <counter type="LINE" missed="0" covered="0"/>
+    </sourcefile>
+    <counter type="LINE" missed="0" covered="0"/>
+  </package>
+  <counter type="LINE" missed="0" covered="0"/>
+</report>

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!DOCTYPE report PUBLIC "-//JACOCO//DTD Report 1.1//EN" "report.dtd">
+<!--
+  Hand-computed fixture (docs/M0-VALIDATION-MANIFEST.md style): 5 executable
+  lines, deliberately chosen so jacoco-line, strict-line, and sonar-compatible
+  each give a DIFFERENT percentage. A fixture where all three modes agree
+  cannot catch a formula bug (see plan note "kendi raporumuz modları ayırt
+  edemiyor").
+
+  Line-by-line (nr, mi, ci, mb, cb):
+    10  0 3 0 0   fully covered, no branch
+    11  0 2 1 1   fully covered, one missed + one covered branch
+    12  2 1 0 0   PARTIALLY covered (ci>0 && mi>0)
+    13  5 0 0 0   fully missed
+    14  0 1 2 0   covered line, but both its branches missed
+
+  EL = 5
+  jacoco-line   = lines with ci>0            = {10,11,12,14} = 4/5 = 80.0%
+  strict-line   = lines with ci>0 && mi==0   = {10,11,14}    = 3/5 = 60.0%
+  sonar-compat  = (sum(cb) + LC) / (sum(cb) + sum(mb) + EL)
+                = (1 + 4) / (1 + 3 + 5) = 5/9 = 55.6%
+-->
+<report name="mixed-coverage-fixture">
+  <package name="com/example">
+    <class name="com/example/Calc" sourcefilename="Calc.java">
+      <method name="compute" desc="(I)I" line="10">
+        <counter type="INSTRUCTION" missed="2" covered="7"/>
+        <counter type="LINE" missed="1" covered="4"/>
+        <counter type="BRANCH" missed="3" covered="1"/>
+        <counter type="METHOD" missed="0" covered="1"/>
+      </method>
+      <counter type="INSTRUCTION" missed="2" covered="7"/>
+      <counter type="LINE" missed="1" covered="4"/>
+      <counter type="BRANCH" missed="3" covered="1"/>
+      <counter type="METHOD" missed="0" covered="1"/>
+      <counter type="CLASS" missed="0" covered="1"/>
+    </class>
+    <sourcefile name="Calc.java">
+      <line nr="10" mi="0" ci="3" mb="0" cb="0"/>
+      <line nr="11" mi="0" ci="2" mb="1" cb="1"/>
+      <line nr="12" mi="2" ci="1" mb="0" cb="0"/>
+      <line nr="13" mi="5" ci="0" mb="0" cb="0"/>
+      <line nr="14" mi="0" ci="1" mb="2" cb="0"/>
+      <counter type="INSTRUCTION" missed="2" covered="7"/>
+      <counter type="LINE" missed="1" covered="4"/>
+      <counter type="BRANCH" missed="3" covered="1"/>
+      <counter type="METHOD" missed="0" covered="1"/>
+      <counter type="CLASS" missed="0" covered="1"/>
+    </sourcefile>
+    <counter type="INSTRUCTION" missed="2" covered="7"/>
+    <counter type="LINE" missed="1" covered="4"/>
+    <counter type="BRANCH" missed="3" covered="1"/>
+    <counter type="METHOD" missed="0" covered="1"/>
+    <counter type="CLASS" missed="0" covered="1"/>
+  </package>
+  <counter type="INSTRUCTION" missed="2" covered="7"/>
+  <counter type="LINE" missed="1" covered="4"/>
+  <counter type="BRANCH" missed="3" covered="1"/>
+  <counter type="METHOD" missed="0" covered="1"/>
+  <counter type="CLASS" missed="0" covered="1"/>
+</report>
