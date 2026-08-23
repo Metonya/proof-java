@@ -62,7 +62,35 @@ gate (SonarQube) answers too late and only partially. Full argument:
 | `fixtures/` | per-rule positive/negative/unresolved Java fixtures |
 | `validation/` | checksums pinning fixtures and schema files |
 | `docs/research-raw/` | full deep-research source reports (~120 KB) — reference only, not for routine reading; see AGENTS.md |
+| `coverdict-cli/` | CLI entry point and exit-code contract (M1a, in progress) |
 | `prototype/` | validated proof of concept (reference only, not the foundation) |
+
+## Building
+
+Requires JDK 17 (D-03) and Maven 3.9+.
+
+```bash
+mvn verify
+```
+
+Produces `coverdict-cli/target/coverdict.jar`. `analyze` currently exits 3
+(incomplete) by design — the analysis itself lands with M1a, and an
+unimplemented run must never report success (hard rule 3a).
+
+Contract checks, runnable without the Java build:
+
+```bash
+python schema/validate-goldens.py && sha256sum -c validation/SHA256SUMS
+```
+
+### Self-scan (optional)
+
+coverdict scans its own code with a local SonarQube. With the server running
+and `SONAR_TOKEN` exported:
+
+```bash
+mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.host.url=http://localhost:9001 -Dsonar.token=$SONAR_TOKEN
+```
 
 ## Running the prototype
 

@@ -69,6 +69,9 @@ a conservative static oracle critic, not as a measurement of “real coverage”
 
 ### M1a — Evidence-safe diff coverage
 
+Skeleton done (2026-08-23): Maven multi-module build on Java 17, picocli CLI,
+exit-code contract wired and tested, self-scan green. Remaining work below.
+
 - Parse one or more JaCoCo XML reports. Every report is explicitly bound to a
   module; overlapping class identities are rejected rather than counter-merged.
 - Compute overall and new-code results in `jacoco-line`, `strict-line`, and
