@@ -110,6 +110,34 @@ class AnalyzeCommandTest {
     }
 
     @Test
+    void malformedModuleOptionIsInvalidInvocationAndWritesNoJson() {
+        // Missing "id=", e.g. a user forgetting the "=" in --module id=dir.
+        Path outFile = repoRoot.resolve("verdict.json");
+
+        int exitCode = run("analyze", "--no-vcs",
+            "--repo", repoRoot.toString(),
+            "--module", "no-equals-sign-here",
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
+        assertFalse(Files.exists(outFile), "exit 2 must never write a verdict document (schema note)");
+    }
+
+    @Test
+    void unwritableOutPathIsInternalErrorNotACrash() {
+        // Parent directory does not exist and is never created for --out.
+        Path outFile = repoRoot.resolve("does/not/exist/verdict.json");
+
+        int exitCode = run("analyze", "--no-vcs",
+            "--repo", repoRoot.toString(),
+            "--report", FIXTURES.resolve("mixed-coverage.xml").toString(),
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.INTERNAL_ERROR.value(), exitCode);
+        assertTrue(err.toString().contains("could not write"), err.toString());
+    }
+
+    @Test
     void missingNoVcsFlagIsInvalidInvocation() {
         int exitCode = run("analyze", "--report", FIXTURES.resolve("mixed-coverage.xml").toString());
         assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);

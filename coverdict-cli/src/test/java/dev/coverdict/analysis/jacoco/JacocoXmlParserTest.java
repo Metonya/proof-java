@@ -83,15 +83,28 @@ class JacocoXmlParserTest {
      *       fixture that actually exercises the ENTITY_REFERENCE event check
      *       in {@link JacocoXmlParser#skipSubtree}, not just XML's own
      *       attribute-value rule.</li>
+     *   <li>{@code wrong-root-element.xml} - well-formed XML whose root is
+     *       not {@code <report>} at all.</li>
+     *   <li>{@code missing-line-attribute.xml} / {@code
+     *       non-numeric-line-attribute.xml} - a {@code <line>} missing a
+     *       required attribute, or one that isn't an integer.</li>
      * </ul>
      * Per SECURITY-POLICY.md #1, both entity cases are reclassified from the
-     * generic parse-failure code to the more specific one.
+     * generic parse-failure code to the more specific one. (Not covered here:
+     * the "no &lt;report&gt; root element found" fallback after the read
+     * loop - every well-formed XML document has exactly one root element, so
+     * that branch cannot be reached without a real parser bug; a document
+     * with zero elements fails as MALFORMED_JACOCO_XML from Xerces itself,
+     * in the outer catch, before this loop even starts.)
      */
     @ParameterizedTest
     @CsvSource({
-        "malformed.xml,    MALFORMED_JACOCO_XML",
-        "xxe.xml,           XML_ENTITY_REFERENCE_REJECTED",
-        "xxe-content.xml,   XML_ENTITY_REFERENCE_REJECTED"
+        "malformed.xml,               MALFORMED_JACOCO_XML",
+        "xxe.xml,                     XML_ENTITY_REFERENCE_REJECTED",
+        "xxe-content.xml,             XML_ENTITY_REFERENCE_REJECTED",
+        "wrong-root-element.xml,      MALFORMED_JACOCO_XML",
+        "missing-line-attribute.xml,  MALFORMED_JACOCO_XML",
+        "non-numeric-line-attribute.xml, MALFORMED_JACOCO_XML"
     })
     void rejectsBadXmlStructurallyWithoutFetchingOrExpandingEntities(String fixtureName, String expectedCode) {
         Path file = FIXTURES.resolve(fixtureName.trim());

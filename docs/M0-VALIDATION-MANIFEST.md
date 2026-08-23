@@ -52,7 +52,8 @@ recorded in the run log next to its results, since it differs per repo.
 
 ## Fixture and schema integrity
 
-`validation/SHA256SUMS` pins every rule fixture and schema/golden file.
+`validation/SHA256SUMS` pins every rule fixture, JaCoCo XML fixture, and
+schema/golden file (`fixtures/**/*.java`, `fixtures/**/*.xml`, `schema/**/*.json`).
 Verify before any labeling run:
 
 ```bash

@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Well-formed XML, but the root element is not <report> at all. -->
+<foo name="not-a-jacoco-report"/>
