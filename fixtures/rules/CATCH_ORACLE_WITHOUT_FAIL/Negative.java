@@ -5,13 +5,17 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.StringReader;
+import java.util.concurrent.atomic.AtomicReference;
 
+import com.google.common.truth.Truth;
 import org.junit.jupiter.api.Test;
 
 // expect: none method=tryWithFail
 // expect: none method=catchRethrows
 // expect: none method=tryWithResourcesNoCatch
 // expect: none method=assertThrowsIdiom
+// expect: none method=oracleAfterTry
+// expect: none method=truthOracleAfterCapturedTry
 class Negative {
 
     static class Parser {
@@ -46,5 +50,32 @@ class Negative {
     @Test
     void assertThrowsIdiom() {
         assertThrows(NumberFormatException.class, () -> new Parser().parse("x"));
+    }
+
+    @Test
+    void oracleAfterTry() {
+        // README: "Never fires on: Oracles present after the whole try statement" -
+        // the catch itself only captures, but a real oracle follows the try/catch.
+        AtomicReference<RuntimeException> captured = new AtomicReference<>();
+        try {
+            new Parser().parse("not-a-number");
+        } catch (NumberFormatException e) {
+            captured.set(e);
+        }
+        assertEquals(true, captured.get() != null);
+    }
+
+    @Test
+    void truthOracleAfterCapturedTry() {
+        // Same shape, but every oracle - inside and after the try - is a Truth
+        // call (D-31): proves the rule's own documented exemption engages once
+        // Truth is a recognized oracle, not just for JUnit/AssertJ.
+        AtomicReference<RuntimeException> captured = new AtomicReference<>();
+        try {
+            Truth.assertThat(new Parser().parse("7")).isEqualTo(7);
+        } catch (RuntimeException e) {
+            captured.set(e);
+        }
+        Truth.assertThat(captured.get()).isNull();
     }
 }

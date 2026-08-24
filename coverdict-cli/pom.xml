@@ -58,7 +58,7 @@
     <plugins>
       <plugin>
         <!-- K4: downloads the fixture-harness API jars (JUnit 4/5, AssertJ, Mockito,
-             Hamcrest) fixtures/rules/** compiles against, without declaring any of
+             Hamcrest, Truth) fixtures/rules/** compiles against, without declaring any of
              them as a project dependency - so coverdict's own oracle engine tests
              exercise the same classpath-less resolution path a real user run does,
              plus a proof of the JarTypeSolver mechanism a future classpath option will reuse. -->
@@ -90,6 +90,11 @@
                   <groupId>org.hamcrest</groupId>
                   <artifactId>hamcrest</artifactId>
                   <version>${fixture.hamcrest.version}</version>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>com.google.truth</groupId>
+                  <artifactId>truth</artifactId>
+                  <version>${fixture.truth.version}</version>
                 </artifactItem>
               </artifactItems>
               <outputDirectory>${fixture.harness.dir}</outputDirectory>

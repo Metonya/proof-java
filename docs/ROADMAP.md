@@ -220,6 +220,18 @@ criterion 6 (analyzer-only benchmark harness - none exists yet).
   57.1 MB (Windows 11 Pro 26200, JDK 17.0.17 Temurin, 5515 executable
   lines / 123 test files / 1 module).
 
+**Calibration round 2 (post-D-31 Truth fix) done (2026-08-24):** criterion 4
+now closes for the gson canary. Findings dropped from 1090 to 38 (-96.5%);
+`NO_RECOGNIZED_ORACLE` HIGH-tier precision is 94.3% (33/35), **meeting the
+≥90% bar** - kill-criteria round 2 of 2 passes, the rule stays. See D-32 and
+`validation/runs/gson/round2/precision-summary.md`. Two new, narrower gaps
+surfaced and are backlogged (not this session): the oracle-helper traversal
+only follows **private** same-file helpers, missing real oracles behind a
+public static helper two gson tests use; and JavaParser's symbol solver
+cannot resolve an overloaded call whose argument is a lambda
+(`assertThrowsStackOverflow(() -> ...)`), producing three correctly-hedged
+`INCONCLUSIVE` findings rather than a wrong verdict.
+
 Phases 2-4 and criterion-2 new-code parity (pending a Developer Edition
 SonarQube instance, or acceptance that Community Edition caps this) remain
 open.
@@ -249,7 +261,17 @@ failure.
   writes tests for gaps it names, reruns, interprets the result through
   coverdict again) · VS Code extension (inline per-line coverage gutter
   annotations, toggleable) · second build integration if not justified in M3 ·
-  non-Java languages. Each gets its own design pass at its milestone, not now.
+  non-Java languages · Truth-specific `NULL_CHECK_ONLY`/`TAUTOLOGICAL_ORACLE`
+  weak-oracle patterns (D-31 added Truth as a recognized oracle for
+  `NO_RECOGNIZED_ORACLE`/`CATCH_ORACLE_WITHOUT_FAIL` only; the other two
+  rules still only recognize JUnit/AssertJ shapes) · extend
+  `OracleRecognizer`'s helper traversal to same-compilation-unit **public
+  static** helpers, not only private ones (D-32 found two real gson false
+  positives behind this exact boundary) · investigate JavaParser
+  symbol-solver resolution of overloaded calls whose argument is a lambda
+  (D-32's `assertThrowsStackOverflow(() -> ...)` case - three correctly-
+  hedged but avoidable `INCONCLUSIVE` findings). Each gets its own design
+  pass at its milestone, not now.
 
 ## Kill and pivot criteria
 

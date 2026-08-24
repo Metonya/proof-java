@@ -235,6 +235,52 @@ is absent from the D-24 allowlist. The rule is not removed or downgraded on
 one round; the fix is scoped (extend D-24) and deferred to a future session,
 with round 2 defined as re-running this same seeded sample afterward.
 
+**D-31 · D-24 extended: Google Truth is a recognized oracle** (2026-08-24)
+D-30's calibration round 1 traced its entire false-positive population to one
+cause: Truth (`com.google.common.truth.Truth.assertThat`/`assertWithMessage`)
+absent from the allowlist. Added with the exact same chain-anchor mechanism
+already used for AssertJ (`OracleAllowlist.isChainAnchor`) - `assertThat(x).
+isEqualTo(y)` and `assertWithMessage(msg).that(x).isEqualTo(y)` both resolve
+via the existing outermost-chain-call walk, no new resolution logic needed.
+Fixture harness (`pom.xml`'s `copy-fixture-harness`) gained a
+`com.google.truth:truth:1.4.5` jar (gson's own pinned version) alongside the
+other four libraries, proving SOLVED-tier resolution the same way; gson's
+own real usage (static-imported `assertThat`) exercises the IMPORT_ANCHORED
+tier instead, already correct by construction. While touching
+`CATCH_ORACLE_WITHOUT_FAIL`'s fixtures, found and closed a real pre-existing
+gap: the rule spec's own documented exemption ("never fires on: oracle
+present after the whole try statement") had zero fixture coverage before
+this - the exact gson finding (`ConcurrencyTest`) that motivated this entry
+was that exemption failing to engage only because Truth was invisible.
+**Not done here, intentionally:** extending `NULL_CHECK_ONLY`/
+`TAUTOLOGICAL_ORACLE` with Truth-specific weak-oracle patterns (e.g.
+`assertThat(x).isNotNull()`) - round 1's findings never touched those two
+rules, so this is new scope needing its own spec text and fixtures, not a
+fix for anything broken; left as a ROADMAP backlog line.
+
+**D-32 · Calibration round 2 (post-D-31) passes; two new, narrower gaps
+found and deferred** (2026-08-24)
+Re-running D-30's gson canary after D-31: findings dropped from 1090 to 38
+(-96.5%); all 38 reviewed (population under the 100-per-rule cap).
+`NO_RECOGNIZED_ORACLE` HIGH-tier precision is 94.3% (33/35) - **meets the
+≥90% bar, kill criteria round 2 of 2 closes with a pass.** Two new false
+positives (not the Truth gap) trace to `OracleRecognizer`'s helper
+traversal only following **private** same-compilation-unit helpers, not
+public static ones (`DefaultTypeAdaptersTest`/`SqlTypesGsonTest`'s
+`assertEqualsDate`/`testNullSerializationAndDeserialization` 2-arg
+overloads). Three `CircularReferenceTest` findings are `INCONCLUSIVE`
+because JavaParser's symbol solver cannot resolve an overloaded call whose
+argument is a lambda (`assertThrowsStackOverflow(() -> ...)`) - the engine
+correctly hedges rather than claiming a false HIGH (D-17), so this is
+correct behavior under genuine uncertainty, not a wrong verdict. Both gaps
+are real and distinct from D-31's fix; neither is implemented this session
+- backlogged in ROADMAP.md as their own follow-up items. Round 1 also
+had one of its own hand-labels corrected: `PerformanceTest#
+testStringDeserialization`'s confirmed true positive turned out to be a
+labeling error (the labeler missed that its private helper already
+contained real Truth assertions) - noted for the record in
+`validation/runs/gson/round2/precision-summary.md`, not silently rewritten.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

@@ -46,6 +46,7 @@
     <fixture.assertj.version>3.26.3</fixture.assertj.version>
     <fixture.mockito.version>5.14.2</fixture.mockito.version>
     <fixture.hamcrest.version>2.2</fixture.hamcrest.version>
+    <fixture.truth.version>1.4.5</fixture.truth.version>
     <dependency.plugin.version>3.8.1</dependency.plugin.version>
 
     <!-- coverdict scans itself with a local SonarQube; host URL and token stay

@@ -87,7 +87,8 @@ class OracleRuleEngineFixturesTest {
                 new JarTypeSolver(HARNESS_DIR.resolve("junit.jar")),
                 new JarTypeSolver(HARNESS_DIR.resolve("assertj-core.jar")),
                 new JarTypeSolver(HARNESS_DIR.resolve("mockito-core.jar")),
-                new JarTypeSolver(HARNESS_DIR.resolve("hamcrest.jar")));
+                new JarTypeSolver(HARNESS_DIR.resolve("hamcrest.jar")),
+                new JarTypeSolver(HARNESS_DIR.resolve("truth.jar")));
         } catch (IOException e) {
             throw new IllegalStateException("fixture-harness jars missing - run 'mvn generate-test-resources' first", e);
         }

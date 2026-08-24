@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import com.google.common.truth.Truth;
 import org.junit.jupiter.api.Test;
 
 // expect: none method=junit5Assertion
@@ -14,6 +15,8 @@ import org.junit.jupiter.api.Test;
 // expect: none method=mockitoVerify
 // expect: none method=expectedException
 // expect: none method=oracleInPrivateHelper
+// expect: none method=truthChain
+// expect: none method=truthChainInPrivateHelper
 class Negative {
 
     static class Calc {
@@ -57,5 +60,19 @@ class Negative {
 
     private void checkSum(Calc calc, int a, int b, int expected) {
         assertEquals(expected, calc.add(a, b));
+    }
+
+    @Test
+    void truthChain() {
+        Truth.assertThat(new Calc().add(2, 2)).isEqualTo(4);
+    }
+
+    @Test
+    void truthChainInPrivateHelper() {
+        roundTrip(new Calc(), 3, 3, 6);
+    }
+
+    private void roundTrip(Calc calc, int a, int b, int expected) {
+        Truth.assertWithMessage("sum").that(calc.add(a, b)).isEqualTo(expected);
     }
 }

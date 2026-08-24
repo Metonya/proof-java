@@ -19,10 +19,11 @@ final class OracleAllowlist {
     static final String MOCKITO = "org.mockito.Mockito";
     static final String MOCKITO_IN_ORDER = "org.mockito.InOrder";
     static final String MOCKITO_BDD = "org.mockito.BDDMockito";
+    static final String TRUTH = "com.google.common.truth.Truth";
 
     static final Set<String> ALL_TYPES = Set.of(
         JUNIT5_ASSERTIONS, JUNIT4_ASSERT, ASSERTJ_ASSERTIONS,
-        HAMCREST_MATCHER_ASSERT, MOCKITO, MOCKITO_IN_ORDER, MOCKITO_BDD);
+        HAMCREST_MATCHER_ASSERT, MOCKITO, MOCKITO_IN_ORDER, MOCKITO_BDD, TRUTH);
 
     private static final String VERIFY = "verify";
 
@@ -62,7 +63,11 @@ final class OracleAllowlist {
             return "assertThat".equals(methodName) || "assertThatThrownBy".equals(methodName)
                 || "assertThatCode".equals(methodName) || "assertThatExceptionOfType".equals(methodName);
         }
-        return MOCKITO_BDD.equals(declaringTypeFqn) && "then".equals(methodName);
+        if (MOCKITO_BDD.equals(declaringTypeFqn)) {
+            return "then".equals(methodName);
+        }
+        return TRUTH.equals(declaringTypeFqn)
+            && ("assertThat".equals(methodName) || "assertWithMessage".equals(methodName));
     }
 
     static boolean isOracleSuggestiveName(String methodName) {
