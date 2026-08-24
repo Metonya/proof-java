@@ -27,4 +27,33 @@ public final class RepoPaths {
     public static String normalizeSeparators(String path) {
         return path.replace('\\', '/');
     }
+
+    /**
+     * Pure string-segment check (SECURITY-POLICY.md #4, M1c criterion 7): true
+     * when a forward-slash-normalized path is absolute, or resolves outside
+     * the repo root once {@code .}/{@code ..} segments are collapsed. Never
+     * touches the filesystem - this must reject a JaCoCo {@code <package
+     * name="../../../../etc">} value before it is ever joined with a source
+     * root and handed to {@link java.nio.file.Path#resolve}.
+     */
+    public static boolean isEscapingRepoRoot(String normalizedPath) {
+        if (normalizedPath.startsWith("/") || normalizedPath.matches("^[A-Za-z]:.*")) {
+            return true;
+        }
+        int depth = 0;
+        for (String segment : normalizedPath.split("/")) {
+            if (segment.isEmpty() || segment.equals(".")) {
+                continue;
+            }
+            if (segment.equals("..")) {
+                depth--;
+                if (depth < 0) {
+                    return true;
+                }
+            } else {
+                depth++;
+            }
+        }
+        return false;
+    }
 }

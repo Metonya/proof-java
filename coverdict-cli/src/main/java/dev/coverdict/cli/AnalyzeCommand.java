@@ -96,10 +96,10 @@ class AnalyzeCommand implements Callable<Integer> {
     @Option(names = "--test-roots", description = "Repeatable <id>=<dir>[,<dir>...]. Default per module: <root>/src/test/java.")
     private List<String> testRootsArgs = new ArrayList<>();
 
-    @Option(names = "--language-level", defaultValue = "17", description = "Recorded as provenance; nothing in this build parses source syntax yet.")
+    @Option(names = "--language-level", defaultValue = "17", description = "Java language level for JavaParser (oracle critic) and recorded as provenance.")
     private int languageLevel;
 
-    @Option(names = "--encoding", defaultValue = "UTF-8", description = "Recorded as provenance; nothing in this build reads source files yet.")
+    @Option(names = "--encoding", defaultValue = "UTF-8", description = "Charset used to read test sources for the oracle critic, and recorded as provenance.")
     private String encoding;
 
     @Option(names = "--coverage-exclusions", description = "Comma-separated sonar.coverage.exclusions globs, one list for the whole run (D-05).")
@@ -351,7 +351,15 @@ class AnalyzeCommand implements Callable<Integer> {
             if (eq < 0) {
                 throw new CliUsageException("Expected <id>=<value>, got: " + arg);
             }
-            result.put(arg.substring(0, eq), arg.substring(eq + 1));
+            String id = arg.substring(0, eq);
+            // hard rule 3a: a repeated id here is ambiguous (which value wins?),
+            // not a guessed "last one wins" default. --report is exempt - it has
+            // its own parser (parseReportArgs) and repeating a module id there
+            // is the legitimate "multiple reports per module" case.
+            if (result.containsKey(id)) {
+                throw new CliUsageException("Duplicate id '" + id + "' - each id may be declared at most once for this option.");
+            }
+            result.put(id, arg.substring(eq + 1));
         }
         return result;
     }

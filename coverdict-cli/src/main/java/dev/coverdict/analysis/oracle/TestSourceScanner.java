@@ -49,12 +49,29 @@ public final class TestSourceScanner {
         if (!Files.isDirectory(dir)) {
             return;
         }
+        Path realRepoRoot = realPathOrNull(repoRoot);
         for (Path absolute : listJavaFiles(dir)) {
+            // Files.walk does not follow directory symlinks, but a regular
+            // file itself can be a symlink pointing outside the repo -
+            // resolve and check before it is ever parsed (SECURITY-POLICY.md
+            // #4, M1c criterion 7).
+            Path real = realPathOrNull(absolute);
+            if (realRepoRoot != null && real != null && !real.startsWith(realRepoRoot)) {
+                continue;
+            }
             String relative = RepoPaths.normalizeSeparators(repoRoot.relativize(absolute).toString());
             boolean inScope = changedPathsOrNull == null || changedPathsOrNull.contains(relative);
             if (inScope && seen.add(module.id() + " " + relative)) {
                 found.add(new TestSourceFile(module.id(), relative, absolute));
             }
+        }
+    }
+
+    private static Path realPathOrNull(Path path) {
+        try {
+            return path.toRealPath();
+        } catch (IOException e) {
+            return null;
         }
     }
 

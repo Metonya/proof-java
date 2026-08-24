@@ -1,13 +1,17 @@
 package dev.coverdict.analysis.jacoco;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -23,6 +27,9 @@ class JacocoXmlParserTest {
     private static final Path FIXTURES = Path.of("../fixtures/jacoco");
 
     private final JacocoXmlParser parser = new JacocoXmlParser();
+
+    @TempDir
+    Path tempDir;
 
     @Test
     void parsesMixedCoverageFixtureWithAllThreeMetricsDistinguishable() {
@@ -119,6 +126,65 @@ class JacocoXmlParserTest {
         assertEquals("com/exämple/wëird pkg", file.packageName());
         assertEquals("Ünïcödé File.java", file.fileName());
         assertEquals(2, file.lines().size());
+    }
+
+    @Test
+    void crlfLineEndingsParseTheSameAsLf() throws IOException {
+        // Built in-memory rather than as a checked-in fixture: .gitattributes
+        // normalizes everything under fixtures/** to LF on commit (D-22), so
+        // a checked-in CRLF file would lose the very line endings this test
+        // exists to exercise (M1c criterion 7).
+        String lfText = Files.readString(FIXTURES.resolve("mixed-coverage.xml"));
+        String crlfText = lfText.replace("\n", "\r\n");
+        Path crlfFile = tempDir.resolve("mixed-coverage-crlf.xml");
+        Files.writeString(crlfFile, crlfText);
+
+        JacocoReport lfReport = parser.parse(FIXTURES.resolve("mixed-coverage.xml"));
+        JacocoReport crlfReport = parser.parse(crlfFile);
+
+        assertEquals(lfReport.totalLineMissed(), crlfReport.totalLineMissed());
+        assertEquals(lfReport.totalLineCovered(), crlfReport.totalLineCovered());
+        assertEquals(lfReport.sourceFiles().get(0).lines(), crlfReport.sourceFiles().get(0).lines());
+    }
+
+    @Test
+    void anXxeAttemptNeverReadsTheTargetFileItPointsAt() throws IOException {
+        // Proof, not just a code assertion: build a marker file with unique
+        // content at test time, point an entity at it, and confirm the
+        // marker never surfaces anywhere in the failure - not just that
+        // some AnalysisException was thrown (SECURITY-POLICY.md #1: "never a
+        // file read, never a network attempt").
+        String marker = "COVERDICT-XXE-CANARY-4f9d2b";
+        Path secretFile = tempDir.resolve("secret.txt");
+        Files.writeString(secretFile, marker);
+        String secretUri = secretFile.toUri().toString();
+
+        Path xmlFile = tempDir.resolve("xxe-live.xml");
+        Files.writeString(xmlFile, String.join("\n",
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>",
+            "<!DOCTYPE report [",
+            "  <!ENTITY xxe SYSTEM \"" + secretUri + "\">",
+            "]>",
+            "<report name=\"ok\">",
+            "  <injected>&xxe;</injected>",
+            "  <package name=\"com/example\"/>",
+            "</report>",
+            ""));
+
+        AnalysisException e = assertThrows(AnalysisException.class, () -> parser.parse(xmlFile));
+
+        assertEquals("XML_ENTITY_REFERENCE_REJECTED", e.code());
+        assertFalse(e.getMessage().contains(marker), e.getMessage());
+    }
+
+    @Test
+    void rejectsAReportLargerThanTheConfiguredByteCap() {
+        // A real 256 MB fixture is unwritable in a test; inject a cap small
+        // enough that this repo's own real fixture trips it (SECURITY-POLICY.md #2).
+        JacocoXmlParser cappedParser = new JacocoXmlParser(100);
+        Path file = FIXTURES.resolve("mixed-coverage.xml");
+        AnalysisException e = assertThrows(AnalysisException.class, () -> cappedParser.parse(file));
+        assertEquals("REPORT_TOO_LARGE", e.code());
     }
 
     @Test

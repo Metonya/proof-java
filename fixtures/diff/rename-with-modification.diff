@@ -1,0 +1,10 @@
+diff --git a/src/main/java/com/example/Old.java b/src/main/java/com/example/Renamed.java
+similarity index 86%
+rename from src/main/java/com/example/Old.java
+rename to src/main/java/com/example/Renamed.java
+index 7dc407d..6ee32fb 100644
+--- a/src/main/java/com/example/Old.java
++++ b/src/main/java/com/example/Renamed.java
+@@ -6 +6 @@ public class Old {
+-    int c = 3;
++    int c = 30;

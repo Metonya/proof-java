@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!DOCTYPE report PUBLIC "-//JACOCO//DTD Report 1.1//EN" "report.dtd">
+<!--
+  SECURITY-POLICY.md #4 / M1c criterion 7: a <package name> that walks
+  outside the repo root once joined with a source root and a sourcefile
+  name. Structurally well-formed, valid JaCoCo XML - the attack is in the
+  attribute value, not the XML syntax.
+-->
+<report name="path-escape-fixture">
+  <package name="../../../../etc">
+    <sourcefile name="passwd">
+      <line nr="1" mi="0" ci="1" mb="0" cb="0"/>
+      <counter type="INSTRUCTION" missed="0" covered="1"/>
+      <counter type="LINE" missed="0" covered="1"/>
+      <counter type="BRANCH" missed="0" covered="0"/>
+      <counter type="METHOD" missed="0" covered="1"/>
+      <counter type="CLASS" missed="0" covered="1"/>
+    </sourcefile>
+    <counter type="INSTRUCTION" missed="0" covered="1"/>
+    <counter type="LINE" missed="0" covered="1"/>
+    <counter type="BRANCH" missed="0" covered="0"/>
+    <counter type="METHOD" missed="0" covered="1"/>
+    <counter type="CLASS" missed="0" covered="1"/>
+  </package>
+  <counter type="INSTRUCTION" missed="0" covered="1"/>
+  <counter type="LINE" missed="0" covered="1"/>
+  <counter type="BRANCH" missed="0" covered="0"/>
+  <counter type="METHOD" missed="0" covered="1"/>
+  <counter type="CLASS" missed="0" covered="1"/>
+</report>

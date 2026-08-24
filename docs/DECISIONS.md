@@ -182,6 +182,33 @@ case conversion, and this project's own dev machine (Turkish default locale)
 corrupts `"INT".toLowerCase()`, silently degrading confidence; forced
 `Locale.ROOT` once per process (`OracleRuleEngine`'s static initializer).
 
+**D-29 · M1c-1 hardening: three security-policy gaps closed, duplicate-id
+rejection, findings-cap semantics, two-tier goldens** (2026-08-24)
+SECURITY-POLICY.md §6 ("a clause without a failing-input test is treated as
+unimplemented") cuts both ways: `REPORT_TOO_LARGE` (§2, a report over 256 MB
+rejected via `Files.size` before the file is opened for streaming),
+`PATH_ESCAPES_REPO_ROOT` (§4, a pure string check on a JaCoCo `<package
+name>`/`<sourcefile name>` value before it is ever joined with a source root
+and resolved), and terminal control-character escaping (§4, `TextRenderer`)
+were spec'd but unimplemented; all three are now real, each behind a
+negative test. A repeated `--module`/`--source-roots`/`--test-roots` id is
+now `CliUsageException` (exit 2) rather than "last one silently wins" - hard
+rule 3a applied to the CLI parser itself; `--report` is exempt, since
+repeating a module id there is the legitimate multi-report-per-module case.
+`OracleRuleEngine`'s findings cap is checked per file, not per finding: a
+truncated run's file results are always whole, never split mid-file, at the
+cost of the total count possibly exceeding the cap slightly - documented as
+intentional, not a bug. M1c criterion 1 gets a second golden layer alongside
+the M0 hand-written `schema/examples/`: two files under `fixtures/verdicts/`
+are real CLI output from a synthetic in-repo fixture, compared byte-for-byte,
+with a checked-in `${tool.version}` placeholder substituted at comparison
+time (the only non-analytic field). Git commit SHA determinism for the
+base-ref golden was verified empirically (fixed `GIT_AUTHOR_DATE`/
+`GIT_COMMITTER_DATE`/identity reproduces the identical SHA across separate
+directories and repeated runs on this machine) before committing to it - the
+plan's documented fallback (restrict checked-in goldens to `--no-vcs`, prove
+diff modes only via two-run byte equality) was not needed.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

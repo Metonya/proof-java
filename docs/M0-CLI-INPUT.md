@@ -21,9 +21,9 @@ rationale (suppressions) carry an explicit `reason` field instead.
 
 ## Repository and diff modes
 
-- `--repo <path>` — repository root. Default: the enclosing git worktree root
-  of the current directory; if that discovery fails and `--repo` is absent,
-  exit 2.
+- `--repo <path>` — repository root. Default: the current working directory
+  (implemented as-is; no git-worktree-root autodiscovery in v0.1 - a repo
+  outside the working directory always needs an explicit `--repo`).
 - Exactly one diff mode is required; supplying none or several is exit 2.
   No implicit default — an agent must state what "new code" means for the run.
   - `--base <ref>` — **base-ref mode.** Changed lines = diff from
@@ -38,6 +38,12 @@ rationale (suppressions) carry an explicit `reason` field instead.
     `unavailable_no_vcs`, never computed from a guess (hard rule 3a).
 - Unresolvable ref, missing merge-base (shallow history), or git failure:
   exit 3 with a structured incomplete result naming the failing prerequisite.
+- `--findings-scope all|changed` — which test sources the oracle critic scans
+  (D-28); default `all`. `changed` requires a diff mode (`--base` or
+  `--uncommitted`) — rejected under `--no-vcs`, exit 2, since "changed" is
+  undefined without a diff. Always recorded in `inputs.findingsScope` so an
+  empty `findings` array is never ambiguous between "nothing wrong" and
+  "nothing scanned".
 
 ## Reports and module binding (D-16)
 
@@ -61,11 +67,16 @@ rationale (suppressions) carry an explicit `reason` field instead.
   Default: `<module-root>/src/main/java`.
 - `--test-roots <id>=<dir>[,<dir>...]` — test source roots per module.
   Default: `<module-root>/src/test/java`.
-- `--language-level <n>` global, or `<id>=<n>` per module. Default: `17`,
-  stated in the output. Parse failures at the configured level classify the
-  file `unsupported`, never crash the run (hard rule 2a).
-- `--encoding <charset>` — source file encoding, default `UTF-8` (explicitly,
-  never the platform default; this machine's Cp1254 is exactly the trap).
+- `--language-level <n>` — global only in v0.1 (the documented per-module
+  `<id>=<n>` form is not implemented). Default: `17`, stated in the output
+  and used by the oracle critic's JavaParser configuration. A test source
+  that fails to parse at this level is skipped with a structured
+  `UNPARSEABLE_TEST_SOURCE` reason; the run continues (hard rule 2a). For
+  the coverage side, `changedFiles[].classification=unsupported` is a
+  separate, name-based classification (Kotlin/Scala/etc.), not this parser.
+- `--encoding <charset>` — charset used to read test sources for the oracle
+  critic, default `UTF-8` (explicitly, never the platform default; this
+  machine's Cp1254 is exactly the trap).
 - `--classpath <id>=<file>` — optional file listing jars (one path per line)
   for JavaParser symbol solving. Absent or partial classpath degrades oracle
   findings to at most MEDIUM/INCONCLUSIVE (D-17); it never silently upgrades.

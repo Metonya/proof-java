@@ -61,6 +61,18 @@ class UnifiedDiffParserTest {
     }
 
     @Test
+    void renameWithModificationAttributesTheNewLinesToTheNewPathOnly() throws IOException {
+        // Distinct from pure-rename-no-changes.diff (100% similarity, no
+        // hunk): a rename below 100% similarity carries both a "rename
+        // from/to" pair and a real hunk, and new-code lines must land on the
+        // new path, never the old one (M1c criterion 7).
+        Map<String, SortedSet<Integer>> result = parse("rename-with-modification.diff");
+        assertEquals(Set.of(6), result.get("src/main/java/com/example/Renamed.java"));
+        assertFalse(result.containsKey("src/main/java/com/example/Old.java"));
+        assertEquals(1, result.size());
+    }
+
+    @Test
     void noCommaSingleLineHunkIsOneLine() throws IOException {
         Map<String, SortedSet<Integer>> result = parse("no-comma-single-line-hunk.diff");
         assertEquals(Set.of(3), result.get("src/main/java/com/example/One.java"));

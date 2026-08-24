@@ -107,6 +107,19 @@ class ModuleBinderTest {
     }
 
     @Test
+    void rejectsAPackagePathThatEscapesTheRepoRoot() {
+        ModuleDefinition demo = new ModuleDefinition("demo", ".", List.of("src"), List.of());
+        JacocoReport report = parser.parse(FIXTURES.resolve("path-escape.xml"));
+
+        ModuleBinder binder = new ModuleBinder(repoRoot);
+        List<ModuleDefinition> modules = List.of(demo);
+        Map<String, List<JacocoReport>> reportsByModuleId = Map.of("demo", List.of(report));
+        AnalysisException e = assertThrows(AnalysisException.class, () -> binder.bind(modules, reportsByModuleId));
+
+        assertEquals("PATH_ESCAPES_REPO_ROOT", e.code());
+    }
+
+    @Test
     void preservesUnicodeAndSpacesWhenJoiningSourceRootAndPackagePath() {
         ModuleDefinition demo = new ModuleDefinition("demo", ".", List.of("src"), List.of());
         JacocoReport report = parser.parse(FIXTURES.resolve("unicode-and-spaces.xml"));
@@ -115,6 +128,22 @@ class ModuleBinderTest {
             .bind(List.of(demo), Map.of("demo", List.of(report)));
 
         assertEquals("src/com/exämple/wëird pkg/Ünïcödé File.java", result.resolvedFiles().get(0).repoRelativePath());
+    }
+
+    @Test
+    void unicodeAndSpacePathResolvesToARealOnDiskFileNotJustTheFoundOnDiskFalseBranch() throws IOException {
+        // The test above never writes the file, so it only proves the
+        // foundOnDisk=false path handles Unicode/spaces correctly. This is
+        // the actual on-disk round trip (M1c criterion 7).
+        createFile(repoRoot.resolve("src/com/exämple/wëird pkg/Ünïcödé File.java"));
+        ModuleDefinition demo = new ModuleDefinition("demo", ".", List.of("src"), List.of());
+        JacocoReport report = parser.parse(FIXTURES.resolve("unicode-and-spaces.xml"));
+
+        BindingResult result = new ModuleBinder(repoRoot)
+            .bind(List.of(demo), Map.of("demo", List.of(report)));
+
+        assertTrue(result.resolvedFiles().get(0).foundOnDisk());
+        assertTrue(result.warnings().isEmpty(), result.warnings().toString());
     }
 
     private static void createFile(Path path) throws IOException {

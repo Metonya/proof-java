@@ -64,6 +64,20 @@ sha256sum -c validation/SHA256SUMS
 Fixtures and schema files are stored LF-normalized via `.gitattributes`, so
 these hashes hold identically on Windows, macOS, and Linux (D-22).
 
+`validation/SHA256SUMS` also pins `fixtures/verdicts/*.json` (M1c-1, D-29):
+real tool OUTPUT, not hand-authored, byte-compared against a fresh CLI run
+over a synthetic in-repo fixture repo by `VerdictGoldenTest`. Regenerate
+after a deliberate, reviewed output-format change:
+
+```bash
+mvn -q -pl coverdict-cli -am test -Dtest=VerdictGoldenTest -Dcoverdict.regenerateGoldens=true
+```
+
+Then hand-edit each regenerated file to replace its literal `tool.version`
+value with the placeholder `${tool.version}` before committing (the test
+substitutes it back in at comparison time), and regenerate
+`validation/SHA256SUMS`.
+
 ## Labeling protocol (M1c criterion 4)
 
 - Scope: per repo **and** per rule. Review all findings up to 100; above

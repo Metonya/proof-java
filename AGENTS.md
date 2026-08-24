@@ -106,8 +106,15 @@ parallel-coverage position, which now lives only in the raw reports.
 - Keep docs short enough to load into an AI context without waste. If a doc
   grows past ~150 lines, split or prune it.
 - Code, docs, and commit messages are in English. Conversation with the
-  maintainer is in Turkish. Established software-engineering terms are never
-  translated (pipeline, coverage, mutation testing, verdict, oracle...).
+  maintainer is ALWAYS in Turkish — every chat reply, every status update,
+  every summary, with no exceptions and no drifting into English mid-session
+  regardless of how long the session runs or what language surrounding text
+  (code, docs, tool output) is in. Established software-engineering terms are
+  never translated (pipeline, coverage, mutation testing, verdict, oracle...).
+- When work is done and verified (tests pass, build green) and the user's
+  instruction implied or stated they're OK with committing, actually run the
+  commit — do not just report completion and stop short of it. If unsure
+  whether a commit was wanted, ask, but do not silently skip it.
 
 ## Repository layout
 

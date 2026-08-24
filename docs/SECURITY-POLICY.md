@@ -21,8 +21,10 @@ hang unboundedly, or inject content into coverdict's own output.
 
 ## 2. Resource limits
 
-- Report size cap: 256 MB per XML file by default, configurable; exceeding it
-  is a structured failure, not silent truncation.
+- Report size cap: 256 MB per XML file by default; exceeding it is a
+  structured failure (`REPORT_TOO_LARGE`), not silent truncation.
+  Configurable only via the `JacocoXmlParser` constructor today — there is no
+  `--config`/CLI surface for it yet (M0-CLI-INPUT.md).
 - Findings cap: 10,000 findings per run; beyond that, analysis stops with an
   explicit truncation warning in the JSON (`status` reflects it) — a capped
   run is never presented as a complete clean run.
@@ -43,8 +45,12 @@ hang unboundedly, or inject content into coverdict's own output.
 
 - All reported paths are normalized repo-relative with forward slashes.
 - Report-to-source mapping rejects any resolved path escaping the repository
-  root (`..`, absolute injection, symlink escape) as unmapped — which is a
-  structured incomplete result per hard rule 3a, never a silent drop.
+  root: a JaCoCo `<package name>`/`<sourcefile name>` combination that walks
+  outside the repo root (`..`, absolute injection) is a structured failure
+  (`PATH_ESCAPES_REPO_ROOT`, a pure string check before any filesystem
+  access), and a test-root file that is itself a symlink resolving outside
+  the repo root is silently excluded from the scan (`TestSourceScanner`) -
+  never a silent drop into a coverage number or a followed read (M1c-1, D-29).
 - JSON output is produced only by a serializer, never string concatenation.
 - Terminal output escapes control characters from any input-derived string
   (file names, module ids), preventing terminal escape-sequence injection.
@@ -60,3 +66,18 @@ hang unboundedly, or inject content into coverdict's own output.
 
 Every clause above maps to at least one automated negative test in M1c
 criterion 7; a clause without a failing-input test is treated as unimplemented.
+
+| Clause | Test |
+|---|---|
+| §1 entity reference rejected, no fetch/expansion | `JacocoXmlParserTest.rejectsBadXmlStructurallyWithoutFetchingOrExpandingEntities` (xxe.xml, xxe-content.xml rows) |
+| §1 no file read, no network attempt | `JacocoXmlParserTest.anXxeAttemptNeverReadsTheTargetFileItPointsAt` |
+| §1 DOCTYPE tolerated but not processed | `JacocoXmlParserTest.parsesMixedCoverageFixtureWithAllThreeMetricsDistinguishable` (fixture carries a real JaCoCo DOCTYPE) |
+| §2 report size cap | `JacocoXmlParserTest.rejectsAReportLargerThanTheConfiguredByteCap` |
+| §2 findings cap, explicit truncation warning | `OracleRuleEngineTest.findingsCapStopsAtAFileBoundaryAndRecordsTruncation` |
+| §2 streaming, no unbounded DOM | enforced by construction (StAX `XMLStreamReader` in `JacocoXmlParser`); no dedicated negative test, since there is no in-memory-size assertion to make |
+| §3 subprocess timeout is a structured failure | `GitClientTest.aTimeoutTooShortToCompleteIsAGitTimeoutNotAHang` |
+| §3 argv array, no shell | enforced by construction (`ProcessBuilder` with a `List<String>` command, no `cmd.exe`/`sh -c` anywhere in `GitClient`); no dedicated negative test |
+| §4 path-escape rejection (`..`, absolute, symlink) | `ModuleBinderTest.rejectsAPackagePathThatEscapesTheRepoRoot`, `TestSourceScannerTest.aSymlinkedTestFileEscapingTheRepoRootIsNotScanned`, `RepoPathsTest.isEscapingRepoRootDetects*` |
+| §4 JSON via serializer only | enforced by construction (`VerdictJsonWriter` uses Jackson's streaming `JsonGenerator` exclusively) |
+| §4 terminal control-character escaping | `TextRendererTest.controlCharactersInAFindingPathAndMessageAreEscapedNotRenderedRaw`, `TextRendererTest.controlCharactersInAnIncompleteReasonAreEscaped` |
+| §5 no network calls | enforced by construction (no HTTP/socket client anywhere in the dependency graph); no dedicated negative test - there is no network call to fail |

@@ -91,6 +91,15 @@ public final class ModuleBinder {
     }
 
     private ResolvedPath resolvePath(ModuleDefinition module, String packageQualifiedPath) {
+        // packageQualifiedPath comes from the JaCoCo XML's own <package name>
+        // attribute - attacker-controlled input, not a CLI argument. Reject
+        // before it is ever joined with a source root and handed to
+        // Path#resolve (SECURITY-POLICY.md #4, M1c criterion 7).
+        if (RepoPaths.isEscapingRepoRoot(RepoPaths.normalizeSeparators(packageQualifiedPath))) {
+            throw new AnalysisException("PATH_ESCAPES_REPO_ROOT",
+                "JaCoCo report path '" + packageQualifiedPath + "' in module '" + module.id()
+                    + "' escapes the repository root and was rejected.");
+        }
         List<String> sourceRoots = module.sourceRoots().isEmpty() ? List.of(module.root()) : module.sourceRoots();
         for (String sourceRoot : sourceRoots) {
             String candidate = RepoPaths.join(sourceRoot, packageQualifiedPath);

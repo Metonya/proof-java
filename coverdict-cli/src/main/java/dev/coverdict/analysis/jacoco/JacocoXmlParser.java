@@ -28,10 +28,40 @@ import dev.coverdict.analysis.AnalysisException;
  * DOCTYPE syntax be accepted) but never processed - external entities and
  * the external DTD subset are never fetched, and any entity reference
  * encountered in content is a structured failure, not a silent pass-through.
+ *
+ * <p>SECURITY-POLICY.md #2: a report larger than {@link #maxReportBytes} is
+ * rejected before the file is opened for streaming - {@code Files.size} costs
+ * one stat call, far cheaper than starting a StAX parse only to fail deep
+ * inside an attacker-sized document. Configurable only via the constructor
+ * (no {@code --config} surface yet - see M0-CLI-INPUT.md).
  */
 public final class JacocoXmlParser {
 
+    private static final long DEFAULT_MAX_REPORT_BYTES = 256L * 1024 * 1024;
+
+    private final long maxReportBytes;
+
+    public JacocoXmlParser() {
+        this(DEFAULT_MAX_REPORT_BYTES);
+    }
+
+    /** @param maxReportBytes test-only hook to exercise the cap without writing an attacker-sized fixture. */
+    JacocoXmlParser(long maxReportBytes) {
+        this.maxReportBytes = maxReportBytes;
+    }
+
     public JacocoReport parse(Path xmlFile) {
+        try {
+            long size = Files.size(xmlFile);
+            if (size > maxReportBytes) {
+                throw new AnalysisException("REPORT_TOO_LARGE",
+                    "JaCoCo report " + xmlFile + " is " + size + " bytes, exceeding the " + maxReportBytes
+                        + "-byte limit (SECURITY-POLICY.md #2).");
+            }
+        } catch (IOException e) {
+            throw new AnalysisException("UNREADABLE_REPORT",
+                "Could not read JaCoCo report " + xmlFile + ": " + e.getMessage(), e);
+        }
         try (InputStream in = Files.newInputStream(xmlFile)) {
             return parse(in, xmlFile.toString());
         } catch (IOException e) {

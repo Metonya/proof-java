@@ -162,6 +162,34 @@ M1 is done when all of these hold on the pinned M0 corpus:
    rename, missing merge base, unsupported Java syntax, and Windows/POSIX path
    normalization have automated negative tests and structured failures.
 
+**M1c-1 (repo-internal hardening: criteria 1 and 7) done (2026-08-24):**
+Everything network-free and corpus-free in M1c is closed. Criterion 1:
+`schema/examples/` stays the hand-written M0 contract layer; a second,
+tool-OUTPUT layer (`fixtures/verdicts/no-vcs.json`, `base-ref.json`) is
+compared byte-for-byte against a fresh CLI run every test invocation
+(`VerdictGoldenTest`), and the existing diff-mode two-run test now compares
+bytes, not strings. Criterion 7: closed every negative-test gap the M1b-era
+suite had - `UNPARSEABLE_TEST_SOURCE` (previously untested), the findings cap
+and its file-boundary truncation semantics, a rename with real content
+modification (previously only 100%-similarity pure renames were tested),
+`MISSING_MERGE_BASE` end to end through the CLI (previously unit-level only),
+an XXE fixture proven not to read its target file's real content, Unicode/
+space paths proven end to end with the file really on disk (previously only
+the not-found branch), CRLF line endings in both JaCoCo XML and Java test
+sources, and a Windows-backslash `--report` argument proven to normalize to
+forward slashes in the JSON. SECURITY-POLICY.md §6 also went the other
+direction: three spec'd-but-unimplemented clauses (256 MB report size cap,
+repo-root path-escape rejection, terminal control-character escaping) are
+now real, each behind the negative test §6's table names. A repeated
+`--module`/`--source-roots`/`--test-roots` id is now a rejected invocation
+(hard rule 3a) instead of a silent last-one-wins. See D-29.
+
+Still open, all requiring the pinned M1c validation corpus
+(`docs/M0-VALIDATION-MANIFEST.md`) and therefore separate steps: criterion 2
+(`sonar-compatible` parity against the real SonarQube UI), criterion 4
+(rule precision labeling), criterion 5 (the four real-repo phases), and
+criterion 6 (analyzer-only benchmark harness - none exists yet).
+
 M1 exit codes: `0` complete analysis regardless of findings; `1` reserved for
 the M3 finding-based quality gate and never emitted by v0.1; `2` invalid
 invocation/input; `3` incomplete or unverified-required evidence; `4` internal

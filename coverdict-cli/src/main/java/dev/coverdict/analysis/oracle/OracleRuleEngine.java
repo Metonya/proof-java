@@ -61,6 +61,22 @@ public final class OracleRuleEngine {
     /** @param extraTypeSolvers test-only hook (fixture harness jars, K4) - never populated in production. */
     static OracleScanResult scan(Path repoRoot, List<ModuleDefinition> modules, int languageLevel, String encoding,
                                   Set<String> changedPathsOrNull, List<TypeSolver> extraTypeSolvers) {
+        return scan(repoRoot, modules, languageLevel, encoding, changedPathsOrNull, extraTypeSolvers, FINDINGS_CAP);
+    }
+
+    /**
+     * @param findingsCap test-only hook to exercise SECURITY-POLICY.md #2's
+     *                     truncation without a 10,000-method fixture. The cap
+     *                     is checked before each FILE, not each finding - a
+     *                     file's findings are never split across the
+     *                     boundary, so the output stays explainable (a file's
+     *                     result is whole or absent, never partial) at the
+     *                     cost of the total findings count in a truncated run
+     *                     possibly exceeding the cap slightly. This is
+     *                     intentional, not a bug (M1c-1 D-29).
+     */
+    static OracleScanResult scan(Path repoRoot, List<ModuleDefinition> modules, int languageLevel, String encoding,
+                                  Set<String> changedPathsOrNull, List<TypeSolver> extraTypeSolvers, int findingsCap) {
         List<TestSourceFile> files = TestSourceScanner.scan(repoRoot, modules, changedPathsOrNull);
         JavaSourceParser parser = new JavaSourceParser(repoRoot, modules, languageLevel, encoding, extraTypeSolvers);
 
@@ -69,7 +85,7 @@ public final class OracleRuleEngine {
         boolean truncated = false;
 
         for (TestSourceFile file : files) {
-            if (findings.size() >= FINDINGS_CAP) {
+            if (findings.size() >= findingsCap) {
                 truncated = true;
                 break;
             }
@@ -77,7 +93,7 @@ public final class OracleRuleEngine {
         }
         if (truncated) {
             incompleteReasons.add(new AnalysisReason("FINDINGS_TRUNCATED",
-                "Analysis stopped after " + FINDINGS_CAP + " findings (SECURITY-POLICY.md #2); not every test source was scanned."));
+                "Analysis stopped after " + findingsCap + " findings (SECURITY-POLICY.md #2); not every test source was scanned."));
         }
 
         findings.sort(Comparator.comparing(Finding::path).thenComparingInt(Finding::startLine)

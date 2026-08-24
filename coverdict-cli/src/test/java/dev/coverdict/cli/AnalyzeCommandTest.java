@@ -1,5 +1,6 @@
 package dev.coverdict.cli;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -89,6 +90,58 @@ class AnalyzeCommandTest {
     }
 
     @Test
+    void unicodeAndSpacePathResolvesEndToEndWithNoMissingSourceFileWarning() throws IOException {
+        // Distinct from the unit-level ModuleBinderTest coverage of the same
+        // fixture: that test never writes the file to disk, so only the
+        // foundOnDisk=false branch is exercised there. Here the file is real
+        // and the run goes through the full CLI (M1c criterion 7). The path
+        // itself is not part of the no-vcs JSON shape (no per-file
+        // breakdown outside changedFiles, which is diff-mode only) - the
+        // observable effect of foundOnDisk=false would be a
+        // MISSING_SOURCE_FILE warning, so its absence is the proof.
+        Files.createDirectories(repoRoot.resolve("src/main/java/com/exämple/wëird pkg"));
+        Files.writeString(repoRoot.resolve("src/main/java/com/exämple/wëird pkg/Ünïcödé File.java"),
+            "package com.exämple;\nclass A {}\n", StandardCharsets.UTF_8);
+        Path outFile = repoRoot.resolve("verdict.json");
+
+        int exitCode = run("analyze", "--no-vcs",
+            "--repo", repoRoot.toString(),
+            "--report", FIXTURES.resolve("unicode-and-spaces.xml").toString(),
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.COMPLETE.value(), exitCode);
+        assertTrue(validate(outFile).isEmpty(), validate(outFile).toString());
+
+        JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(outFile));
+        assertTrue(doc.at("/warnings").isEmpty(), doc.toPrettyString());
+        assertEquals(50.0, doc.at("/coverage/overall/jacoco-line/percent").asDouble());
+    }
+
+    @Test
+    void aReportPathGivenWithBackslashesIsNormalizedToForwardSlashesInTheJson() throws IOException {
+        // The schema's $defs/path pattern rejects backslashes outright; a
+        // Windows-style --report argument must not leak one into the JSON
+        // (D-22, M1c criterion 7). Built by hand rather than relying on
+        // Path#toString, whose separator depends on the OS this test happens
+        // to run on.
+        String backslashArg = FIXTURES.toString().replace('/', '\\') + "\\mixed-coverage.xml";
+        Path outFile = repoRoot.resolve("verdict.json");
+
+        int exitCode = run("analyze", "--no-vcs",
+            "--repo", repoRoot.toString(),
+            "--report", backslashArg,
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.COMPLETE.value(), exitCode);
+        assertTrue(validate(outFile).isEmpty(), validate(outFile).toString());
+
+        JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(outFile));
+        String reportPath = doc.at("/inputs/modules/0/reports/0/path").asText();
+        assertTrue(reportPath.endsWith("mixed-coverage.xml"), reportPath);
+        assertFalse(reportPath.contains("\\"), reportPath);
+    }
+
+    @Test
     void malformedReportProducesASchemaValidIncompleteVerdictAndExitThree() throws IOException {
         Path outFile = repoRoot.resolve("verdict.json");
 
@@ -132,6 +185,51 @@ class AnalyzeCommandTest {
 
         assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
         assertFalse(Files.exists(outFile), "exit 2 must never write a verdict document (schema note)");
+    }
+
+    @Test
+    void duplicateModuleIdIsInvalidInvocationAndWritesNoJson() {
+        // hard rule 3a: which of the two roots wins must never be a silent guess.
+        Path outFile = repoRoot.resolve("verdict.json");
+
+        int exitCode = run("analyze", "--no-vcs",
+            "--repo", repoRoot.toString(),
+            "--module", "demo=.",
+            "--module", "demo=other",
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
+        assertFalse(Files.exists(outFile), "exit 2 must never write a verdict document (schema note)");
+    }
+
+    @Test
+    void duplicateSourceRootsIdIsInvalidInvocation() {
+        int exitCode = run("analyze", "--no-vcs",
+            "--repo", repoRoot.toString(),
+            "--module", "demo=.",
+            "--source-roots", "demo=src/main/java",
+            "--source-roots", "demo=src/other",
+            "--report", FIXTURES.resolve("mixed-coverage.xml").toString());
+
+        assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
+    }
+
+    @Test
+    void repeatingTheSameModuleIdAcrossMultipleReportOptionsIsStillValid() {
+        // --report has its own parser and legitimately allows multiple
+        // reports per module id - the duplicate-id rejection above must not
+        // regress this.
+        Path outFile = repoRoot.resolve("verdict.json");
+
+        int exitCode = run("analyze", "--no-vcs",
+            "--repo", repoRoot.toString(),
+            "--module", "demo=.",
+            "--report", "demo=" + FIXTURES.resolve("duplicate-a.xml"),
+            "--report", "demo=" + FIXTURES.resolve("duplicate-b.xml"),
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.INCOMPLETE.value(), exitCode, "duplicate class identity across the two reports is a real, separate rejection (D-16)");
+        assertTrue(Files.exists(outFile));
     }
 
     @Test
@@ -255,6 +353,34 @@ class AnalyzeCommandTest {
     }
 
     @Test
+    void missingMergeBaseIsIncompleteButKeepsTheAlreadyComputedOverallCoverage() throws IOException, InterruptedException {
+        // A real, resolvable ref that shares no history with the current
+        // branch (M1c criterion 7) - distinct from unresolvableBaseRef above,
+        // which never finds the ref at all.
+        initGitRepo(repoRoot);
+        Files.createDirectories(repoRoot.resolve("src/main/java/com/example"));
+        Files.writeString(repoRoot.resolve("src/main/java/com/example/Calc.java"), "class Calc {}\n");
+        commitAll(repoRoot, "base");
+        runGit(repoRoot, "checkout", "-q", "--orphan", "unrelated");
+        commitAll(repoRoot, "unrelated root");
+        Path outFile = outputDir.resolve("verdict.json");
+
+        int exitCode = run("analyze", "--base", "main",
+            "--repo", repoRoot.toString(),
+            "--report", FIXTURES.resolve("mixed-coverage.xml").toString(),
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.INCOMPLETE.value(), exitCode);
+        assertTrue(validate(outFile).isEmpty(), validate(outFile).toString());
+
+        JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(outFile));
+        assertEquals("incomplete", doc.at("/analysis/status").asText());
+        assertEquals("MISSING_MERGE_BASE", doc.at("/analysis/incompleteReasons/0/code").asText());
+        assertEquals("unavailable_incomplete", doc.at("/coverage/newCode/status").asText());
+        assertEquals(80.0, doc.at("/coverage/overall/jacoco-line/percent").asDouble());
+    }
+
+    @Test
     void diffModeRunsAreByteIdenticalAcrossTwoInvocations() throws IOException, InterruptedException {
         initGitRepo(repoRoot);
         Path calc = repoRoot.resolve("src/main/java/com/example/Calc.java");
@@ -270,7 +396,9 @@ class AnalyzeCommandTest {
         run("analyze", "--uncommitted", "--repo", repoRoot.toString(),
             "--report", FIXTURES.resolve("mixed-coverage.xml").toString(), "--out", second.toString());
 
-        assertEquals(Files.readString(first), Files.readString(second));
+        // Byte comparison, not String - a BOM or encoding difference between
+        // the two runs must not slip through a String-level equals (M1c criterion 1).
+        assertArrayEquals(Files.readAllBytes(first), Files.readAllBytes(second));
     }
 
     @Test

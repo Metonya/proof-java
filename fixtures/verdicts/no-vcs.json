@@ -1,0 +1,82 @@
+{
+  "schemaVersion" : "0.1.0",
+  "tool" : {
+    "name" : "coverdict",
+    "version" : "${tool.version}"
+  },
+  "analysis" : {
+    "status" : "complete",
+    "exitCode" : 0,
+    "incompleteReasons" : [ ]
+  },
+  "inputs" : {
+    "diffMode" : "no-vcs",
+    "findingsScope" : "all",
+    "languageLevel" : 17,
+    "encoding" : "UTF-8",
+    "exclusions" : [ ],
+    "modules" : [
+      {
+        "id" : "root",
+        "root" : ".",
+        "sourceRoots" : [
+          "src/main/java"
+        ],
+        "testRoots" : [
+          "src/test/java"
+        ],
+        "reports" : [
+          {
+            "path" : "coverage.xml",
+            "freshness" : "unverified"
+          }
+        ]
+      }
+    ]
+  },
+  "coverage" : {
+    "overall" : {
+      "jacoco-line" : {
+        "numeratorName" : "coveredLines",
+        "numerator" : 4,
+        "denominatorName" : "executableLines",
+        "denominator" : 5,
+        "percent" : 80.0
+      },
+      "strict-line" : {
+        "numeratorName" : "fullyCoveredLines",
+        "numerator" : 3,
+        "denominatorName" : "executableLines",
+        "denominator" : 5,
+        "percent" : 60.0
+      },
+      "sonar-compatible" : {
+        "numeratorName" : "coveredBranchesPlusCoveredLines",
+        "numerator" : 5,
+        "denominatorName" : "branchesPlusExecutableLines",
+        "denominator" : 9,
+        "percent" : 55.6
+      }
+    },
+    "newCode" : {
+      "status" : "unavailable_no_vcs"
+    }
+  },
+  "changedFiles" : [ ],
+  "findings" : [
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "root",
+      "path" : "src/test/java/com/example/CalcTest.java",
+      "startLine" : 6,
+      "endLine" : 9,
+      "testMethod" : "com.example.CalcTest#printsResultOnly()",
+      "message" : "Test 'printsResultOnly' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "5207c6f6acf9b0e8"
+    }
+  ],
+  "warnings" : [ ]
+}
