@@ -380,6 +380,104 @@ in the generated report, since deltas involving empty compared to a real
 number are large). Fixed to poll `api/ce/component` until its `queue` is
 empty instead of guessing a sleep duration.
 
+**D-36 · M1c-2 phase 3 (junit-framework): Gradle branch added to the corpus
+harness; module scoped to junit-vintage-engine; a chain-terminal oracle
+recognition fix was attempted and reverted; sonar-parity deferred**
+(2026-08-24)
+`run-corpus-phase.ps1` gained a `-BuildTool Gradle` branch (`-GradleModule`,
+`-GradleInitScript`) alongside the unchanged Maven branch (regression-proven:
+gson still 33 findings, assertj still 2148, both re-run through the extended
+script). The default init script turns on `JacocoReport` XML output (off by
+default in Gradle's own jacoco plugin) via `gradle.beforeProject` rather
+than `allprojects{}` - junit-framework has
+`org.gradle.isolated-projects=true` in its `gradle.properties`, which
+rejects any cross-project `Project.plugins` access through `allprojects{}`
+in both the outer build and its `gradle/plugins` included build;
+`beforeProject` configures each project from within its own configuration
+phase, which Isolated Projects allows. `--no-daemon` is used deliberately
+(D-35 lesson: a one-shot corpus run should never leave a background JVM
+resident). The repo's `gradle-daemon-jvm.properties` requires JDK 25; the
+user installed Temurin 25 via winget (a real environment prerequisite, not
+worked around silently, since Gradle refused to auto-download it - no
+toolchain repository is configured for Windows/x86_64 in this repo).
+
+**Module scope**: `junit-team/junit-framework` splits every Jupiter/platform
+component into a main-only module (no local tests) with all tests
+centralized in separate `jupiter-tests`/`platform-tests` modules, bound via
+JaCoCo's whole-repo aggregation plugin - incompatible with coverdict's
+one-module-owns-its-own-main+test model, and would require building/testing
+30+ modules just to analyze one. `junit-vintage-engine` is the only
+component with its own self-contained `src/main/java`+`src/test/java`, and
+does contain real `@Nested`/`@TestFactory`/`DynamicTest` usage (verified
+before committing to it) - a deliberate, documented scope narrowing, not
+avoidance of difficulty.
+
+**Precision result**: 51 `NO_RECOGNIZED_ORACLE` findings (full population).
+HIGH 1/1 (100%, the manifest's hard kill-criterion, met trivially at n=1).
+MEDIUM 0/46 and INCONCLUSIVE 0/4 - both reported in full, not hidden. 82% of
+all findings (42/51) trace to one root cause: JUnit Platform Testkit's
+`Events.assertEventsMatchExactly`/`assertEventsMatchLoosely` is the
+**terminal** link of a chain rooted at the test's own private helper
+(`execute(x).allEvents().assertEventsMatchExactly(...)`), not a call the
+library itself anchors - `OracleRecognizer.isChainAnchor` only ever
+inspects the chain's root, by design (every prior recognized library -
+AssertJ, Truth, JUnit4/5, Mockito BDD - owns its chain's root call). The
+remaining 8 findings trace to `OracleRecognizer.sameFileNameMatch`'s
+ambiguity bailout not considering call-site arity when two same-named
+same-file helper overloads exist (`assertYieldsNoDescriptors`,
+`doesNotResolve`) - a real, separate, narrower gap. Full root-cause
+breakdown and per-item reasoning: `validation/runs/junit-framework/
+precision-summary.md` and `labels.csv`.
+
+**A same-session fix attempt for the chain-terminal gap was implemented,
+verified against the fixture harness (a new `testkitEventsChainTerminal`
+fixture, `junit-platform-testkit` added to the fixture-harness jar list),
+regression-clean on gson/assertj/coverdict's own suite - and then reverted**
+after real-world testing against junit-vintage-engine showed it does not
+actually help: coverdict's real `analyze` path has no `--classpath`
+mechanism at all (only source-roots + JDK reflection + the file's own
+import statements - the fixture harness's `JarTypeSolver` is a test-only
+mechanism, never present for a real corpus run), and the affected test
+files never literally `import` the JUnit Platform Testkit types whose
+methods form the chain's terminal (`Events` is only ever an inferred
+chain-return type, never referenced by name) - so there is no fact, resolved
+or import-anchored, connecting the terminal call back to its owning type.
+The only remaining path is a name-only heuristic (trust
+`assertEventsMatch*` with zero type evidence) or real classpath support (an
+M2/M3-scale feature) - both correctly out of scope for a measurement phase,
+so the code was reverted to HEAD rather than shipped half-verified (hard
+rule: unknown is never silently green). Backlogged, not fixed - see
+`docs/ROADMAP.md`.
+
+**Sonar parity (criterion 2) deferred for this phase**: `sonar-parity.ps1`
+is Maven-only (invokes `sonar-maven-plugin:sonar` from inside the module
+directory, which requires a `pom.xml`). junit-framework has none. A Gradle
+equivalent needs its own design - `org.sonarqube`'s Gradle plugin applies at
+the root and aggregates the whole project tree by default, and this repo's
+Isolated Projects mode (same wall hit above) makes scoping it down to just
+`junit-vintage-engine` non-trivial - forcing an ad hoc version now, on a
+30+-module tree, is exactly the kind of unscoped-operation risk D-35 exists
+to avoid. Left undone rather than rushed.
+
+**Benchmark (criterion 6) done, but hit and fixed a second real,
+pre-existing script bug**: `benchmark-phase.ps1` redirected the child
+`java` process's stdout/stderr but never drained them - harmless for gson/
+assertj's short output, but junit-vintage-engine's 51-finding analyze
+output was large enough to fill the OS pipe buffer and deadlock the child
+process forever (observed directly: the benchmark hung indefinitely on its
+first "Cold run", confirmed via `tasklist` still showing the `java.exe`
+alive with no progress). Fixed with `BeginOutputReadLine`/
+`BeginErrorReadLine` (verified this drains the pipe without needing an
+attached event handler, via a standalone repro). Results: cold 1909.4 ms,
+warm median 1918.6 ms, warm p95 1937.9 ms, peak working set 425 MB - far
+higher than gson's (207.2 ms / 56.9 MB) despite a *smaller* analyzed source
+tree, because `--repo` points at the whole junit-framework checkout (a
+30+-module monorepo) even though only one module's files are in scope -
+likely file-system/module-graph overhead scales with repo size, not just
+analyzed size. Not investigated further this session (out of scope for a
+measurement phase); worth a closer look before trusting benchmark numbers
+across repos of very different total size.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

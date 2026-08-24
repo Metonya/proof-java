@@ -277,10 +277,44 @@ size. See D-35 for a real incident hit while running the Sonar scan (local
 machine froze, required a hard restart) and its fix - a WSL2 memory cap,
 now a documented prerequisite for any further phase.
 
-Phases 2-4 and criterion-2 new-code parity (pending a Developer Edition
+**Phase 3 (junit-framework) harness Gradle support + criterion 4 done
+(2026-08-24):** `run-corpus-phase.ps1` gained a Gradle branch (D-36);
+regression-clean on gson (33) and assertj (2148). Module scoped to
+`junit-vintage-engine` - the only Jupiter/platform component with its own
+self-contained tests (every other component centralizes tests in a separate
+`jupiter-tests`/`platform-tests` module, bound via whole-repo JaCoCo
+aggregation - out of scope, see D-36). Precision: HIGH 1/1 (100%, the
+manifest's kill-criterion, met trivially at n=1); MEDIUM 0/46 and
+INCONCLUSIVE 0/4, both reported in full per the manifest's "no hiding a
+failing tier" rule. 82% of all findings trace to one root cause: recognized
+libraries have always owned the **root** of a chain (`assertThat(x)`,
+`then(x)`); JUnit Platform Testkit's `Events.assertEventsMatchExactly` is
+instead the chain's **terminal** link, rooted at the test's own private
+helper - `isChainAnchor` never checks anything but the root. A same-session
+fix attempt (checking the terminal separately) was implemented,
+fixture-verified, and regression-clean - then **reverted** once real-world
+testing showed coverdict's real `analyze` path has no classpath mechanism
+at all to resolve the terminal's owning type, and the affected files never
+literally import it either (only ever an inferred chain-return type) - no
+fact-based path remained short of a name-only heuristic or real classpath
+support (M2/M3-scale). Backlogged below, not shipped half-verified. The
+remaining 8 findings trace to a second, narrower, unfixed gap:
+`sameFileNameMatch`'s ambiguity bailout ignores call-site arity when
+disambiguating same-file overloads. `validation/runs/junit-framework/
+precision-summary.md`. Sonar parity (criterion 2) deferred - `sonar-
+parity.ps1` is Maven-only, and junit-framework's Isolated-Projects, 30+
+module tree makes an ad hoc Gradle equivalent a real, separate design task,
+not a same-session extension (D-36). Benchmark (criterion 6) done, after
+fixing a second real pre-existing bug in `benchmark-phase.ps1` (undrained
+redirected stdout/stderr deadlocked the child process on this repo's larger
+output, D-36): cold 1909.4 ms, warm median 1918.6 ms, warm p95 1937.9 ms,
+peak working set 425 MB - notably higher than gson's despite a smaller
+analyzed tree, likely repo-size overhead from `--repo` pointing at the
+whole 30+-module checkout; not investigated further.
+
+Phase 4 and criterion-2 new-code parity (pending a Developer Edition
 SonarQube instance, or acceptance that Community Edition caps this) remain
-open. Phase 2's own criterion-4 precision labeling and criterion-2/6 runs
-are separate next steps, not done in this pass.
+open.
 
 M1 exit codes: `0` complete analysis regardless of findings; `1` reserved for
 the M3 finding-based quality gate and never emitted by v0.1; `2` invalid
@@ -330,8 +364,16 @@ failure.
   isCloseTo(...)`, never touching `Assertions`/`BDDAssertions` at all - a
   structurally different gap from a missing allowlist entry, would need
   recognizing terminal calls on AssertJ's own `AbstractAssert`-typed
-  values). Each remaining item gets its own design pass at its milestone,
-  not now.
+  values) · chain-terminal oracle recognition for a library that owns only
+  the terminal link of a chain rooted at the test's own code (D-36, JUnit
+  Platform Testkit's `Events`/`EventStatistics`; a same-session fix attempt
+  was reverted - real corpus code has no classpath and no import naming the
+  terminal's type, so this is blocked on real `--classpath` support, not an
+  allowlist edit) · `sameFileNameMatch`'s same-file-overload ambiguity
+  bailout should consider call-site arity before giving up (D-36; today it
+  bails on any name collision even when only one candidate has the right
+  parameter count for that specific call). Each remaining item gets its own
+  design pass at its milestone, not now.
 
 ## Kill and pivot criteria
 

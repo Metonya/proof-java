@@ -40,6 +40,13 @@ mvn -q -B verify            # Maven repos; phase 3 uses ./gradlew build
 # JaCoCo XML lands at target/site/jacoco/jacoco.xml (per module)
 ```
 
+Phase 3's `./gradlew build` in practice (D-36): `run-corpus-phase.ps1
+-BuildTool Gradle -GradleModule <name>` runs
+`gradlew.bat --no-daemon :<module>:test :<module>:jacocoTestReport`, with an
+`--init-script` (never a checkout edit) turning on JaCoCo's XML report
+(off by default in Gradle's own plugin). JaCoCo XML lands at
+`<module>/build/reports/jacoco/test/jacocoTestReport.xml`.
+
 Then, from the coverdict checkout:
 
 ```bash
@@ -63,12 +70,15 @@ assertj; never skip this check for them.
 each corpus phase's commands above without new code per phase (D-30):
 
 - `run-corpus-phase.ps1` — clone/checkout the pinned commit, bind JaCoCo via
-  CLI goals (no permanent pom edit), run coverdict in `--base <pin>~50` and
-  `--no-vcs`.
+  CLI goals (no permanent pom edit) or, for a Gradle repo (`-BuildTool
+  Gradle`, D-36), via a temp `--init-script` (never a checkout edit), run
+  coverdict in `--base <pin>~50` and `--no-vcs`.
 - `sonar-parity.ps1` — overall-scope `sonar-compatible` vs SonarQube UI
   comparison (must be run from inside the target module's own directory,
   not via reactor `-pl`; new-code parity needs a non-Community-Edition
-  instance, currently unavailable).
+  instance, currently unavailable). Maven-only today (invokes
+  `sonar-maven-plugin` against a `pom.xml`) - a Gradle repo needs its own
+  design, not attempted for phase 3 (D-36).
 - `benchmark-phase.ps1` — cold + 5-warm wall time and peak working-set
   memory around a coverdict invocation.
 - `scaffold_labels.py` — seeded 100-sample (per rule) CSV scaffold from a
