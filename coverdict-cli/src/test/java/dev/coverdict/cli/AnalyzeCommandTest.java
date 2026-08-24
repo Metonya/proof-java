@@ -274,6 +274,76 @@ class AnalyzeCommandTest {
     }
 
     @Test
+    void noVcsModeScansAllTestSourcesByDefaultAndProducesARealOracleFinding() throws IOException {
+        Files.createDirectories(repoRoot.resolve("src/main/java/com/example"));
+        Files.writeString(repoRoot.resolve("src/main/java/com/example/Calc.java"), "class Calc {}\n");
+        Files.createDirectories(repoRoot.resolve("src/test/java/com/example"));
+        Files.writeString(repoRoot.resolve("src/test/java/com/example/CalcTest.java"), noOracleTestSource("CalcTest", "noAssertionHere"));
+        Path outFile = repoRoot.resolve("verdict.json");
+
+        int exitCode = run("analyze", "--no-vcs",
+            "--repo", repoRoot.toString(),
+            "--report", FIXTURES.resolve("mixed-coverage.xml").toString(),
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.COMPLETE.value(), exitCode, "a finding is not an incomplete reason - ROADMAP: exit 0 regardless of findings");
+        assertTrue(validate(outFile).isEmpty(), validate(outFile).toString());
+
+        JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(outFile));
+        assertEquals("all", doc.at("/inputs/findingsScope").asText());
+        assertEquals(1, doc.at("/findings").size());
+        assertEquals("NO_RECOGNIZED_ORACLE", doc.at("/findings/0/rule").asText());
+        assertEquals("HIGH", doc.at("/findings/0/confidence").asText());
+        assertEquals("src/test/java/com/example/CalcTest.java", doc.at("/findings/0/path").asText());
+    }
+
+    @Test
+    void findingsScopeChangedWithNoVcsIsInvalidInvocationAndWritesNoJson() {
+        Path outFile = repoRoot.resolve("verdict.json");
+        int exitCode = run("analyze", "--no-vcs", "--findings-scope", "changed",
+            "--repo", repoRoot.toString(),
+            "--report", FIXTURES.resolve("mixed-coverage.xml").toString(),
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
+        assertFalse(Files.exists(outFile));
+    }
+
+    @Test
+    void invalidFindingsScopeValueIsInvalidInvocation() {
+        int exitCode = run("analyze", "--no-vcs", "--findings-scope", "bogus",
+            "--repo", repoRoot.toString(),
+            "--report", FIXTURES.resolve("mixed-coverage.xml").toString());
+        assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
+    }
+
+    @Test
+    void findingsScopeChangedOnlyScansTestFilesTouchedByTheDiff() throws IOException, InterruptedException {
+        initGitRepo(repoRoot);
+        Files.createDirectories(repoRoot.resolve("src/main/java/com/example"));
+        Files.writeString(repoRoot.resolve("src/main/java/com/example/Calc.java"), "class Calc {}\n");
+        Files.createDirectories(repoRoot.resolve("src/test/java/com/example"));
+        Files.writeString(repoRoot.resolve("src/test/java/com/example/OldTest.java"), noOracleTestSource("OldTest", "oldNoAssertion"));
+        commitAll(repoRoot, "base");
+        // Untracked new test file - untouched OldTest.java must not be scanned in "changed" scope.
+        Files.writeString(repoRoot.resolve("src/test/java/com/example/NewTest.java"), noOracleTestSource("NewTest", "newNoAssertion"));
+
+        Path outFile = outputDir.resolve("verdict.json");
+        int exitCode = run("analyze", "--uncommitted", "--findings-scope", "changed",
+            "--repo", repoRoot.toString(),
+            "--report", FIXTURES.resolve("mixed-coverage.xml").toString(),
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.COMPLETE.value(), exitCode);
+        assertTrue(validate(outFile).isEmpty(), validate(outFile).toString());
+
+        JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(outFile));
+        assertEquals("changed", doc.at("/inputs/findingsScope").asText());
+        assertEquals(1, doc.at("/findings").size());
+        assertEquals("src/test/java/com/example/NewTest.java", doc.at("/findings/0/path").asText());
+    }
+
+    @Test
     void moduleWithoutAnyReportIsExcludedWithAWarningNotAnError() throws IOException {
         Files.createDirectories(repoRoot.resolve("src/main/java/com/example"));
         Files.writeString(repoRoot.resolve("src/main/java/com/example/Calc.java"), "class Calc {}\n");
@@ -322,6 +392,21 @@ class AnalyzeCommandTest {
             "    " + editedLine12,
             "    int d = 4;",
             "    int e = 5;",
+            "}",
+            "");
+    }
+
+    private static String noOracleTestSource(String className, String methodName) {
+        return String.join("\n",
+            "package com.example;",
+            "",
+            "import org.junit.jupiter.api.Test;",
+            "",
+            "class " + className + " {",
+            "    @Test",
+            "    void " + methodName + "() {",
+            "        System.out.println(\"no assertion here\");",
+            "    }",
             "}",
             "");
     }

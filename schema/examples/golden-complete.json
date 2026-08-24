@@ -4,6 +4,7 @@
   "analysis": { "status": "complete", "exitCode": 0, "incompleteReasons": [] },
   "inputs": {
     "diffMode": "base-ref",
+    "findingsScope": "all",
     "baseRef": "origin/main",
     "resolved": {
       "base": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",

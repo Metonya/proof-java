@@ -34,9 +34,10 @@
     "inputs": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["diffMode", "languageLevel", "encoding", "exclusions", "modules"],
+      "required": ["diffMode", "findingsScope", "languageLevel", "encoding", "exclusions", "modules"],
       "properties": {
         "diffMode": { "enum": ["base-ref", "working-tree", "no-vcs"] },
+        "findingsScope": { "enum": ["all", "changed"], "description": "Which test sources the L0 oracle rules scanned (M1b K1): 'all' (default) is every test source under every module's testRoots; 'changed' is only test files touched by the diff. Always written so an empty findings array is never ambiguous between 'nothing wrong' and 'nothing scanned'." },
         "baseRef": { "type": "string", "minLength": 1 },
         "resolved": {
           "type": "object",

@@ -166,6 +166,22 @@ is not missing evidence. Schema's `changedFile.module` is no longer required
 value for it (D-25 precedent: relaxing a constraint cannot break a
 previously-valid document).
 
+**D-28 · Oracle findings scope, and two-tier call resolution without a classpath** (2026-08-24)
+`--findings-scope` (`all` default, `changed`) is always written to
+`inputs.findingsScope` - schema addition, `changedFile`-style: an empty
+`findings` array must never be ambiguous between "nothing wrong" and
+"nothing scanned" (`changed` requires a diff mode, rejected under `--no-vcs`).
+Oracle-allowlist call resolution tries Symbol Solver first (works for JDK
+calls and same-file user types with zero jars), then falls back to
+import-anchoring: a bare call matching one `import static` (or a qualified
+call whose scope matches one `import`) is HIGH-confidence resolved by Java's
+own naming rules alone, no classpath needed - the realistic path for a v0.1
+user who has not configured one yet. Also fixed a real, reproducible bug this
+surfaced: JavaParser's own primitive-type resolution does a default-locale
+case conversion, and this project's own dev machine (Turkish default locale)
+corrupts `"INT".toLowerCase()`, silently degrading confidence; forced
+`Locale.ROOT` once per process (`OracleRuleEngine`'s static initializer).
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

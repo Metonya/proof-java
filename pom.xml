@@ -35,6 +35,18 @@
     <junit.version>5.12.2</junit.version>
     <jackson.version>2.18.4</jackson.version>
     <json-schema-validator.version>1.5.6</json-schema-validator.version>
+    <javaparser.version>3.26.2</javaparser.version>
+
+    <!-- Test-only fixture harness (docs/rules/README.md fixture convention): downloaded
+         as jars via maven-dependency-plugin, never added as project dependencies, so the
+         oracle engine's own resolution never accidentally benefits from these being on
+         coverdict's own classpath (K4) - the import-anchored resolution tier (D-28) is
+         what a real, classpath-less user run actually exercises. -->
+    <fixture.junit4.version>4.13.2</fixture.junit4.version>
+    <fixture.assertj.version>3.26.3</fixture.assertj.version>
+    <fixture.mockito.version>5.14.2</fixture.mockito.version>
+    <fixture.hamcrest.version>2.2</fixture.hamcrest.version>
+    <dependency.plugin.version>3.8.1</dependency.plugin.version>
 
     <!-- coverdict scans itself with a local SonarQube; host URL and token stay
          outside the repo (SONAR_HOST_URL / SONAR_TOKEN). -->
@@ -75,6 +87,14 @@
         <artifactId>json-schema-validator</artifactId>
         <version>${json-schema-validator.version}</version>
       </dependency>
+      <dependency>
+        <!-- D-10/D-28: AST + symbol resolution for the L0 oracle rules. Apache-2.0 option
+             (RESEARCH.md), never the LGPL one - hard rule 9. Pulls javaparser-core and Guava
+             transitively. -->
+        <groupId>com.github.javaparser</groupId>
+        <artifactId>javaparser-symbol-solver-core</artifactId>
+        <version>${javaparser.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -112,6 +132,11 @@
           <groupId>org.sonarsource.scanner.maven</groupId>
           <artifactId>sonar-maven-plugin</artifactId>
           <version>${sonar.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>${dependency.plugin.version}</version>
         </plugin>
       </plugins>
     </pluginManagement>

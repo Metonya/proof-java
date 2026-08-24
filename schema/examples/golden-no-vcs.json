@@ -4,6 +4,7 @@
   "analysis": { "status": "complete", "exitCode": 0, "incompleteReasons": [] },
   "inputs": {
     "diffMode": "no-vcs",
+    "findingsScope": "all",
     "languageLevel": 17,
     "encoding": "UTF-8",
     "exclusions": [],

@@ -111,16 +111,29 @@ measure `sonar-compatible` new-code parity against the real SonarQube UI
 
 ### M1b — Conservative static oracle critic
 
-- Use JavaParser plus Symbol Solver with explicit source roots, language level,
-  and classpath. Parser success alone is not semantic resolution.
-- Implement `NO_RECOGNIZED_ORACLE`, `TAUTOLOGICAL_ORACLE`,
-  `CATCH_ORACLE_WITHOUT_FAIL`, and `NULL_CHECK_ONLY` to their checked-in rule
-  specifications. `NULL_CHECK_ONLY` is advisory; none suggests deletion.
-- Recognize the explicitly supported JUnit/assertion/mock APIs and configured
-  custom oracle providers. Unresolved helpers or types are MEDIUM/INCONCLUSIVE,
-  never HIGH absence evidence.
-- Support rule/path suppression in the configuration. Baselines and
-  changed-findings-only gating must exist before CI gating, not necessarily v0.1.
+**Engine + four rules done (2026-08-24):** `analyze` now runs real L0 oracle
+detection over test sources - JavaParser AST + Symbol Solver
+(`dev.coverdict.analysis.oracle`), a two-tier call-resolution scheme (D-28:
+Symbol Solver first, then import-anchoring so a run with no `--classpath`
+still resolves the JUnit/AssertJ/Mockito/Hamcrest allowlist with certainty),
+same-compilation-unit private-helper traversal, and all four rules
+(`NO_RECOGNIZED_ORACLE`, `TAUTOLOGICAL_ORACLE`, `CATCH_ORACLE_WITHOUT_FAIL`,
+`NULL_CHECK_ONLY`) implemented exactly to their checked-in specs
+(`docs/rules/`). `coverage.newCode` sits alongside a real `findings` array in
+the same document; `--findings-scope` (`all`/`changed`, D-28) controls which
+test sources are scanned. Verified two ways: a fixture-driven test
+(`OracleRuleEngineFixturesTest`) executes every `docs/rules/**` fixture and
+asserts its `// expect:` header against the real engine output - the M0 rule
+specs are now executable, not aspirational prose - and a real run against
+coverdict's own 14 test files / 103 `@Test` methods found zero false
+positives while a dedicated negative-test fixture confirms the detector does
+fire on a genuinely oracle-less test.
+
+- Custom oracle providers (`customOracles` configuration) and `--classpath`
+  are still open - the allowlist and resolution layers are already shaped to
+  add them without a rework.
+- Rule/path suppression, baselines, and changed-findings-only CI gating are
+  still open (M3 pre-CI work, as originally scoped).
 
 ### M1c — Hardening and validation
 

@@ -30,6 +30,8 @@ import dev.coverdict.analysis.model.AnalysisReason;
 import dev.coverdict.analysis.model.ModuleDefinition;
 import dev.coverdict.analysis.model.RepoPaths;
 import dev.coverdict.analysis.model.ResolvedSourceFile;
+import dev.coverdict.analysis.oracle.OracleRuleEngine;
+import dev.coverdict.analysis.oracle.OracleScanResult;
 import dev.coverdict.analysis.report.ModuleInput;
 import dev.coverdict.analysis.report.NewCodeCoverage;
 import dev.coverdict.analysis.report.ReportInput;
@@ -64,6 +66,8 @@ class AnalyzeCommand implements Callable<Integer> {
     private static final String DIFF_MODE_NO_VCS = "no-vcs";
     private static final String DIFF_MODE_WORKING_TREE = "working-tree";
     private static final String DIFF_MODE_BASE_REF = "base-ref";
+    private static final String FINDINGS_SCOPE_ALL = "all";
+    private static final String FINDINGS_SCOPE_CHANGED = "changed";
 
     @Spec
     private CommandSpec spec;
@@ -101,6 +105,10 @@ class AnalyzeCommand implements Callable<Integer> {
     @Option(names = "--coverage-exclusions", description = "Comma-separated sonar.coverage.exclusions globs, one list for the whole run (D-05).")
     private String exclusionsArg;
 
+    @Option(names = "--findings-scope", defaultValue = FINDINGS_SCOPE_ALL,
+        description = "Which test sources the L0 oracle rules scan: 'all' (default, every test source under every module's testRoots) or 'changed' (only test files touched by the diff; requires --uncommitted or --base).")
+    private String findingsScopeOption;
+
     @Option(names = "--out", defaultValue = "coverdict-verdict.json", description = "Verdict JSON output path.")
     private String outOption;
 
@@ -114,6 +122,16 @@ class AnalyzeCommand implements Callable<Integer> {
             return ExitCode.INVALID_INPUT.value();
         }
         String diffMode = selectedDiffMode();
+
+        if (!FINDINGS_SCOPE_ALL.equals(findingsScopeOption) && !FINDINGS_SCOPE_CHANGED.equals(findingsScopeOption)) {
+            spec.commandLine().getErr().println("coverdict: --findings-scope must be 'all' or 'changed', got: " + findingsScopeOption);
+            return ExitCode.INVALID_INPUT.value();
+        }
+        if (FINDINGS_SCOPE_CHANGED.equals(findingsScopeOption) && DIFF_MODE_NO_VCS.equals(diffMode)) {
+            spec.commandLine().getErr().println(
+                "coverdict: --findings-scope changed requires a diff mode (--uncommitted or --base <ref>), not --no-vcs.");
+            return ExitCode.INVALID_INPUT.value();
+        }
 
         Path repoRoot = Path.of(repoOption != null ? repoOption : System.getProperty("user.dir"));
         List<String> exclusions = exclusionsArg == null || exclusionsArg.isBlank()
@@ -258,9 +276,12 @@ class AnalyzeCommand implements Callable<Integer> {
         ToolVersion.Info version = ToolVersion.read();
 
         if (DIFF_MODE_NO_VCS.equals(diffMode)) {
-            return new VerdictDocument(version.schemaVersion(), version.version(), true, List.of(),
-                languageLevel, encoding, exclusions, moduleInputs, diffMode, null, overall,
-                NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), warnings);
+            // findings-scope=changed is rejected in --no-vcs mode by call() already, so "all" always holds here.
+            OracleScanResult scan = OracleRuleEngine.scan(repoRoot, evidencedModules, languageLevel, encoding, null);
+            List<AnalysisReason> allReasons = new ArrayList<>(scan.incompleteReasons());
+            return new VerdictDocument(version.schemaVersion(), version.version(), allReasons.isEmpty(), allReasons,
+                languageLevel, encoding, exclusions, moduleInputs, diffMode, findingsScopeOption, null, overall,
+                NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), scan.findings(), warnings);
         }
 
         // Diff-mode phase: a failure here does NOT discard the overall data
@@ -277,20 +298,40 @@ class AnalyzeCommand implements Callable<Integer> {
 
             MetricSet newCode = MetricsEngine.compute(classification.newCodeDataset());
 
+            java.util.Set<String> findingsPaths = FINDINGS_SCOPE_CHANGED.equals(findingsScopeOption)
+                ? changedAndUntrackedPaths(diffResult) : null;
+            OracleScanResult scan = OracleRuleEngine.scan(repoRoot, evidencedModules, languageLevel, encoding, findingsPaths);
+
+            List<AnalysisReason> allIncompleteReasons = new ArrayList<>(classification.incompleteReasons());
+            allIncompleteReasons.addAll(scan.incompleteReasons());
             List<AnalysisReason> allWarnings = new ArrayList<>(warnings);
             allWarnings.addAll(classification.warnings());
 
-            boolean complete = classification.incompleteReasons().isEmpty();
+            boolean complete = allIncompleteReasons.isEmpty();
             return new VerdictDocument(version.schemaVersion(), version.version(), complete,
-                classification.incompleteReasons(), languageLevel, encoding, exclusions, moduleInputs,
-                diffMode, diffResult.identity(), overall, NewCodeCoverage.available(newCode),
-                classification.changedFiles(), allWarnings);
+                allIncompleteReasons, languageLevel, encoding, exclusions, moduleInputs,
+                diffMode, findingsScopeOption, diffResult.identity(), overall, NewCodeCoverage.available(newCode),
+                classification.changedFiles(), scan.findings(), allWarnings);
         } catch (AnalysisException e) {
+            // findings-scope=all does not need the diff that just failed - real
+            // oracle evidence is still worth reporting alongside the failure.
+            OracleScanResult scan = FINDINGS_SCOPE_ALL.equals(findingsScopeOption)
+                ? OracleRuleEngine.scan(repoRoot, evidencedModules, languageLevel, encoding, null)
+                : new OracleScanResult(List.of(), List.of());
+            List<AnalysisReason> allReasons = new ArrayList<>();
+            allReasons.add(new AnalysisReason(e.code(), e.getMessage()));
+            allReasons.addAll(scan.incompleteReasons());
             return new VerdictDocument(version.schemaVersion(), version.version(), false,
-                List.of(new AnalysisReason(e.code(), e.getMessage())), languageLevel, encoding, exclusions,
-                moduleInputs, diffMode, null, overall, NewCodeCoverage.unavailable("unavailable_incomplete"),
-                List.of(), warnings);
+                allReasons, languageLevel, encoding, exclusions,
+                moduleInputs, diffMode, findingsScopeOption, null, overall, NewCodeCoverage.unavailable("unavailable_incomplete"),
+                List.of(), scan.findings(), warnings);
         }
+    }
+
+    private static java.util.Set<String> changedAndUntrackedPaths(DiffResult diffResult) {
+        java.util.Set<String> paths = new java.util.LinkedHashSet<>(diffResult.changedLinesByPath().keySet());
+        paths.addAll(diffResult.untrackedFiles());
+        return paths;
     }
 
     private VerdictDocument incompleteDocument(List<String> exclusions, AnalysisException e, String diffMode) {
@@ -299,8 +340,8 @@ class AnalyzeCommand implements Callable<Integer> {
         return new VerdictDocument(
             version.schemaVersion(), version.version(), false,
             List.of(new AnalysisReason(e.code(), e.getMessage())),
-            languageLevel, encoding, exclusions, List.of(), diffMode, null,
-            MetricsEngine.compute(List.of()), NewCodeCoverage.unavailable(unavailableStatus), List.of(), List.of());
+            languageLevel, encoding, exclusions, List.of(), diffMode, findingsScopeOption, null,
+            MetricsEngine.compute(List.of()), NewCodeCoverage.unavailable(unavailableStatus), List.of(), List.of(), List.of());
     }
 
     private static Map<String, String> parseIdValue(List<String> args) {

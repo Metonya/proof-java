@@ -24,6 +24,10 @@
       <artifactId>jackson-core</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.github.javaparser</groupId>
+      <artifactId>javaparser-symbol-solver-core</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
       <scope>test</scope>
@@ -36,6 +40,14 @@
     </dependency>
   </dependencies>
 
+  <properties>
+    <!-- Test-only: where the fixture-harness jars (K4) land, kept off the real
+         compile/test classpath deliberately - see the maven-dependency-plugin
+         execution below and OracleRuleEngineTest, which loads them with a
+         standalone JarTypeSolver. -->
+    <fixture.harness.dir>${project.build.directory}/fixture-harness</fixture.harness.dir>
+  </properties>
+
   <build>
     <resources>
       <resource>
@@ -44,6 +56,48 @@
       </resource>
     </resources>
     <plugins>
+      <plugin>
+        <!-- K4: downloads the fixture-harness API jars (JUnit 4/5, AssertJ, Mockito,
+             Hamcrest) fixtures/rules/** compiles against, without declaring any of
+             them as a project dependency - so coverdict's own oracle engine tests
+             exercise the same classpath-less resolution path a real user run does,
+             plus a proof of the JarTypeSolver mechanism a future classpath option will reuse. -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-fixture-harness</id>
+            <phase>generate-test-resources</phase>
+            <goals><goal>copy</goal></goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>junit</groupId>
+                  <artifactId>junit</artifactId>
+                  <version>${fixture.junit4.version}</version>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.assertj</groupId>
+                  <artifactId>assertj-core</artifactId>
+                  <version>${fixture.assertj.version}</version>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.mockito</groupId>
+                  <artifactId>mockito-core</artifactId>
+                  <version>${fixture.mockito.version}</version>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.hamcrest</groupId>
+                  <artifactId>hamcrest</artifactId>
+                  <version>${fixture.hamcrest.version}</version>
+                </artifactItem>
+              </artifactItems>
+              <outputDirectory>${fixture.harness.dir}</outputDirectory>
+              <stripVersion>true</stripVersion>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>

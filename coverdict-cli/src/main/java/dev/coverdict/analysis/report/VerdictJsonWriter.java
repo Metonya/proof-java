@@ -16,6 +16,7 @@ import dev.coverdict.analysis.metrics.Metric;
 import dev.coverdict.analysis.metrics.MetricSet;
 import dev.coverdict.analysis.model.AnalysisReason;
 import dev.coverdict.analysis.model.ChangedFile;
+import dev.coverdict.analysis.model.Finding;
 import dev.coverdict.analysis.model.LineRange;
 import dev.coverdict.analysis.vcs.VcsIdentity;
 
@@ -91,7 +92,14 @@ public final class VerdictJsonWriter {
             g.writeEndArray();
 
             g.writeArrayFieldStart("findings");
-            g.writeEndArray(); // L0 oracle rules are M1b, not this step
+            List<Finding> findings = doc.findings().stream()
+                .sorted(Comparator.comparing(Finding::path).thenComparingInt(Finding::startLine)
+                    .thenComparing(Finding::rule).thenComparing(Finding::fingerprint))
+                .toList();
+            for (Finding finding : findings) {
+                writeFinding(g, finding);
+            }
+            g.writeEndArray();
 
             g.writeArrayFieldStart("warnings");
             for (AnalysisReason warning : sortedReasons(doc.warnings())) {
@@ -106,6 +114,7 @@ public final class VerdictJsonWriter {
     private static void writeInputs(JsonGenerator g, VerdictDocument doc) throws IOException {
         g.writeObjectFieldStart("inputs");
         g.writeStringField("diffMode", doc.diffMode());
+        g.writeStringField("findingsScope", doc.findingsScope());
         VcsIdentity identity = doc.identity();
         if (identity != null && identity.baseRef() != null) {
             g.writeStringField("baseRef", identity.baseRef());
@@ -189,6 +198,24 @@ public final class VerdictJsonWriter {
             }
             g.writeEndArray();
         }
+        g.writeEndObject();
+    }
+
+    private static void writeFinding(JsonGenerator g, Finding finding) throws IOException {
+        g.writeStartObject();
+        g.writeStringField("rule", finding.rule());
+        g.writeStringField("severity", finding.severity().name());
+        g.writeStringField("confidence", finding.confidence().name());
+        g.writeStringField("module", finding.module());
+        g.writeStringField("path", finding.path());
+        g.writeNumberField("startLine", finding.startLine());
+        g.writeNumberField("endLine", finding.endLine());
+        if (finding.testMethod() != null) {
+            g.writeStringField("testMethod", finding.testMethod());
+        }
+        g.writeStringField("message", finding.message());
+        g.writeStringField("suggestedAction", finding.suggestedAction());
+        g.writeStringField("fingerprint", finding.fingerprint());
         g.writeEndObject();
     }
 

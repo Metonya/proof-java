@@ -26,8 +26,11 @@ import dev.coverdict.analysis.metrics.MetricsEngine;
 import dev.coverdict.analysis.model.AnalysisReason;
 import dev.coverdict.analysis.model.ChangedFile;
 import dev.coverdict.analysis.model.Classification;
+import dev.coverdict.analysis.model.Confidence;
+import dev.coverdict.analysis.model.Finding;
 import dev.coverdict.analysis.model.LineRange;
 import dev.coverdict.analysis.model.ResolvedSourceFile;
+import dev.coverdict.analysis.model.Severity;
 import dev.coverdict.analysis.vcs.VcsIdentity;
 
 /** Asserts real analyzer output against the checked-in contract (schema/coverdict-verdict.schema.json), not just a spot-checked example. */
@@ -60,16 +63,16 @@ class VerdictJsonWriterTest {
                 1, 1, true));
         var metrics = MetricsEngine.compute(files);
         return new VerdictDocument("0.1.0", "0.1.0-TEST", true, List.of(),
-            17, "UTF-8", List.of(), List.of(module()), "no-vcs", null, metrics,
-            NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(),
+            17, "UTF-8", List.of(), List.of(module()), "no-vcs", "all", null, metrics,
+            NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), List.of(),
             List.of(new AnalysisReason("MISSING_SOURCE_FILE", "not found", "src/main/java/Missing.java", "root")));
     }
 
     private VerdictDocument noVcsIncompleteDocument() {
         return new VerdictDocument("0.1.0", "0.1.0-TEST", false,
             List.of(new AnalysisReason("MALFORMED_JACOCO_XML", "bad xml")),
-            17, "UTF-8", List.of(), List.of(), "no-vcs", null, MetricsEngine.compute(List.of()),
-            NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), List.of());
+            17, "UTF-8", List.of(), List.of(), "no-vcs", "all", null, MetricsEngine.compute(List.of()),
+            NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), List.of(), List.of());
     }
 
     /** Mirrors schema/examples/golden-complete.json's shape: base-ref mode, real newCode, a mix of changedFiles classifications. */
@@ -93,19 +96,27 @@ class VerdictJsonWriterTest {
                 null, null, List.of()),
             new ChangedFile("build-tools/Outside.java", null, Classification.UNKNOWN, null, null, List.of()));
 
+        List<Finding> findings = List.of(
+            new Finding("NO_RECOGNIZED_ORACLE", Severity.WARNING, Confidence.HIGH, "root",
+                "src/test/java/com/example/CalcTest.java", 10, 14,
+                "com.example.CalcTest#printsResultOnly()",
+                "Test 'printsResultOnly' contains no recognized assertion, verification, or expected exception.",
+                "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+                "3f9a1c2b4d5e6a70"));
+
         return new VerdictDocument("0.1.0", "0.1.0-TEST", false,
             List.of(new AnalysisReason("CHANGED_JAVA_OUTSIDE_MODULES", "outside every module", "build-tools/Outside.java")),
-            17, "UTF-8", List.of(), List.of(module()), "base-ref", identity, overall,
-            NewCodeCoverage.available(newCode), changedFiles,
+            17, "UTF-8", List.of(), List.of(module()), "base-ref", "all", identity, overall,
+            NewCodeCoverage.available(newCode), changedFiles, findings,
             List.of(new AnalysisReason("UNTRACKED_NON_JAVA_FILE", "Untracked file ignored by diff analysis.", "notes.txt")));
     }
 
     private VerdictDocument workingTreeDocument() {
         VcsIdentity identity = new VcsIdentity(SHA_B, null, null, null, false);
         return new VerdictDocument("0.1.0", "0.1.0-TEST", true, List.of(),
-            17, "UTF-8", List.of(), List.of(module()), "working-tree", identity,
+            17, "UTF-8", List.of(), List.of(module()), "working-tree", "changed", identity,
             MetricsEngine.compute(List.of()), NewCodeCoverage.available(MetricsEngine.compute(List.of())),
-            List.of(), List.of());
+            List.of(), List.of(), List.of());
     }
 
     @Test

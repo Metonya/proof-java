@@ -36,6 +36,12 @@ public final class TextRenderer {
             sb.append(doc.changedFiles().size()).append(" changed file(s): ").append(classificationSummary(doc)).append('\n');
         }
 
+        if (!doc.findings().isEmpty()) {
+            sb.append(doc.findings().size()).append(" finding(s) (").append(doc.findingsScope()).append("):\n");
+            doc.findings().forEach(f -> sb.append("  ").append(f.rule()).append(' ').append(f.confidence())
+                .append(' ').append(f.path()).append(':').append(f.startLine()).append(' ').append(f.message()).append('\n'));
+        }
+
         if (!doc.incompleteReasons().isEmpty()) {
             doc.incompleteReasons().forEach(r -> sb.append("  ").append(r.code()).append(": ").append(r.message()).append('\n'));
         }
