@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import com.google.common.truth.Truth;
+import org.assertj.core.api.BDDAssertions;
 import org.junit.jupiter.api.Test;
 
 // Deliberately unresolvable: not on the fixture classpath, simulating an
@@ -23,6 +24,8 @@ import some.external.ThrowingRunnable;
 // expect: none method=truthChainInPrivateHelper
 // expect: none method=oracleInPublicStaticHelper
 // expect: none method=oracleReachedThroughUnresolvableParamTypeHelper
+// expect: none method=bddAssertionsThenChain
+// expect: none method=assertThatExceptionFamilyChain
 class Negative {
 
     static class Calc {
@@ -103,5 +106,18 @@ class Negative {
     // name-match fallback must still find this single, unambiguous match.
     private static void assertThrowsSomething(ThrowingRunnable runnable) {
         assertThrows(ArithmeticException.class, runnable);
+    }
+
+    @Test
+    void bddAssertionsThenChain() {
+        BDDAssertions.then(new Calc().add(2, 2)).isEqualTo(4);
+    }
+
+    @Test
+    void assertThatExceptionFamilyChain() {
+        org.assertj.core.api.Assertions.assertThatNullPointerException()
+            .isThrownBy(() -> {
+                throw new NullPointerException();
+            });
     }
 }

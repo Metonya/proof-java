@@ -46,10 +46,21 @@ try {
     Pop-Location
 }
 
-Start-Sleep -Seconds 5
+$headers = @{ Authorization = "Basic " + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("$($env:SONAR_TOKEN):")) }
+
+# Sonar processes an uploaded report asynchronously (Compute Engine); a
+# fixed short sleep works for a small project (gson) but a larger one
+# (assertj: ~4600 test files) can still be IN_PROGRESS well past 5s, which
+# silently returns empty measures rather than an error. Poll the CE task
+# instead of guessing a sleep duration.
+$ceUrl = "$SonarHost/api/ce/component?component=$projectKey"
+for ($i = 0; $i -lt 60; $i++) {
+    $ce = Invoke-RestMethod -Uri $ceUrl -Headers $headers
+    if (-not $ce.queue -or $ce.queue.Count -eq 0) { break }
+    Start-Sleep -Seconds 5
+}
 
 $measuresUrl = "$SonarHost/api/measures/component?component=$projectKey&metricKeys=coverage,line_coverage,lines_to_cover,uncovered_lines"
-$headers = @{ Authorization = "Basic " + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("$($env:SONAR_TOKEN):")) }
 $resp = Invoke-RestMethod -Uri $measuresUrl -Headers $headers
 
 $sonarCoverage = ($resp.component.measures | Where-Object { $_.metric -eq "coverage" }).value

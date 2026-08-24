@@ -15,6 +15,7 @@ final class OracleAllowlist {
     static final String JUNIT5_ASSERTIONS = "org.junit.jupiter.api.Assertions";
     static final String JUNIT4_ASSERT = "org.junit.Assert";
     static final String ASSERTJ_ASSERTIONS = "org.assertj.core.api.Assertions";
+    static final String ASSERTJ_BDD_ASSERTIONS = "org.assertj.core.api.BDDAssertions";
     static final String HAMCREST_MATCHER_ASSERT = "org.hamcrest.MatcherAssert";
     static final String MOCKITO = "org.mockito.Mockito";
     static final String MOCKITO_IN_ORDER = "org.mockito.InOrder";
@@ -22,7 +23,7 @@ final class OracleAllowlist {
     static final String TRUTH = "com.google.common.truth.Truth";
 
     static final Set<String> ALL_TYPES = Set.of(
-        JUNIT5_ASSERTIONS, JUNIT4_ASSERT, ASSERTJ_ASSERTIONS,
+        JUNIT5_ASSERTIONS, JUNIT4_ASSERT, ASSERTJ_ASSERTIONS, ASSERTJ_BDD_ASSERTIONS,
         HAMCREST_MATCHER_ASSERT, MOCKITO, MOCKITO_IN_ORDER, MOCKITO_BDD, TRUTH);
 
     private static final String VERIFY = "verify";
@@ -58,11 +59,21 @@ final class OracleAllowlist {
      * A call that only counts as an oracle when something else is chained
      * onto its result (README: "the chain itself counts as an oracle only if
      * a terminal assertion method is invoked on it").
+     *
+     * <p>AssertJ's {@code Assertions}/{@code BDDAssertions} each declare a
+     * whole family of entry points sharing one prefix ({@code assertThatXxx},
+     * {@code thenXxx} - `assertThatThrownBy`, `thenCode`,
+     * `assertThatNullPointerException`, etc., all typed-subject overloads of
+     * the same chain-anchor shape) - matched by prefix, the same style
+     * already used for JUnit's own {@code assert*}/{@code fail} in {@link
+     * #isUnconditionalOracle} (D-34).
      */
     static boolean isChainAnchor(String declaringTypeFqn, String methodName) {
         if (ASSERTJ_ASSERTIONS.equals(declaringTypeFqn)) {
-            return ASSERT_THAT.equals(methodName) || "assertThatThrownBy".equals(methodName)
-                || "assertThatCode".equals(methodName) || "assertThatExceptionOfType".equals(methodName);
+            return methodName.startsWith(ASSERT_THAT);
+        }
+        if (ASSERTJ_BDD_ASSERTIONS.equals(declaringTypeFqn)) {
+            return methodName.startsWith("then");
         }
         if (MOCKITO_BDD.equals(declaringTypeFqn)) {
             return "then".equals(methodName);

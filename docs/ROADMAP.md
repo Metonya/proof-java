@@ -241,9 +241,46 @@ name-match fallback for exactly that failure shape. Re-verified on the real
 gson checkout: 38 findings drop to 33, all HIGH, all true-positive - 100%
 of what was reviewed, up from 94.3%. `validation/runs/gson/round2-followup.md`.
 
+**Phase 2 (assertj) allowlist gap closed (2026-08-24):** see D-34. A
+5343-finding run from a separate session (reproducibility gap - its script
+changes did not exist in this repo) traced to AssertJ's own `Assertions`/
+`BDDAssertions` classes each declaring ~27-29 typed-subject entry points
+sharing one prefix, of which D-24 only recognized 4 by exact name - not a
+new library, D-24's existing AssertJ entry was incomplete.
+`OracleAllowlist.isChainAnchor` now matches both by prefix
+(`assertThat`/`then`). Re-verified on the real corpus (same `jacoco.xml`,
+no rebuild needed): 5343 to 2148 findings (-59.8%). `validation/scripts/
+run-corpus-phase.ps1` gained multi-patch support, git-reset-before-build,
+and a `-SkipBuild` mode, making the corpus harness actually reproducible
+from the repo again. `validation/runs/assertj/`.
+
+**Phase 2 (assertj) criterion 4 done, calibration round 1 passes
+(2026-08-24):** all 102 sampled findings (100 `NO_RECOGNIZED_ORACLE`, seed
+42, plus the full 2-item `CATCH_ORACLE_WITHOUT_FAIL` population) reviewed
+against real source - **100% true-positive.** Unlike gson, assertj needed
+only one round: its remaining findings are overwhelmingly genuine, because
+much of assertj's own suite tests its **own** internal assertion engine via
+void calls relying on non-throw (no missing-library gap, no second oracle
+to find). Two new, low-volume, structurally distinct allowlist gaps
+surfaced and are backlogged (not fixed this session): `WithAssertions`
+interface delegation, and `InstanceOfAssertFactory` chains (terminal
+assertions on a factory-returned assert object, never touching `Assertions`/
+`BDDAssertions`). `validation/runs/assertj/precision-summary.md`.
+
+**Phase 2 (assertj) criteria 2 (overall) and 6 done (2026-08-24):** sonar-
+compatible parity PASS, exact match (74.4 vs SonarQube's 74.4; jacoco-line/
+line_coverage also matched exactly, 77.7 vs 77.7, as a bonus cross-check).
+Benchmark: cold 207.2 ms, warm median 175.6 ms, warm p95 199.4 ms, peak
+working set 56.9 MB - close to gson's numbers despite a ~4x larger source
+tree, since analysis time scales with changed/analyzed lines, not repo
+size. See D-35 for a real incident hit while running the Sonar scan (local
+machine froze, required a hard restart) and its fix - a WSL2 memory cap,
+now a documented prerequisite for any further phase.
+
 Phases 2-4 and criterion-2 new-code parity (pending a Developer Edition
 SonarQube instance, or acceptance that Community Edition caps this) remain
-open.
+open. Phase 2's own criterion-4 precision labeling and criterion-2/6 runs
+are separate next steps, not done in this pass.
 
 M1 exit codes: `0` complete analysis regardless of findings; `1` reserved for
 the M3 finding-based quality gate and never emitted by v0.1; `2` invalid
@@ -279,7 +316,21 @@ failure.
   resolution of overloaded calls whose argument is a lambda~~ done, D-33 -
   turned out not to be about lambdas at all (an unresolvable parameter type
   on the callee's own declaration), fixed with a same-file name-match
-  fallback. Each remaining item gets its own design pass at its milestone,
+  fallback · SoftAssertions instance-receiver recognition (`softly.
+  assertThat(x)`/`softly.then(x)`) - D-34 found ~5% of assertj's
+  `NO_RECOGNIZED_ORACLE` findings are this shape; `isChainAnchor` is built
+  on static (declaringType, methodName) pairs, so recognizing an instance
+  receiver is a structural `OracleRecognizer` change, not an allowlist edit
+  · `WithAssertions` interface delegation (a test class implementing that
+  interface gets `assertThat(...)` resolved to its own default methods,
+  declaring type `org.assertj.core.api.WithAssertions`, not `Assertions` -
+  D-34's assertj precision review, low volume but real) ·
+  `InstanceOfAssertFactory` chains (a terminal assertion called directly on
+  a factory-returned assert object, e.g. `TEMPORAL.createAssert(actual).
+  isCloseTo(...)`, never touching `Assertions`/`BDDAssertions` at all - a
+  structurally different gap from a missing allowlist entry, would need
+  recognizing terminal calls on AssertJ's own `AbstractAssert`-typed
+  values). Each remaining item gets its own design pass at its milestone,
   not now.
 
 ## Kill and pivot criteria

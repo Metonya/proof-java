@@ -52,6 +52,13 @@ recorded in the run log next to its results, since it differs per repo.
 
 ## Corpus phase harness (M1c-2)
 
+**Prerequisite before running `sonar-parity.ps1` on any phase:** confirm
+`C:\Users\Mert\.wslconfig` has a `[wsl2] memory=` cap set (currently 8GB) -
+D-35 records a real incident where scanning assertj-core (~4600 test
+files) without this cap froze the whole machine and required a hard
+restart. junit-framework and dropwizard are both likely larger than
+assertj; never skip this check for them.
+
 `validation/scripts/` holds three reusable, repo-agnostic scripts that run
 each corpus phase's commands above without new code per phase (D-30):
 

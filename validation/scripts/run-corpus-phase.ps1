@@ -19,22 +19,35 @@
 .PARAMETER SourceRootRelative / TestRootRelative
   Relative to ModuleRoot; default src/main/java, src/test/java.
 .PARAMETER JacocoVersion
-  Must match pom.xml's jacoco.plugin.version for consistency (D-29-adjacent).
+  Must match pom.xml's jacoco.plugin.version (0.8.13) for consistency
+  (D-29-adjacent) - the report format is the contract, not the tool
+  version, but a silent, undocumented deviation is still not acceptable
+  (M1c-2 assertj precedent: an earlier session used 0.8.15 with no
+  rationale recorded anywhere).
 .PARAMETER SurefireExcludes
   Test class names to exclude from the -Dtest filter (comma-joined with "!").
   Needed when the corpus repo has ProGuard/obfuscation or jar-dependent
   integration tests that only work under `mvn clean verify`, not under
   JaCoCo-instrumented `test` (gson precedent: EnumWithObfuscatedTest,
   OSGiManifestIT - see validation/runs/gson/run-log.md).
-.PARAMETER ArgLinePomPatch
-  If set, a (search, replace) pair applied to the module's pom.xml with sed
-  semantics, to let JaCoCo's ${argLine} property reach a hardcoded
-  <argLine> element (gson precedent). Local to the throwaway corpus clone
-  only - never touches the coverdict repo.
+.PARAMETER PomPatches
+  Zero or more (search, replace) pairs applied to the module's pom.xml with
+  sed semantics, e.g. to let JaCoCo's ${argLine} property reach a hardcoded
+  <argLine> element, or to flip a repo's own <jacoco.skip> off (assertj
+  precedent - three separate patches were needed on one file). Pass as an
+  array of 2-element arrays: @(@($search1,$replace1), @($search2,$replace2)).
+  Local to the throwaway corpus clone only - never touches the coverdict
+  repo, and the clone is git-reset before every run (below) so patches
+  never stack across repeated invocations.
 .PARAMETER LanguageLevel
   --language-level for the oracle critic (match the corpus's testRelease).
 .PARAMETER CoverdictJar
   Path to coverdict.jar.
+.PARAMETER SkipBuild
+  Skip the clone/checkout/mvn-build step entirely and just re-run coverdict
+  against an already-produced jacoco.xml (e.g. after a coverdict-only code
+  change - no need to rebuild a 15-minute corpus test suite just to re-run
+  the analyzer).
 #>
 param(
     [Parameter(Mandatory)][string]$Name,
@@ -47,10 +60,11 @@ param(
     [string]$TestRootRelative = "src/test/java",
     [string]$JacocoVersion = "0.8.13",
     [string[]]$SurefireExcludes = @(),
-    [string[]]$ArgLinePomPatch = @(),
+    [object[]]$PomPatches = @(),
     [int]$LanguageLevel = 17,
     [Parameter(Mandatory)][string]$CoverdictJar,
-    [string]$OutDir
+    [string]$OutDir,
+    [switch]$SkipBuild
 )
 
 if (-not $OutDir) { $OutDir = "C:\Users\Mert\Desktop\coverdict\validation\runs\$Name" }
@@ -63,25 +77,36 @@ if (-not (Test-Path $repoDir)) {
 }
 Push-Location $repoDir
 try {
-    & git checkout --quiet $Pin
-    if ($LASTEXITCODE -ne 0) { throw "git checkout $Pin failed" }
+    if (-not $SkipBuild) {
+        # Discard any patches left over from a previous run of this script
+        # before applying this run's own - patches must never stack.
+        & git reset --hard --quiet HEAD
+        & git clean -fdq
+        & git checkout --quiet $Pin
+        if ($LASTEXITCODE -ne 0) { throw "git checkout $Pin failed" }
 
-    $modulePomPath = Join-Path $ModuleRoot "pom.xml"
-    if ($ArgLinePomPatch.Count -eq 2) {
-        (Get-Content $modulePomPath -Raw) -replace [regex]::Escape($ArgLinePomPatch[0]), $ArgLinePomPatch[1] |
-            Set-Content -Path $modulePomPath -NoNewline
+        $modulePomPath = Join-Path $ModuleRoot "pom.xml"
+        foreach ($patch in $PomPatches) {
+            if ($patch.Count -ne 2) { throw "each PomPatches entry must be a (search, replace) pair" }
+            $content = Get-Content $modulePomPath -Raw
+            if ($content -notmatch [regex]::Escape($patch[0])) {
+                throw "pom patch search text not found in ${modulePomPath}: $($patch[0])"
+            }
+            ($content -replace [regex]::Escape($patch[0]), $patch[1]) |
+                Set-Content -Path $modulePomPath -NoNewline
+        }
+
+        $testFilter = if ($SurefireExcludes.Count -gt 0) {
+            "-Dtest=" + (($SurefireExcludes | ForEach-Object { "!$_" }) -join ",")
+        } else { $null }
+
+        $mvnArgs = @("-q", "-B", "-pl", $ModuleRoot, "-am")
+        if ($testFilter) { $mvnArgs += $testFilter; $mvnArgs += "-DfailIfNoTests=false" }
+        $mvnArgs += @("clean", "org.jacoco:jacoco-maven-plugin:${JacocoVersion}:prepare-agent",
+                      "test", "org.jacoco:jacoco-maven-plugin:${JacocoVersion}:report")
+        & mvn.cmd @mvnArgs
+        if ($LASTEXITCODE -ne 0) { throw "mvn build failed (exit $LASTEXITCODE)" }
     }
-
-    $testFilter = if ($SurefireExcludes.Count -gt 0) {
-        "-Dtest=" + (($SurefireExcludes | ForEach-Object { "!$_" }) -join ",")
-    } else { $null }
-
-    $mvnArgs = @("-q", "-B", "-pl", $ModuleRoot, "-am")
-    if ($testFilter) { $mvnArgs += $testFilter; $mvnArgs += "-DfailIfNoTests=false" }
-    $mvnArgs += @("clean", "org.jacoco:jacoco-maven-plugin:${JacocoVersion}:prepare-agent",
-                  "test", "org.jacoco:jacoco-maven-plugin:${JacocoVersion}:report")
-    & mvn @mvnArgs
-    if ($LASTEXITCODE -ne 0) { throw "mvn build failed (exit $LASTEXITCODE)" }
 
     $jacocoXml = Join-Path $ModuleRoot "target\site\jacoco\jacoco.xml"
     if (-not (Test-Path $jacocoXml)) { throw "jacoco.xml not produced at $jacocoXml" }
@@ -108,14 +133,26 @@ try {
     Pop-Location
 }
 
+$patchLines = if ($PomPatches.Count -eq 0) {
+    "(none)"
+} else {
+    ($PomPatches | ForEach-Object { "  - `"$($_[0])`" -> `"$($_[1])`"" }) -join "`n"
+}
+$patchStatus = if ($SkipBuild) {
+    "required on a fresh (non -SkipBuild) build - NOT (re)applied this run, this run reused the clone's existing state as-is"
+} else {
+    "applied to the throwaway clone only - never committed to the coverdict repo"
+}
+
 @"
 # $Name - corpus phase run log
 
 Repo: $RepoUrl @ $Pin
 Module: $ModuleId at $ModuleRoot
-JaCoCo: $JacocoVersion (bound via CLI goals, no pom edit unless ArgLinePomPatch set)
+JaCoCo: $JacocoVersion (bound via CLI goals)
 Surefire excludes: $($SurefireExcludes -join ', ')
-ArgLine pom patch applied: $($ArgLinePomPatch.Count -eq 2)
+pom.xml patches ($patchStatus):
+$patchLines
 Language level: $LanguageLevel
 
 Commands (module-relative, run from $repoDir):

@@ -307,6 +307,79 @@ is a genuine cross-file case, a different, still-open D-17 boundary
 neither fix touched. `docs/rules/README.md`'s "Helper traversal" section
 updated to match. See `validation/runs/gson/round2-followup.md`.
 
+**D-34 · M1c-2 phase 2 (assertj): allowlist entry completed by prefix, not
+a new library; corpus harness made reproducible** (2026-08-24)
+A separate session cloned/built assertj and reported script improvements
+that do not exist in this repo (`git diff HEAD -- validation/scripts/
+run-corpus-phase.ps1` is empty, single branch, no stash) - its 5343-finding
+output was real (verified against the on-disk `jacoco.xml`) but the harness
+that produced it was not reproducible from the repo, and it used JaCoCo
+0.8.15 with no rationale recorded anywhere (our own pin is 0.8.13). Root
+cause of the finding volume, measured (not assumed) by reading real flagged
+bodies against the real source: 41.8% call `BDDAssertions.then*`, 10.5% call
+`Assertions.assertThatXxx*` beyond the 4 names already in D-24 - AssertJ is
+already an allowlisted library; both classes declare a whole family of
+typed-subject entry points sharing one prefix (`Assertions` declares 27
+`assertThatXxx` methods, `BDDAssertions` 29 `thenXxx`), so `OracleAllowlist.
+isChainAnchor` now matches by prefix for these two types - the same style
+already used for JUnit's `assert*`/`fail` in `isUnconditionalOracle`. Not a
+new-library decision; this is D-24's existing AssertJ entry, completed.
+3.1% call `AssertionsUtil.assertThatAssertionErrorIsThrownBy`, a test-side
+cross-file helper (D-17 boundary, same category as gson's `MoreAsserts`) -
+deliberately left unrecognized. 5.2% use `SoftAssertions` instance receivers
+(`softly.assertThat(...)`) - out of scope this round, `isChainAnchor` is
+built on static (declaringType, methodName) pairs and instance-receiver
+recognition is a structural change to `OracleRecognizer`, not an allowlist
+edit; backlogged. Result measured on the real corpus: 5343 to 2148 findings
+(-59.8%). `run-corpus-phase.ps1` gained multi-patch support (`PomPatches`,
+a list of (search, replace) pairs - assertj needed two, not one), a
+git-reset-hard-and-clean before every build so patches never stack across
+repeated runs, an explicit `mvn.cmd` invocation, and a `-SkipBuild` mode to
+re-run the analyzer alone against an already-produced `jacoco.xml` without
+rebuilding a 14,701-test suite. The JaCoCo 0.8.15 deviation from our 0.8.13
+pin is accepted as-is (rebuilding assertj's full suite solely to change a
+patch-version JaCoCo build serves no purpose - the manifest's own position
+is that the XML report format is the contract, not the tool version) but is
+now recorded, not silent. Precision labeling (criterion 4, seed 42, 100
+`NO_RECOGNIZED_ORACLE` sampled + the full 2-item `CATCH_ORACLE_WITHOUT_FAIL`
+population): **100% true-positive, calibration round 1 passes** - unlike
+gson, no second round is warranted. Root cause of the profile difference:
+much of assertj's own suite tests its own internal assertion engine via
+void calls relying on non-throw (no missing-library gap to find). Found and
+backlogged, not fixed this session: `WithAssertions` interface delegation
+(a class `implements WithAssertions` gets `assertThat` resolved to that
+interface's own default methods, a different declaring type) and
+`InstanceOfAssertFactory` chains (terminal assertions on a factory-returned
+assert object, never touching `Assertions`/`BDDAssertions`).
+`validation/runs/assertj/precision-summary.md`.
+
+**D-35 · WSL2 memory cap required before scanning a large corpus; local
+SonarQube CE completion must be polled, not slept** (2026-08-24)
+The first `sonar-parity.ps1` run against assertj-core (~4600 test files, 4x
+gson's size) triggered a real, severe incident on the development machine:
+`C:\Users\Mert\.wslconfig` had no `[wsl2] memory=` cap, so the local
+Docker-Desktop-hosted SonarQube server's WSL2 VM balloon grew unbounded
+while ingesting the large analysis report, consumed enough of the
+machine's 32 GB RAM to freeze Windows entirely, and required a hard
+restart - twice, since a retry before diagnosing the cause repeated it.
+Root cause confirmed via Task Manager (`VmmemWSL`/`OpenJDK Platform
+binary` at 70%+ CPU, sustained) and the missing config line. Fix (applied
+by the user, not this session): `memory=8GB` added to `.wslconfig`,
+followed by `wsl --shutdown` and a Docker Desktop restart. Verified safe
+by re-running the same assertj scan afterward - `VmmemWSL` stayed under
+the cap, no incident. **Any future corpus phase (junit-framework,
+dropwizard - both likely larger than assertj) requires this cap to already
+be in place before a Sonar scan is attempted; never attempt one on a
+machine without a WSL2 memory ceiling confirmed first.** Separately (a
+real but far lower-severity bug hit while investigating): `sonar-parity.ps1`
+slept a fixed 5 seconds after the scanner exited before reading measures -
+correct for gson's size, but SonarQube's Compute Engine was still
+`IN_PROGRESS` processing assertj's larger report past that window, so the
+API silently returned empty measures rather than an error (a false `FAIL`
+in the generated report, since deltas involving empty compared to a real
+number are large). Fixed to poll `api/ce/component` until its `queue` is
+empty instead of guessing a sleep duration.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not
