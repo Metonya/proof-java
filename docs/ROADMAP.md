@@ -105,7 +105,7 @@ measure `sonar-compatible` new-code parity against the real SonarQube UI
   committed) as coverdict's own quality gate — run via
   `mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar ...`
   (`mvn sonar:sonar` fails, plugin prefix isn't registered); currently 0 open
-  issues, ~95% real line coverage. Separate from the `sonar-compatible`
+  issues, ~87% real line coverage (2026-08-24, after M1b). Separate from the `sonar-compatible`
   parity ground truth mentioned in the
   kill criteria below, which targets the M1c validation corpus, not our code.
 
