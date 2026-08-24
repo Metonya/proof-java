@@ -45,8 +45,9 @@ class GitClientTest {
     @Test
     void resolveHeadOnAnUnbornRepositoryIsUnresolvableHead() throws IOException, InterruptedException {
         initRepo(repo); // no commits at all
+        GitClient client = new GitClient(repo);
 
-        AnalysisException e = assertThrows(AnalysisException.class, () -> new GitClient(repo).resolveHead());
+        AnalysisException e = assertThrows(AnalysisException.class, client::resolveHead);
         assertEquals("UNRESOLVABLE_HEAD", e.code());
     }
 
@@ -54,8 +55,9 @@ class GitClientTest {
     void resolveRefOnAMissingRefIsUnresolvableRef() throws IOException, InterruptedException {
         initRepo(repo);
         commitFile(repo, "a.txt", "one");
+        GitClient client = new GitClient(repo);
 
-        AnalysisException e = assertThrows(AnalysisException.class, () -> new GitClient(repo).resolveRef("no-such-branch"));
+        AnalysisException e = assertThrows(AnalysisException.class, () -> client.resolveRef("no-such-branch"));
         assertEquals("UNRESOLVABLE_REF", e.code());
     }
 
@@ -87,9 +89,10 @@ class GitClientTest {
         commitFile(repo, "a.txt", "on-main");
         runGit(repo, "checkout", "-q", "--orphan", "unrelated");
         commitFile(repo, "b.txt", "on-unrelated");
+        GitClient client = new GitClient(repo);
 
         AnalysisException e = assertThrows(AnalysisException.class,
-            () -> new GitClient(repo).mergeBase("main", "unrelated"));
+            () -> client.mergeBase("main", "unrelated"));
         assertEquals("MISSING_MERGE_BASE", e.code());
     }
 

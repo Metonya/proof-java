@@ -78,15 +78,27 @@ rejection), module/source-root binding with on-disk verification, the D-05
 single-exclusion-layer, all three metric modes, and schema-valid JSON/text
 output, all real (not stubbed). Verified against coverdict's own real
 `jacoco.xml`: `jacoco-line` matches JaCoCo's report-level LINE counter
-exactly (518/549, D-04 parity), two runs are byte-identical. Still open below.
+exactly (518/549, D-04 parity), two runs are byte-identical.
 
-- Add the `--base`/`--uncommitted` diff modes (D-16 merge-base semantics).
-  Missing refs, shallow-history failure, and unmapped/ambiguous changed Java
-  files must produce a structured incomplete result and non-zero exit, never
-  a false green - the `--no-vcs` slice already establishes this pattern for
-  bad JaCoCo/module evidence; diff evidence needs the same treatment.
-- Compute new-code results in the same three modes once a diff exists;
-  `coverage.newCode` currently always reports `unavailable_no_vcs`.
+**`--base`/`--uncommitted` diff modes done (2026-08-24):** `analyze --base
+<ref>` and `analyze --uncommitted` run end to end - `GitClient` invokes git
+as an argv array (no shell, D-26), `UnifiedDiffParser` reads `--unified=0`
+hunk headers, `ChangedFileClassifier` sorts every changed `.java`/`.kt`/
+`.scala` path into mapped/excluded/non-executable/unsupported/unknown
+(D-27), and `coverage.newCode` is a real `MetricSet` computed by the same
+`MetricsEngine.compute` as `overall`, over a line-restricted projection
+(hard rule 4). Verified against coverdict's own history: the
+`sum(changedFiles[mapped].newLines) == newCode.denominator` invariant holds
+on a real run, changed test files classify `excluded` (not incomplete) as
+designed, and a genuinely untracked Java file correctly produces
+`UNTRACKED_JAVA_FILE` + exit 3 while still preserving the already-computed
+overall coverage in the same document (D-26). Missing refs, missing merge
+base, and unmapped/absent-from-report changed Java files all produce a
+structured incomplete result with the specific failing prerequisite named,
+never a false green. M1a is now feature-complete; M1c will still need to
+measure `sonar-compatible` new-code parity against the real SonarQube UI
+(criterion 2) once the validation corpus work starts.
+
 - Standalone HTML is deferred until dogfood proves a need.
 - coverdict's own codebase is scanned by a local, self-hosted SonarQube
   (Docker, `localhost:9001`; token via `SONAR_TOKEN` env var, never

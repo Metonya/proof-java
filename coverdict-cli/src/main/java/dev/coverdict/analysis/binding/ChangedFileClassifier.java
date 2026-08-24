@@ -1,6 +1,7 @@
 package dev.coverdict.analysis.binding;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -78,37 +79,32 @@ public final class ChangedFileClassifier {
 
         List<Pattern> exclusionPatterns = ExclusionFilter.compile(exclusionGlobs);
         Map<String, ResolvedSourceFile> boundByModuleAndPath = indexByModuleAndPath(boundFiles);
-
-        List<ChangedFile> changedFiles = new ArrayList<>();
-        List<AnalysisReason> incompleteReasons = new ArrayList<>();
-        List<AnalysisReason> warnings = new ArrayList<>();
-        Counters counters = new Counters();
+        Accumulator acc = new Accumulator();
 
         for (String path : new TreeSet<>(changedLinesByPath.keySet())) {
-            classifyOne(path, changedLinesByPath.get(path), modules, exclusionPatterns, boundByModuleAndPath,
-                changedFiles, incompleteReasons, counters);
+            classifyOne(path, changedLinesByPath.get(path), modules, exclusionPatterns, boundByModuleAndPath, acc);
         }
 
-        classifyUntracked(untrackedFiles, modules, exclusionPatterns, warnings, incompleteReasons);
+        classifyUntracked(untrackedFiles, modules, exclusionPatterns, acc);
 
-        if (counters.excluded > 0) {
-            warnings.add(new AnalysisReason("CHANGED_FILES_EXCLUDED",
-                counters.excluded + " changed file(s) excluded from new-code coverage by --coverage-exclusions or a test root."));
+        if (acc.excluded > 0) {
+            acc.warnings.add(new AnalysisReason("CHANGED_FILES_EXCLUDED",
+                acc.excluded + " changed file(s) excluded from new-code coverage by --coverage-exclusions or a test root."));
         }
-        if (counters.staleFiles > 0) {
-            warnings.add(new AnalysisReason("CHANGED_LINES_ABSENT_FROM_REPORT",
-                counters.staleLines + " changed line(s) across " + counters.staleFiles + " file(s) are absent from the "
+        if (acc.staleFiles > 0) {
+            acc.warnings.add(new AnalysisReason("CHANGED_LINES_ABSENT_FROM_REPORT",
+                acc.staleLines + " changed line(s) across " + acc.staleFiles + " file(s) are absent from the "
                     + "bound report(s) and excluded from new-code numerators/denominators; the report may be older than this diff."));
         }
 
-        changedFiles.sort(Comparator.comparing(ChangedFile::module, Comparator.nullsFirst(Comparator.naturalOrder()))
+        acc.changedFiles.sort(Comparator.comparing(ChangedFile::module, Comparator.nullsFirst(Comparator.naturalOrder()))
             .thenComparing(ChangedFile::path));
-        return new ClassificationResult(changedFiles, incompleteReasons, warnings);
+        return new ClassificationResult(acc.changedFiles, acc.newCodeDataset, acc.incompleteReasons, acc.warnings);
     }
 
     private static void classifyOne(String path, SortedSet<Integer> changedNumbers, List<ModuleDefinition> modules,
                                      List<Pattern> exclusionPatterns, Map<String, ResolvedSourceFile> boundByModuleAndPath,
-                                     List<ChangedFile> changedFiles, List<AnalysisReason> incompleteReasons, Counters counters) {
+                                     Accumulator acc) {
         String ext = extension(path);
         boolean isJava = ".java".equals(ext);
         boolean isUnsupportedJvm = ".kt".equals(ext) || ".scala".equals(ext);
@@ -118,44 +114,43 @@ public final class ChangedFileClassifier {
 
         ModuleDefinition module = resolveOwningModule(path, modules);
         if (module == null) {
-            changedFiles.add(new ChangedFile(path, null, Classification.UNKNOWN, null, null, List.of()));
-            incompleteReasons.add(new AnalysisReason("CHANGED_JAVA_OUTSIDE_MODULES",
+            acc.changedFiles.add(new ChangedFile(path, null, Classification.UNKNOWN, null, null, List.of()));
+            acc.incompleteReasons.add(new AnalysisReason("CHANGED_JAVA_OUTSIDE_MODULES",
                 "Changed path '" + path + "' is not under any declared module root.", path));
             return;
         }
 
         if (isUnsupportedJvm) {
-            changedFiles.add(new ChangedFile(path, module.id(), Classification.UNSUPPORTED, null, null, List.of()));
+            acc.changedFiles.add(new ChangedFile(path, module.id(), Classification.UNSUPPORTED, null, null, List.of()));
             return;
         }
 
         if (ExclusionFilter.matchesAny(path, exclusionPatterns) || underAnyTestRoot(path, module)) {
-            changedFiles.add(new ChangedFile(path, module.id(), Classification.EXCLUDED, null, null, List.of()));
-            counters.excluded++;
+            acc.changedFiles.add(new ChangedFile(path, module.id(), Classification.EXCLUDED, null, null, List.of()));
+            acc.excluded++;
             return;
         }
 
         ResolvedSourceFile bound = boundByModuleAndPath.get(key(module.id(), path));
         if (bound != null) {
-            addMapped(path, module.id(), changedNumbers, bound, changedFiles, counters);
+            addMapped(path, module.id(), changedNumbers, bound, acc);
             return;
         }
 
         if (isPackageOrModuleInfo(path)) {
-            changedFiles.add(new ChangedFile(path, module.id(), Classification.NON_EXECUTABLE, null, null, List.of()));
+            acc.changedFiles.add(new ChangedFile(path, module.id(), Classification.NON_EXECUTABLE, null, null, List.of()));
             return;
         }
 
-        changedFiles.add(new ChangedFile(path, module.id(), Classification.UNKNOWN, null, null, List.of()));
-        incompleteReasons.add(new AnalysisReason("REPORT_MISSING_CHANGED_FILE",
+        acc.changedFiles.add(new ChangedFile(path, module.id(), Classification.UNKNOWN, null, null, List.of()));
+        acc.incompleteReasons.add(new AnalysisReason("REPORT_MISSING_CHANGED_FILE",
             "Changed path '" + path + "' is under module '" + module.id() + "' but absent from every bound report; "
                 + "the report may be older than this diff. Rebuild coverage and rerun.", path, module.id()));
     }
 
-    private static void addMapped(String path, String moduleId, SortedSet<Integer> changedNumbers, ResolvedSourceFile bound,
-                                   List<ChangedFile> changedFiles, Counters counters) {
+    private static void addMapped(String path, String moduleId, SortedSet<Integer> changedNumbers, ResolvedSourceFile bound, Accumulator acc) {
         if (bound.lines().isEmpty()) {
-            changedFiles.add(new ChangedFile(path, moduleId, Classification.NON_EXECUTABLE, null, null, List.of()));
+            acc.changedFiles.add(new ChangedFile(path, moduleId, Classification.NON_EXECUTABLE, null, null, List.of()));
             return;
         }
         List<LineCoverage> executableChanged = new ArrayList<>();
@@ -174,28 +169,30 @@ public final class ChangedFileClassifier {
                 uncoveredNumbers.add(line.number());
             }
         }
-        java.util.Collections.sort(uncoveredNumbers);
-        changedFiles.add(new ChangedFile(path, moduleId, Classification.MAPPED, newLines, coveredNewLines, coalesce(uncoveredNumbers)));
+        Collections.sort(uncoveredNumbers);
+        acc.changedFiles.add(new ChangedFile(path, moduleId, Classification.MAPPED, newLines, coveredNewLines, coalesce(uncoveredNumbers)));
+        // Same executableChanged list the numbers above came from - MetricsEngine.compute
+        // over this dataset is guaranteed to agree with the per-file sums (hard rule 4).
+        acc.newCodeDataset.add(new ResolvedSourceFile(moduleId, path, executableChanged, 0, 0, true));
 
         if (newLines < changedNumbers.size()) {
-            counters.staleFiles++;
-            counters.staleLines += changedNumbers.size() - newLines;
+            acc.staleFiles++;
+            acc.staleLines += changedNumbers.size() - newLines;
         }
     }
 
     private static void classifyUntracked(List<String> untrackedFiles, List<ModuleDefinition> modules,
-                                           List<Pattern> exclusionPatterns, List<AnalysisReason> warnings,
-                                           List<AnalysisReason> incompleteReasons) {
+                                           List<Pattern> exclusionPatterns, Accumulator acc) {
         for (String path : untrackedFiles) {
             if (!path.endsWith(".java")) {
-                warnings.add(new AnalysisReason("UNTRACKED_NON_JAVA_FILE", "Untracked file ignored by diff analysis.", path));
+                acc.warnings.add(new AnalysisReason("UNTRACKED_NON_JAVA_FILE", "Untracked file ignored by diff analysis.", path));
                 continue;
             }
             ModuleDefinition module = resolveOwningModule(path, modules);
             boolean isTestFile = module != null && underAnyTestRoot(path, module);
             boolean isExcluded = ExclusionFilter.matchesAny(path, exclusionPatterns);
             if (!isTestFile && !isExcluded) {
-                incompleteReasons.add(new AnalysisReason("UNTRACKED_JAVA_FILE",
+                acc.incompleteReasons.add(new AnalysisReason("UNTRACKED_JAVA_FILE",
                     "Untracked Java file '" + path + "' is not tracked by git and was not analyzed (D-16).", path,
                     module == null ? null : module.id()));
             }
@@ -210,8 +207,10 @@ public final class ChangedFileClassifier {
         return index;
     }
 
+    /** NUL-separated: a module id can never contain one, unlike a space or "/" a real path could (D-22). */
+    /** NUL-separated: a module id can never contain one, unlike a space or "/" a real path could (D-22). */
     private static String key(String moduleId, String path) {
-        return moduleId + " " + path;
+        return moduleId + "\u0000" + path;
     }
 
     /** Longest declared module root under which {@code path} falls; {@code null} if none. A root of {@code "."} matches every path. */
@@ -276,7 +275,12 @@ public final class ChangedFileClassifier {
         return ranges;
     }
 
-    private static final class Counters {
+    /** All the mutable state one {@link #classify} run threads through - grouped so no helper method needs more than a handful of parameters. */
+    private static final class Accumulator {
+        final List<ChangedFile> changedFiles = new ArrayList<>();
+        final List<ResolvedSourceFile> newCodeDataset = new ArrayList<>();
+        final List<AnalysisReason> incompleteReasons = new ArrayList<>();
+        final List<AnalysisReason> warnings = new ArrayList<>();
         int excluded;
         int staleFiles;
         int staleLines;

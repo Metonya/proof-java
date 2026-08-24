@@ -12,6 +12,8 @@ import java.util.Set;
 import java.util.SortedSet;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Every fixture here is either captured verbatim from a real {@code git
@@ -38,27 +40,17 @@ class UnifiedDiffParserTest {
         assertEquals(Set.of(1, 2, 3, 4, 5, 6, 7), result.get("src/main/java/com/example/New.java"));
     }
 
-    @Test
-    void deletedFileContributesNoEntry() throws IOException {
-        Map<String, SortedSet<Integer>> result = parse("deleted-file.diff");
-        assertTrue(result.isEmpty(), result.toString());
-    }
-
-    @Test
-    void pureRemovalHunkContributesNoEntry() throws IOException {
-        Map<String, SortedSet<Integer>> result = parse("pure-removal-hunk.diff");
-        assertTrue(result.isEmpty(), "a +0,0 hunk adds nothing to the new side: " + result);
-    }
-
-    @Test
-    void pureRenameWithNoContentChangeContributesNoEntry() throws IOException {
-        Map<String, SortedSet<Integer>> result = parse("pure-rename-no-changes.diff");
-        assertTrue(result.isEmpty(), result.toString());
-    }
-
-    @Test
-    void binaryFileContributesNoEntry() throws IOException {
-        Map<String, SortedSet<Integer>> result = parse("binary-file.diff");
+    /**
+     * Four distinct causes, same observable contract: no new-side lines means
+     * no {@code changedFiles} entry at all - a full deletion ({@code +++
+     * /dev/null}), a hunk whose new-side count is {@code 0} (pure removal), a
+     * pure rename with no content change (no {@code +++} line at all), and a
+     * binary diff (same).
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"deleted-file.diff", "pure-removal-hunk.diff", "pure-rename-no-changes.diff", "binary-file.diff"})
+    void fixturesWithNoNewSideLinesContributeNoEntry(String fixtureName) throws IOException {
+        Map<String, SortedSet<Integer>> result = parse(fixtureName);
         assertTrue(result.isEmpty(), result.toString());
     }
 

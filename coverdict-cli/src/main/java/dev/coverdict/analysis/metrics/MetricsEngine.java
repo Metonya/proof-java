@@ -9,14 +9,19 @@ import dev.coverdict.analysis.model.ResolvedSourceFile;
  * Computes all three metric modes from one filtered dataset (hard rule 4):
  * no number here is ever read back out of a raw JaCoCo counter - every
  * numerator and denominator is summed from the same {@code lines} that
- * {@link ExclusionFilter} already filtered.
+ * {@link ExclusionFilter} already filtered. The same method serves both
+ * scopes the schema defines: {@code coverage.overall} (the full filtered
+ * dataset) and {@code coverage.newCode} (the same dataset shape, but each
+ * file's {@code lines()} already restricted to changed-and-report-known
+ * lines by {@link dev.coverdict.analysis.binding.ChangedFileClassifier}) -
+ * one formula, never two.
  */
 public final class MetricsEngine {
 
     private MetricsEngine() {
     }
 
-    public static MetricSet computeOverall(List<ResolvedSourceFile> filteredFiles) {
+    public static MetricSet compute(List<ResolvedSourceFile> filteredFiles) {
         int executableLines = 0;
         int coveredLines = 0;
         int fullyCoveredLines = 0;

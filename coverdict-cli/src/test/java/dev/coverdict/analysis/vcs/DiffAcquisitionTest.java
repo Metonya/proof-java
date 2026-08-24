@@ -74,9 +74,10 @@ class DiffAcquisitionTest {
     void unresolvableBaseRefFailsBeforeAnyDiffIsAttempted() throws IOException, InterruptedException {
         initRepo(repo);
         commitFile(repo, "a.txt", "one");
+        GitClient git = new GitClient(repo);
 
         AnalysisException e = assertThrows(AnalysisException.class,
-            () -> DiffAcquisition.acquireBaseRef(new GitClient(repo), "no-such-ref"));
+            () -> DiffAcquisition.acquireBaseRef(git, "no-such-ref"));
         assertEquals("UNRESOLVABLE_REF", e.code());
     }
 
@@ -86,22 +87,24 @@ class DiffAcquisitionTest {
         commitFile(repo, "a.txt", "on-main");
         runGit(repo, "checkout", "-q", "--orphan", "unrelated");
         commitFile(repo, "b.txt", "on-unrelated");
+        GitClient git = new GitClient(repo);
 
         AnalysisException e = assertThrows(AnalysisException.class,
-            () -> DiffAcquisition.acquireBaseRef(new GitClient(repo), "main"));
+            () -> DiffAcquisition.acquireBaseRef(git, "main"));
         assertEquals("MISSING_MERGE_BASE", e.code());
     }
 
     @Test
     void zeroCommitRepositoryFailsStructurallyNotWithANullPointer() throws IOException, InterruptedException {
         initRepo(repo); // git init, but no commits: HEAD is unborn
+        GitClient git = new GitClient(repo);
 
         AnalysisException workingTree = assertThrows(AnalysisException.class,
-            () -> DiffAcquisition.acquireWorkingTree(new GitClient(repo)));
+            () -> DiffAcquisition.acquireWorkingTree(git));
         assertEquals("UNRESOLVABLE_HEAD", workingTree.code());
 
         AnalysisException baseRef = assertThrows(AnalysisException.class,
-            () -> DiffAcquisition.acquireBaseRef(new GitClient(repo), "HEAD"));
+            () -> DiffAcquisition.acquireBaseRef(git, "HEAD"));
         assertEquals("UNRESOLVABLE_HEAD", baseRef.code());
     }
 

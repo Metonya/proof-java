@@ -4,13 +4,15 @@ import java.util.List;
 
 import dev.coverdict.analysis.metrics.MetricSet;
 import dev.coverdict.analysis.model.AnalysisReason;
+import dev.coverdict.analysis.model.ChangedFile;
+import dev.coverdict.analysis.vcs.VcsIdentity;
 
 /**
- * Everything {@link VerdictJsonWriter} needs. Scoped to what this milestone
- * step produces: {@code diffMode} is always {@code "no-vcs"} here (D-16's
- * base-ref/working-tree modes are the next step - see ROADMAP M1a);
- * {@code changedFiles} and {@code findings} are always empty (no diff
- * support, no L0 oracle rules yet - M1b).
+ * Everything {@link VerdictJsonWriter} needs. {@code findings} is still
+ * always empty (no L0 oracle rules yet - M1b). {@code identity} is {@code
+ * null} exactly when {@code diffMode} is {@code "no-vcs"} - in every other
+ * case it carries at least {@code head}/{@code dirty}, and {@code baseRef}/
+ * {@code base}/{@code mergeBase} besides in base-ref mode (D-16).
  */
 public record VerdictDocument(
     String schemaVersion,
@@ -21,7 +23,11 @@ public record VerdictDocument(
     String encoding,
     List<String> exclusions,
     List<ModuleInput> modules,
+    String diffMode,
+    VcsIdentity identity,
     MetricSet overallMetrics,
+    NewCodeCoverage newCode,
+    List<ChangedFile> changedFiles,
     List<AnalysisReason> warnings
 ) {
 }

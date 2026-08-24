@@ -204,10 +204,16 @@ public final class GitClient {
     private record ProcessResult(int exitCode, String stdout, String stderr) {
     }
 
-    /** Reads an entire stream on its own thread so a large diff can never deadlock the pipe (see class javadoc). */
+    /**
+     * Reads an entire stream on its own thread so a large diff can never
+     * deadlock the pipe (see class javadoc). No {@code volatile} needed on
+     * {@link #bytes}: every caller reads it only after {@code Thread.join()}
+     * on this runnable's thread, and join() already establishes a
+     * happens-before edge with everything the thread did before it finished.
+     */
     private static final class StreamGobbler implements Runnable {
         private final InputStream in;
-        private volatile byte[] bytes = new byte[0];
+        private byte[] bytes = new byte[0];
 
         StreamGobbler(InputStream in) {
             this.in = in;

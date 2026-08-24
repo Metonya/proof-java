@@ -38,7 +38,7 @@ class MetricsEngineTest {
     void computesAllThreeModesFromTheHandCalculatedFixture() {
         // See fixtures/jacoco/mixed-coverage.xml's header comment for the
         // by-hand derivation: 80.0% / 60.0% / 55.6%, all different.
-        MetricSet metrics = MetricsEngine.computeOverall(bind("mixed-coverage.xml", "src"));
+        MetricSet metrics = MetricsEngine.compute(bind("mixed-coverage.xml", "src"));
 
         assertEquals(new BigDecimal("80.0"), metrics.jacocoLine().percent());
         assertEquals(4, metrics.jacocoLine().numerator());
@@ -60,7 +60,7 @@ class MetricsEngineTest {
         // number, so a bug shared between the fixture and the engine can't
         // hide the mismatch.
         JacocoReport report = parser.parse(FIXTURES.resolve("mixed-coverage.xml"));
-        MetricSet metrics = MetricsEngine.computeOverall(bind("mixed-coverage.xml", "src"));
+        MetricSet metrics = MetricsEngine.compute(bind("mixed-coverage.xml", "src"));
 
         assertEquals(report.totalLineCovered(), metrics.jacocoLine().numerator());
         assertEquals(report.totalLineCovered() + report.totalLineMissed(), metrics.jacocoLine().denominator());
@@ -68,7 +68,7 @@ class MetricsEngineTest {
 
     @Test
     void zeroExecutableLinesProducesNullPercentNotZeroOrHundred() {
-        MetricSet metrics = MetricsEngine.computeOverall(bind("empty-report.xml", "src"));
+        MetricSet metrics = MetricsEngine.compute(bind("empty-report.xml", "src"));
         assertNull(metrics.jacocoLine().percent());
         assertNull(metrics.strictLine().percent());
         assertNull(metrics.sonarCompatible().percent());
@@ -80,7 +80,7 @@ class MetricsEngineTest {
         List<ResolvedSourceFile> files = bind("mixed-coverage.xml", "src");
         List<ResolvedSourceFile> excluded = ExclusionFilter.apply(files, List.of("**/Calc.java"));
 
-        MetricSet metrics = MetricsEngine.computeOverall(excluded);
+        MetricSet metrics = MetricsEngine.compute(excluded);
 
         assertEquals(0, metrics.jacocoLine().denominator(), "the only source file was excluded");
         assertNull(metrics.jacocoLine().percent());

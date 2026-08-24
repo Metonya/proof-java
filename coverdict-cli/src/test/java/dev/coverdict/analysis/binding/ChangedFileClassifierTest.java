@@ -13,7 +13,6 @@ import java.util.TreeSet;
 import org.junit.jupiter.api.Test;
 
 import dev.coverdict.analysis.jacoco.LineCoverage;
-import dev.coverdict.analysis.model.AnalysisReason;
 import dev.coverdict.analysis.model.ChangedFile;
 import dev.coverdict.analysis.model.Classification;
 import dev.coverdict.analysis.model.LineRange;
@@ -231,6 +230,40 @@ class ChangedFileClassifierTest {
         assertEquals(1, result.warnings().size());
         assertEquals("UNTRACKED_NON_JAVA_FILE", result.warnings().get(0).code());
         assertEquals("notes.txt", result.warnings().get(0).path());
+    }
+
+    @Test
+    void newCodeDatasetSumsExactlyToThePerFileNewLinesAndCoveredNewLinesTotals() {
+        // The critical cross-check: MetricsEngine.compute(result.newCodeDataset())
+        // must agree with sum(changedFiles[mapped].newLines/coveredNewLines) -
+        // both come from the exact same executableChanged list per file
+        // (hard rule 4), never two independently-derived numbers.
+        ResolvedSourceFile calc = resolvedFile("src/main/java/com/example/Calc.java",
+            covered(1), covered(2), uncovered(3));
+        ResolvedSourceFile util = resolvedFile("src/main/java/com/example/Util.java",
+            covered(10), uncovered(11), uncovered(12));
+        Map<String, SortedSet<Integer>> changed = new LinkedHashMap<>();
+        changed.put("src/main/java/com/example/Calc.java", lines(1, 2, 3));
+        changed.put("src/main/java/com/example/Util.java", lines(10, 11, 12));
+
+        ClassificationResult result = ChangedFileClassifier.classify(
+            changed, List.of(), List.of(ROOT), List.of(), List.of(calc, util));
+
+        int totalNewLinesFromChangedFiles = result.changedFiles().stream()
+            .filter(f -> f.classification() == Classification.MAPPED)
+            .mapToInt(ChangedFile::newLines).sum();
+        int totalCoveredFromChangedFiles = result.changedFiles().stream()
+            .filter(f -> f.classification() == Classification.MAPPED)
+            .mapToInt(ChangedFile::coveredNewLines).sum();
+
+        int totalLinesInDataset = result.newCodeDataset().stream().mapToInt(f -> f.lines().size()).sum();
+        long totalCoveredInDataset = result.newCodeDataset().stream()
+            .flatMap(f -> f.lines().stream()).filter(LineCoverage::isCovered).count();
+
+        assertEquals(6, totalNewLinesFromChangedFiles);
+        assertEquals(3, totalCoveredFromChangedFiles); // Calc: lines 1,2 covered; Util: line 10 covered
+        assertEquals(totalNewLinesFromChangedFiles, totalLinesInDataset);
+        assertEquals(totalCoveredFromChangedFiles, totalCoveredInDataset);
     }
 
     @Test

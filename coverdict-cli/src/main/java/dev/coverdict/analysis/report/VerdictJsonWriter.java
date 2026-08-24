@@ -15,6 +15,9 @@ import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import dev.coverdict.analysis.metrics.Metric;
 import dev.coverdict.analysis.metrics.MetricSet;
 import dev.coverdict.analysis.model.AnalysisReason;
+import dev.coverdict.analysis.model.ChangedFile;
+import dev.coverdict.analysis.model.LineRange;
+import dev.coverdict.analysis.vcs.VcsIdentity;
 
 /**
  * Writes a {@link VerdictDocument} field-by-field via Jackson's streaming
@@ -62,36 +65,30 @@ public final class VerdictJsonWriter {
             g.writeEndArray();
             g.writeEndObject();
 
-            g.writeObjectFieldStart("inputs");
-            g.writeStringField("diffMode", "no-vcs");
-            g.writeNumberField("languageLevel", doc.languageLevel());
-            g.writeStringField("encoding", doc.encoding());
-            g.writeArrayFieldStart("exclusions");
-            for (String glob : doc.exclusions()) {
-                g.writeString(glob);
-            }
-            g.writeEndArray();
-            g.writeArrayFieldStart("modules");
-            List<ModuleInput> modules = doc.modules().stream()
-                .sorted(Comparator.comparing(ModuleInput::id))
-                .toList();
-            for (ModuleInput module : modules) {
-                writeModule(g, module);
-            }
-            g.writeEndArray();
-            g.writeEndObject();
+            writeInputs(g, doc);
 
             g.writeObjectFieldStart("coverage");
             g.writeObjectFieldStart("overall");
             writeMetricSet(g, doc.overallMetrics());
             g.writeEndObject();
             g.writeObjectFieldStart("newCode");
-            g.writeStringField("status", "unavailable_no_vcs");
+            if (doc.newCode().metrics() != null) {
+                writeMetricSet(g, doc.newCode().metrics());
+            } else {
+                g.writeStringField("status", doc.newCode().unavailableStatus());
+            }
             g.writeEndObject();
             g.writeEndObject();
 
             g.writeArrayFieldStart("changedFiles");
-            g.writeEndArray(); // no-vcs mode has no diff, so this is always empty (schema note)
+            List<ChangedFile> changedFiles = doc.changedFiles().stream()
+                .sorted(Comparator.comparing(ChangedFile::module, Comparator.nullsFirst(Comparator.naturalOrder()))
+                    .thenComparing(ChangedFile::path))
+                .toList();
+            for (ChangedFile file : changedFiles) {
+                writeChangedFile(g, file);
+            }
+            g.writeEndArray();
 
             g.writeArrayFieldStart("findings");
             g.writeEndArray(); // L0 oracle rules are M1b, not this step
@@ -104,6 +101,47 @@ public final class VerdictJsonWriter {
 
             g.writeEndObject();
         }
+    }
+
+    private static void writeInputs(JsonGenerator g, VerdictDocument doc) throws IOException {
+        g.writeObjectFieldStart("inputs");
+        g.writeStringField("diffMode", doc.diffMode());
+        VcsIdentity identity = doc.identity();
+        if (identity != null && identity.baseRef() != null) {
+            g.writeStringField("baseRef", identity.baseRef());
+        }
+        if (identity != null) {
+            writeResolvedIdentity(g, identity);
+        }
+        g.writeNumberField("languageLevel", doc.languageLevel());
+        g.writeStringField("encoding", doc.encoding());
+        g.writeArrayFieldStart("exclusions");
+        for (String glob : doc.exclusions()) {
+            g.writeString(glob);
+        }
+        g.writeEndArray();
+        g.writeArrayFieldStart("modules");
+        List<ModuleInput> modules = doc.modules().stream()
+            .sorted(Comparator.comparing(ModuleInput::id))
+            .toList();
+        for (ModuleInput module : modules) {
+            writeModule(g, module);
+        }
+        g.writeEndArray();
+        g.writeEndObject();
+    }
+
+    private static void writeResolvedIdentity(JsonGenerator g, VcsIdentity identity) throws IOException {
+        g.writeObjectFieldStart("resolved");
+        if (identity.base() != null) {
+            g.writeStringField("base", identity.base());
+        }
+        if (identity.mergeBase() != null) {
+            g.writeStringField("mergeBase", identity.mergeBase());
+        }
+        g.writeStringField("head", identity.head());
+        g.writeBooleanField("dirty", identity.dirty());
+        g.writeEndObject();
     }
 
     private static void writeModule(JsonGenerator g, ModuleInput module) throws IOException {
@@ -128,6 +166,29 @@ public final class VerdictJsonWriter {
             g.writeEndObject();
         }
         g.writeEndArray();
+        g.writeEndObject();
+    }
+
+    private static void writeChangedFile(JsonGenerator g, ChangedFile file) throws IOException {
+        g.writeStartObject();
+        g.writeStringField("path", file.path());
+        if (file.module() != null) {
+            g.writeStringField("module", file.module());
+        }
+        g.writeStringField("classification", file.classification().schemaValue());
+        // Line-count fields exist only for classification=mapped (schema note); newLines is the reliable signal for all three together.
+        if (file.newLines() != null) {
+            g.writeNumberField("newLines", file.newLines());
+            g.writeNumberField("coveredNewLines", file.coveredNewLines());
+            g.writeArrayFieldStart("uncoveredNewRanges");
+            for (LineRange range : file.uncoveredNewRanges()) {
+                g.writeStartArray();
+                g.writeNumber(range.start());
+                g.writeNumber(range.end());
+                g.writeEndArray();
+            }
+            g.writeEndArray();
+        }
         g.writeEndObject();
     }
 

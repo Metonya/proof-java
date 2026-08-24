@@ -18,6 +18,8 @@ import picocli.CommandLine.Spec;
 
 import dev.coverdict.analysis.AnalysisException;
 import dev.coverdict.analysis.binding.BindingResult;
+import dev.coverdict.analysis.binding.ChangedFileClassifier;
+import dev.coverdict.analysis.binding.ClassificationResult;
 import dev.coverdict.analysis.binding.ModuleBinder;
 import dev.coverdict.analysis.jacoco.JacocoReport;
 import dev.coverdict.analysis.jacoco.JacocoXmlParser;
@@ -29,32 +31,51 @@ import dev.coverdict.analysis.model.ModuleDefinition;
 import dev.coverdict.analysis.model.RepoPaths;
 import dev.coverdict.analysis.model.ResolvedSourceFile;
 import dev.coverdict.analysis.report.ModuleInput;
+import dev.coverdict.analysis.report.NewCodeCoverage;
 import dev.coverdict.analysis.report.ReportInput;
 import dev.coverdict.analysis.report.TextRenderer;
 import dev.coverdict.analysis.report.ToolVersion;
 import dev.coverdict.analysis.report.VerdictDocument;
 import dev.coverdict.analysis.report.VerdictJsonWriter;
+import dev.coverdict.analysis.vcs.DiffAcquisition;
+import dev.coverdict.analysis.vcs.DiffResult;
+import dev.coverdict.analysis.vcs.GitClient;
 
 /**
- * This build supports only {@code --no-vcs} (docs/M0-CLI-INPUT.md): overall
- * coverage in all three metric modes, no changed-code/new-code numbers (base
- * ref and working-tree diff modes are the next ROADMAP M1a step).
+ * Three diff modes, exactly one required per invocation (docs/M0-CLI-INPUT.md):
+ * {@code --no-vcs} (overall coverage only), {@code --uncommitted} (working-tree
+ * mode: {@code HEAD} to the working tree), and {@code --base <ref>} (base-ref
+ * mode: {@code merge-base(ref, HEAD)} to the working tree, D-16).
  *
  * <p>Two distinct failure shapes, matching the schema's own note that "exit
  * codes 2 and 4 abort before a verdict document is written": a
- * {@link CliUsageException} (bad option syntax) never writes JSON and exits
- * 2; an {@link AnalysisException} (bad evidence - malformed XML, an
- * undeclared module, a duplicate class identity) always writes a structured
- * incomplete verdict and exits 3 (hard rule 3a).
+ * {@link CliUsageException} (bad option syntax, zero or several diff modes)
+ * never writes JSON and exits 2; an {@link AnalysisException} always writes a
+ * structured incomplete verdict and exits 3 (hard rule 3a). For a diff-mode
+ * run, an {@link AnalysisException} thrown while acquiring or classifying the
+ * diff (bad {@code --base} ref, missing merge base, git failure) is caught
+ * inside {@link #analyze} itself, not propagated to {@link #call} - the
+ * overall coverage phase before it already succeeded, and that real data is
+ * preserved in the resulting document rather than discarded (D-26).
  */
 @Command(name = "analyze", description = "Analyze coverage and test-oracle evidence for a repository.")
 class AnalyzeCommand implements Callable<Integer> {
 
+    private static final String DIFF_MODE_NO_VCS = "no-vcs";
+    private static final String DIFF_MODE_WORKING_TREE = "working-tree";
+    private static final String DIFF_MODE_BASE_REF = "base-ref";
+
     @Spec
     private CommandSpec spec;
 
-    @Option(names = "--no-vcs", description = "Overall coverage only; no changed-code numbers. The only mode this build supports.")
+    @Option(names = "--no-vcs", description = "Overall coverage only; no changed-code numbers.")
     private boolean noVcs;
+
+    @Option(names = "--uncommitted", description = "Working-tree mode: HEAD to the working tree, staged and unstaged.")
+    private boolean uncommitted;
+
+    @Option(names = "--base", description = "Base-ref mode: merge-base(ref, HEAD) to the working tree.")
+    private String baseRefOption;
 
     @Option(names = "--repo", description = "Repository root. Default: current working directory.")
     private String repoOption;
@@ -85,12 +106,14 @@ class AnalyzeCommand implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        if (!noVcs) {
+        int modesSelected = (noVcs ? 1 : 0) + (uncommitted ? 1 : 0) + (baseRefOption != null ? 1 : 0);
+        if (modesSelected != 1) {
             spec.commandLine().getErr().println(
-                "coverdict: this build supports only --no-vcs; --base and --uncommitted "
-                + "diff modes are the next ROADMAP M1a step (docs/M0-CLI-INPUT.md).");
+                "coverdict: exactly one diff mode is required: --no-vcs, --uncommitted, or --base <ref> "
+                + "(docs/M0-CLI-INPUT.md).");
             return ExitCode.INVALID_INPUT.value();
         }
+        String diffMode = selectedDiffMode();
 
         Path repoRoot = Path.of(repoOption != null ? repoOption : System.getProperty("user.dir"));
         List<String> exclusions = exclusionsArg == null || exclusionsArg.isBlank()
@@ -109,9 +132,9 @@ class AnalyzeCommand implements Callable<Integer> {
 
         VerdictDocument doc;
         try {
-            doc = analyze(repoRoot, exclusions, modules, reportPathsById);
+            doc = analyze(repoRoot, exclusions, modules, reportPathsById, diffMode);
         } catch (AnalysisException e) {
-            doc = incompleteDocument(exclusions, e);
+            doc = incompleteDocument(exclusions, e, diffMode);
         }
 
         try (OutputStream out = Files.newOutputStream(Path.of(outOption))) {
@@ -124,6 +147,17 @@ class AnalyzeCommand implements Callable<Integer> {
         spec.commandLine().getOut().println("verdict written to " + outOption);
 
         return doc.complete() ? ExitCode.COMPLETE.value() : ExitCode.INCOMPLETE.value();
+    }
+
+    /** Exactly one of {@link #noVcs}/{@link #uncommitted}/{@link #baseRefOption} is set by the time this is called - {@link #call} already validated that. */
+    private String selectedDiffMode() {
+        if (noVcs) {
+            return DIFF_MODE_NO_VCS;
+        }
+        if (uncommitted) {
+            return DIFF_MODE_WORKING_TREE;
+        }
+        return DIFF_MODE_BASE_REF;
     }
 
     /** @throws CliUsageException on malformed --report syntax or an option conflict (exit 2, no JSON). */
@@ -174,16 +208,15 @@ class AnalyzeCommand implements Callable<Integer> {
         return modules;
     }
 
-    /** @throws AnalysisException when the evidence itself is bad (exit 3, structured incomplete document). */
+    /** @throws AnalysisException when the overall-coverage evidence itself is bad (exit 3, structured incomplete document, nothing preserved). */
     private VerdictDocument analyze(Path repoRoot, List<String> exclusions, List<ModuleDefinition> modules,
-                                     Map<String, List<String>> reportPathsById) {
-        List<AnalysisReason> extraWarnings = new ArrayList<>();
-
+                                     Map<String, List<String>> reportPathsById, String diffMode) {
         // A declared module with no bound report has no coverage evidence in
         // --no-vcs mode (M0-CLI-INPUT.md: this is only a hard error when the
         // module has changed Java files, a diff-mode concept this build
         // doesn't have yet) - warn and leave it out of the analyzed set,
         // rather than passing an empty-evidence module through.
+        List<AnalysisReason> extraWarnings = new ArrayList<>();
         List<ModuleDefinition> evidencedModules = new ArrayList<>();
         for (ModuleDefinition module : modules) {
             if (reportPathsById.getOrDefault(module.id(), List.of()).isEmpty()) {
@@ -213,7 +246,7 @@ class AnalyzeCommand implements Callable<Integer> {
 
         BindingResult binding = new ModuleBinder(repoRoot).bind(evidencedModules, parsedReportsById);
         List<ResolvedSourceFile> filtered = ExclusionFilter.apply(binding.resolvedFiles(), exclusions);
-        MetricSet overall = MetricsEngine.computeOverall(filtered);
+        MetricSet overall = MetricsEngine.compute(filtered);
 
         List<ModuleInput> moduleInputs = evidencedModules.stream()
             .map(m -> new ModuleInput(m.id(), m.root(), m.sourceRoots(), m.testRoots(), reportInputsById.get(m.id())))
@@ -223,18 +256,51 @@ class AnalyzeCommand implements Callable<Integer> {
         warnings.addAll(binding.warnings());
 
         ToolVersion.Info version = ToolVersion.read();
-        return new VerdictDocument(
-            version.schemaVersion(), version.version(), true, List.of(),
-            languageLevel, encoding, exclusions, moduleInputs, overall, warnings);
+
+        if (DIFF_MODE_NO_VCS.equals(diffMode)) {
+            return new VerdictDocument(version.schemaVersion(), version.version(), true, List.of(),
+                languageLevel, encoding, exclusions, moduleInputs, diffMode, null, overall,
+                NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), warnings);
+        }
+
+        // Diff-mode phase: a failure here does NOT discard the overall data
+        // computed above (D-26) - only diff-specific fields fall back.
+        try {
+            GitClient git = new GitClient(repoRoot);
+            DiffResult diffResult = DIFF_MODE_BASE_REF.equals(diffMode)
+                ? DiffAcquisition.acquireBaseRef(git, baseRefOption)
+                : DiffAcquisition.acquireWorkingTree(git);
+
+            ClassificationResult classification = ChangedFileClassifier.classify(
+                diffResult.changedLinesByPath(), diffResult.untrackedFiles(),
+                evidencedModules, exclusions, binding.resolvedFiles());
+
+            MetricSet newCode = MetricsEngine.compute(classification.newCodeDataset());
+
+            List<AnalysisReason> allWarnings = new ArrayList<>(warnings);
+            allWarnings.addAll(classification.warnings());
+
+            boolean complete = classification.incompleteReasons().isEmpty();
+            return new VerdictDocument(version.schemaVersion(), version.version(), complete,
+                classification.incompleteReasons(), languageLevel, encoding, exclusions, moduleInputs,
+                diffMode, diffResult.identity(), overall, NewCodeCoverage.available(newCode),
+                classification.changedFiles(), allWarnings);
+        } catch (AnalysisException e) {
+            return new VerdictDocument(version.schemaVersion(), version.version(), false,
+                List.of(new AnalysisReason(e.code(), e.getMessage())), languageLevel, encoding, exclusions,
+                moduleInputs, diffMode, null, overall, NewCodeCoverage.unavailable("unavailable_incomplete"),
+                List.of(), warnings);
+        }
     }
 
-    private VerdictDocument incompleteDocument(List<String> exclusions, AnalysisException e) {
+    private VerdictDocument incompleteDocument(List<String> exclusions, AnalysisException e, String diffMode) {
         ToolVersion.Info version = ToolVersion.read();
+        String unavailableStatus = DIFF_MODE_NO_VCS.equals(diffMode) ? "unavailable_no_vcs" : "unavailable_incomplete";
         return new VerdictDocument(
             version.schemaVersion(), version.version(), false,
             List.of(new AnalysisReason(e.code(), e.getMessage())),
-            languageLevel, encoding, exclusions, List.of(),
-            MetricsEngine.computeOverall(List.of()), List.of());
+            languageLevel, encoding, exclusions, List.of(), diffMode, null,
+            MetricsEngine.compute(List.of()), NewCodeCoverage.unavailable(unavailableStatus), List.of(), List.of());
     }
 
     private static Map<String, String> parseIdValue(List<String> args) {
