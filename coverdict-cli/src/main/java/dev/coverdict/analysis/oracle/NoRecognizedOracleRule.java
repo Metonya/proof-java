@@ -23,7 +23,8 @@ final class NoRecognizedOracleRule {
         if (TestMethods.isTestFactory(testMethod)) {
             return Optional.empty(); // never fires on @TestFactory (spec: dynamic-test lambdas not traversed)
         }
-        if (testMethod.getBody().isEmpty() || testMethod.getBody().get().getStatements().isEmpty()) {
+        Optional<com.github.javaparser.ast.stmt.BlockStmt> body = testMethod.getBody();
+        if (body.isEmpty() || body.get().getStatements().isEmpty()) {
             return Optional.empty(); // empty body is a different smell, out of v0.1 scope
         }
         if (!traversal.oracles().isEmpty() || TestMethods.hasExpectedExceptionAnnotation(testMethod)) {

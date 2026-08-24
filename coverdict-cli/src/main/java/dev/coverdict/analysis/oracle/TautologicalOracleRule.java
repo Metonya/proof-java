@@ -50,16 +50,16 @@ final class TautologicalOracleRule {
             .orElse(null);
 
         for (OracleOccurrence occ : traversal.oracles()) {
-            if (occ.anchorCall() != occ.terminalCall()) {
-                continue; // fluent chain - argument shape not inspected (see class javadoc)
-            }
-            if (!OracleAllowlist.JUNIT5_ASSERTIONS.equals(occ.declaringTypeFqn())
-                && !OracleAllowlist.JUNIT4_ASSERT.equals(occ.declaringTypeFqn())) {
-                continue;
-            }
-            Optional<RuleFinding> finding = matchPattern(occ.methodName(), occ.anchorCall(), testClassFqn);
-            if (finding.isPresent()) {
-                return finding;
+            // Fluent-chain argument shapes are not inspected (see class javadoc); only a
+            // direct JUnit-style call (anchor == terminal) is a candidate for these patterns.
+            boolean isDirectJunitCall = occ.anchorCall() == occ.terminalCall()
+                && (OracleAllowlist.JUNIT5_ASSERTIONS.equals(occ.declaringTypeFqn())
+                    || OracleAllowlist.JUNIT4_ASSERT.equals(occ.declaringTypeFqn()));
+            if (isDirectJunitCall) {
+                Optional<RuleFinding> finding = matchPattern(occ.methodName(), occ.anchorCall(), testClassFqn);
+                if (finding.isPresent()) {
+                    return finding;
+                }
             }
         }
         return Optional.empty();

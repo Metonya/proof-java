@@ -73,14 +73,7 @@ public final class OracleRuleEngine {
                 truncated = true;
                 break;
             }
-            Optional<CompilationUnit> cu = parser.parse(file.absolutePath());
-            if (cu.isEmpty()) {
-                incompleteReasons.add(new AnalysisReason("UNPARSEABLE_TEST_SOURCE",
-                    "Test source '" + file.repoRelativePath() + "' could not be parsed at the configured language "
-                        + "level; skipped, run continues.", file.repoRelativePath(), file.moduleId()));
-                continue;
-            }
-            findings.addAll(scanFile(file, cu.get()));
+            scanOneFile(file, parser, findings, incompleteReasons);
         }
         if (truncated) {
             incompleteReasons.add(new AnalysisReason("FINDINGS_TRUNCATED",
@@ -90,6 +83,17 @@ public final class OracleRuleEngine {
         findings.sort(Comparator.comparing(Finding::path).thenComparingInt(Finding::startLine)
             .thenComparing(Finding::rule).thenComparing(Finding::fingerprint));
         return new OracleScanResult(findings, incompleteReasons);
+    }
+
+    private static void scanOneFile(TestSourceFile file, JavaSourceParser parser, List<Finding> findings, List<AnalysisReason> incompleteReasons) {
+        Optional<CompilationUnit> cu = parser.parse(file.absolutePath());
+        if (cu.isEmpty()) {
+            incompleteReasons.add(new AnalysisReason("UNPARSEABLE_TEST_SOURCE",
+                "Test source '" + file.repoRelativePath() + "' could not be parsed at the configured language "
+                    + "level; skipped, run continues.", file.repoRelativePath(), file.moduleId()));
+            return;
+        }
+        findings.addAll(scanFile(file, cu.get()));
     }
 
     private static List<Finding> scanFile(TestSourceFile file, CompilationUnit cu) {

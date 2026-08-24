@@ -24,8 +24,10 @@ final class OracleAllowlist {
         JUNIT5_ASSERTIONS, JUNIT4_ASSERT, ASSERTJ_ASSERTIONS,
         HAMCREST_MATCHER_ASSERT, MOCKITO, MOCKITO_IN_ORDER, MOCKITO_BDD);
 
+    private static final String VERIFY = "verify";
+
     private static final List<String> ORACLE_SUGGESTIVE_PREFIXES =
-        List.of("assert", "verify", "check", "expect", "should", "require", "fail");
+        List.of("assert", VERIFY, "check", "expect", "should", "require", "fail");
 
     private OracleAllowlist() {
     }
@@ -42,10 +44,10 @@ final class OracleAllowlist {
             return "assertThat".equals(methodName);
         }
         if (MOCKITO.equals(declaringTypeFqn)) {
-            return "verify".equals(methodName) || "verifyNoInteractions".equals(methodName) || "verifyNoMoreInteractions".equals(methodName);
+            return VERIFY.equals(methodName) || "verifyNoInteractions".equals(methodName) || "verifyNoMoreInteractions".equals(methodName);
         }
         if (MOCKITO_IN_ORDER.equals(declaringTypeFqn)) {
-            return "verify".equals(methodName);
+            return VERIFY.equals(methodName);
         }
         return false;
     }

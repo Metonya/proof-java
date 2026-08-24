@@ -26,7 +26,7 @@ class FingerprintTest {
         String fp = Fingerprint.compute("NULL_CHECK_ONLY", "m", "p", "sig");
         assertEquals(16, fp.length());
         assertEquals(fp, fp.toLowerCase());
-        assertEquals(fp.replaceAll("[0-9a-f]", ""), "");
+        assertEquals("", fp.replaceAll("[0-9a-f]", ""));
     }
 
     @Test

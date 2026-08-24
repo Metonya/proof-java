@@ -32,10 +32,11 @@ final class CatchOracleWithoutFailRule {
     }
 
     static Optional<RuleFinding> evaluate(MethodDeclaration testMethod, TraversalResult traversal) {
-        if (testMethod.getBody().isEmpty()) {
+        Optional<BlockStmt> body = testMethod.getBody();
+        if (body.isEmpty()) {
             return Optional.empty();
         }
-        for (TryStmt tryStmt : findTryStatements(testMethod.getBody().get())) {
+        for (TryStmt tryStmt : findTryStatements(body.get())) {
             Optional<RuleFinding> finding = evaluateTry(tryStmt, traversal);
             if (finding.isPresent()) {
                 return finding;
@@ -60,8 +61,9 @@ final class CatchOracleWithoutFailRule {
         boolean tryCallsFail = traversal.oracles().stream()
             .anyMatch(o -> "fail".equals(o.methodName()) && withinRange(o.anchorCall(), tryRange));
         if (tryCallsFail) {
-            // try { sut(); fail("..."); } catch (Specific e) {} - the classic manual
-            // "expect this exception" idiom: fail() is reached, and only reached, when
+            // The classic manual "expect this exception" idiom: invoke the code under
+            // test, then call fail() right after it, then catch the specific expected
+            // exception with an empty body. fail() is reached, and only reached, when
             // the expected exception did NOT occur, so being unreached on the exception
             // path is itself the verification, not a silently skipped oracle.
             return Optional.empty();
@@ -176,7 +178,7 @@ final class CatchOracleWithoutFailRule {
 
         @Override
         public void visit(MethodCallExpr n, Void arg) {
-            boolean chainContinuation = n.getScope().filter(s -> s instanceof MethodCallExpr).isPresent();
+            boolean chainContinuation = n.getScope().filter(MethodCallExpr.class::isInstance).isPresent();
             if (!chainContinuation) {
                 calls.add(n);
             }
@@ -189,6 +191,7 @@ final class CatchOracleWithoutFailRule {
 
         @Override
         public void visit(LambdaExpr n, Void arg) {
+            // same documented limit as RootCallOnlyCollector: lambda bodies are not traversed
         }
 
         @Override

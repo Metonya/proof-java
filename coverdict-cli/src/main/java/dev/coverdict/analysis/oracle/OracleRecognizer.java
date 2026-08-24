@@ -13,6 +13,7 @@ import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.LambdaExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
+import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserMethodDeclaration;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
@@ -52,34 +53,40 @@ final class OracleRecognizer {
 
     private void traverseInto(MethodDeclaration method, Set<MethodDeclaration> visited,
                                List<OracleOccurrence> oracles, List<ResolvedCall> allCalls) {
-        if (!visited.add(method) || method.getBody().isEmpty()) {
+        Optional<BlockStmt> body = method.getBody();
+        if (!visited.add(method) || body.isEmpty()) {
             return;
         }
         RootCallCollector collector = new RootCallCollector();
-        method.getBody().get().accept(collector, null);
+        body.get().accept(collector, null);
 
         for (MethodCallExpr call : collector.rootCalls) {
-            CallResolution resolution = resolve(call);
-            allCalls.add(new ResolvedCall(call, resolution));
-            if (resolution.tier() == CallResolution.Tier.UNRESOLVED) {
-                continue;
+            processRootCall(call, visited, oracles, allCalls);
+        }
+    }
+
+    private void processRootCall(MethodCallExpr call, Set<MethodDeclaration> visited,
+                                  List<OracleOccurrence> oracles, List<ResolvedCall> allCalls) {
+        CallResolution resolution = resolve(call);
+        allCalls.add(new ResolvedCall(call, resolution));
+        if (resolution.tier() == CallResolution.Tier.UNRESOLVED) {
+            return;
+        }
+        String fqn = resolution.declaringTypeFqn();
+        String name = call.getNameAsString();
+        if (OracleAllowlist.isChainAnchor(fqn, name)) {
+            if (hasOuterChainedCall(call)) {
+                MethodCallExpr terminal = outermostChainCall(call);
+                oracles.add(new OracleOccurrence(call, terminal, fqn, terminal.getNameAsString()));
             }
-            String fqn = resolution.declaringTypeFqn();
-            String name = call.getNameAsString();
-            if (OracleAllowlist.isChainAnchor(fqn, name)) {
-                if (hasOuterChainedCall(call)) {
-                    MethodCallExpr terminal = outermostChainCall(call);
-                    oracles.add(new OracleOccurrence(call, terminal, fqn, terminal.getNameAsString()));
-                }
-                continue;
-            }
-            if (OracleAllowlist.isUnconditionalOracle(fqn, name)) {
-                oracles.add(new OracleOccurrence(call, call, fqn, name));
-                continue;
-            }
-            if (resolution.tier() == CallResolution.Tier.SOLVED && resolution.localPrivateDeclaration() != null) {
-                traverseInto(resolution.localPrivateDeclaration(), visited, oracles, allCalls);
-            }
+            return;
+        }
+        if (OracleAllowlist.isUnconditionalOracle(fqn, name)) {
+            oracles.add(new OracleOccurrence(call, call, fqn, name));
+            return;
+        }
+        if (resolution.tier() == CallResolution.Tier.SOLVED && resolution.localPrivateDeclaration() != null) {
+            traverseInto(resolution.localPrivateDeclaration(), visited, oracles, allCalls);
         }
     }
 
@@ -106,14 +113,15 @@ final class OracleRecognizer {
 
     private Optional<String> importAnchoredOwner(MethodCallExpr call) {
         String name = call.getNameAsString();
-        if (call.getScope().isEmpty()) {
+        Optional<Expression> scopeOpt = call.getScope();
+        if (scopeOpt.isEmpty()) {
             String owner = imports.staticSingleImportOwner(name);
             if (owner != null) {
                 return Optional.of(owner);
             }
             return imports.wildcardAnchoredOwner(name, OracleAllowlist.ALL_TYPES);
         }
-        Expression scope = call.getScope().get();
+        Expression scope = scopeOpt.get();
         if (scope instanceof MethodCallExpr) {
             return Optional.empty(); // fluent-chain continuation, resolved structurally elsewhere
         }
@@ -164,7 +172,7 @@ final class OracleRecognizer {
 
         @Override
         public void visit(MethodCallExpr n, Void arg) {
-            boolean chainContinuation = n.getScope().filter(s -> s instanceof MethodCallExpr).isPresent();
+            boolean chainContinuation = n.getScope().filter(MethodCallExpr.class::isInstance).isPresent();
             if (!chainContinuation) {
                 rootCalls.add(n);
             }

@@ -36,6 +36,7 @@ import dev.coverdict.analysis.vcs.VcsIdentity;
 public final class VerdictJsonWriter {
 
     private static final JsonFactory FACTORY = new JsonFactory();
+    private static final String FIELD_MODULE = "module";
 
     private VerdictJsonWriter() {
     }
@@ -182,7 +183,7 @@ public final class VerdictJsonWriter {
         g.writeStartObject();
         g.writeStringField("path", file.path());
         if (file.module() != null) {
-            g.writeStringField("module", file.module());
+            g.writeStringField(FIELD_MODULE, file.module());
         }
         g.writeStringField("classification", file.classification().schemaValue());
         // Line-count fields exist only for classification=mapped (schema note); newLines is the reliable signal for all three together.
@@ -206,7 +207,7 @@ public final class VerdictJsonWriter {
         g.writeStringField("rule", finding.rule());
         g.writeStringField("severity", finding.severity().name());
         g.writeStringField("confidence", finding.confidence().name());
-        g.writeStringField("module", finding.module());
+        g.writeStringField(FIELD_MODULE, finding.module());
         g.writeStringField("path", finding.path());
         g.writeNumberField("startLine", finding.startLine());
         g.writeNumberField("endLine", finding.endLine());
@@ -249,7 +250,7 @@ public final class VerdictJsonWriter {
             g.writeStringField("path", reason.path());
         }
         if (reason.module() != null) {
-            g.writeStringField("module", reason.module());
+            g.writeStringField(FIELD_MODULE, reason.module());
         }
         g.writeEndObject();
     }
