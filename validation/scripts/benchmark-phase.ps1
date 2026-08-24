@@ -41,6 +41,13 @@ function Invoke-TimedRun {
 
     $peakBytes = 0
     $proc = [System.Diagnostics.Process]::Start($psi)
+    # Redirected stdout/stderr must be drained asynchronously - a verbose
+    # analyze run (many findings) can fill the OS pipe buffer and deadlock
+    # the child process forever if nothing reads it (hit for real on
+    # junit-framework's 51-finding output, D-36; gson/assertj's shorter
+    # output never filled the buffer, so this was latent until now).
+    $proc.BeginOutputReadLine()
+    $proc.BeginErrorReadLine()
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     while (-not $proc.HasExited) {
         try {
