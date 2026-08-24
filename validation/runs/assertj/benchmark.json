@@ -1,0 +1,33 @@
+﻿{
+    "phase":  "assertj",
+    "machine":  "Windows 11 Pro 26200, x86-64",
+    "jdk":  "openjdk version \"17.0.17\" 2025-10-21 | OpenJDK Runtime Environment Temurin-17.0.17+10 (build 17.0.17+10) | OpenJDK 64-Bit Server VM Temurin-17.0.17+10 (build 17.0.17+10, mixed mode, sharing)",
+    "coldMillis":  207.2,
+    "warmMillisAll":  [
+                          173.4,
+                          173.9,
+                          175.6,
+                          183.8,
+                          199.4
+                      ],
+    "warmMedianMillis":  175.6,
+    "warmP95Millis":  199.4,
+    "peakWorkingSetMb":  56.9,
+    "jarArgs":  [
+                    "--repo",
+                    ".",
+                    "--no-vcs",
+                    "--module",
+                    "assertj-core=assertj-core",
+                    "--source-roots",
+                    "assertj-core=assertj-core/src/main/java",
+                    "--test-roots",
+                    "assertj-core=assertj-core/src/test/java",
+                    "--report",
+                    "assertj-core=assertj-core/target/site/jacoco/jacoco.xml",
+                    "--language-level",
+                    "17",
+                    "--out",
+                    "coverdict-verdict.json"
+                ]
+}
