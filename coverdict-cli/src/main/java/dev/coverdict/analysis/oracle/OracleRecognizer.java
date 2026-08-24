@@ -85,8 +85,8 @@ final class OracleRecognizer {
             oracles.add(new OracleOccurrence(call, call, fqn, name));
             return;
         }
-        if (resolution.tier() == CallResolution.Tier.SOLVED && resolution.localPrivateDeclaration() != null) {
-            traverseInto(resolution.localPrivateDeclaration(), visited, oracles, allCalls);
+        if (resolution.tier() == CallResolution.Tier.SOLVED && resolution.localHelperDeclaration() != null) {
+            traverseInto(resolution.localHelperDeclaration(), visited, oracles, allCalls);
         }
     }
 
@@ -94,21 +94,49 @@ final class OracleRecognizer {
         try {
             ResolvedMethodDeclaration resolved = call.resolve();
             String fqn = resolved.declaringType().getQualifiedName();
-            MethodDeclaration localPrivate = null;
+            MethodDeclaration localHelper = null;
             if (resolved instanceof JavaParserMethodDeclaration jpmd) {
                 MethodDeclaration decl = jpmd.getWrappedNode();
-                if (decl.isPrivate() && decl.findCompilationUnit().map(u -> u == cu).orElse(false)) {
-                    localPrivate = decl;
+                if (isLocalHelperCandidate(decl)) {
+                    localHelper = decl;
                 }
             }
-            return new CallResolution(CallResolution.Tier.SOLVED, fqn, localPrivate);
+            return new CallResolution(CallResolution.Tier.SOLVED, fqn, localHelper);
         } catch (RuntimeException e) {
-            // No classpath jar, or genuinely undeclared (fixtures/rules/**/Unresolved.java) -
-            // fall back to import-anchoring (K2), which needs no jar at all.
+            // Symbol Solver can fail here even for a genuinely local, well-formed call: it
+            // must resolve the callee's own declaration to report a result, and that fails
+            // whenever any of the callee's parameter types is itself unresolvable (e.g. an
+            // external library type with no jar/--classpath configured) - independent of
+            // whether the call site's own argument is a lambda. Before giving up, try the
+            // file's own imports (K2, no jar needed), then - for a bare, unqualified call
+            // only - a same-compilation-unit name match (D-33): if exactly one private or
+            // static method here has this name, it is that call's target by Java's own
+            // shadowing rules, and ambiguity (more than one match) safely disables this path.
             return importAnchoredOwner(call)
                 .map(fqn -> new CallResolution(CallResolution.Tier.IMPORT_ANCHORED, fqn, null))
+                .or(() -> sameFileNameMatch(call))
                 .orElse(CallResolution.UNRESOLVED);
         }
+    }
+
+    private Optional<CallResolution> sameFileNameMatch(MethodCallExpr call) {
+        if (call.getScope().isPresent()) {
+            return Optional.empty(); // qualified call - a same-file name match here would be a guess, not a fact
+        }
+        List<MethodDeclaration> matches = cu.findAll(MethodDeclaration.class).stream()
+            .filter(this::isLocalHelperCandidate)
+            .filter(decl -> decl.getNameAsString().equals(call.getNameAsString()))
+            .toList();
+        if (matches.size() != 1) {
+            return Optional.empty(); // no candidate, or a real overload - never guess between them
+        }
+        String fqn = cu.getPrimaryType().flatMap(t -> t.getFullyQualifiedName()).orElse(matches.get(0).getNameAsString());
+        return Optional.of(new CallResolution(CallResolution.Tier.SOLVED, fqn, matches.get(0)));
+    }
+
+    /** Same-compilation-unit and private-or-static: the two hallmarks of a genuine test-support helper (D-33). */
+    private boolean isLocalHelperCandidate(MethodDeclaration decl) {
+        return (decl.isPrivate() || decl.isStatic()) && decl.findCompilationUnit().map(u -> u == cu).orElse(false);
     }
 
     private Optional<String> importAnchoredOwner(MethodCallExpr call) {

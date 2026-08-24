@@ -232,6 +232,15 @@ cannot resolve an overloaded call whose argument is a lambda
 (`assertThrowsStackOverflow(() -> ...)`), producing three correctly-hedged
 `INCONCLUSIVE` findings rather than a wrong verdict.
 
+**Both backlog gaps closed (2026-08-24):** see D-33. Helper traversal now
+follows private-or-static same-file helpers (not private-only); the
+`CircularReferenceTest` cause turned out not to be lambda arguments at all
+(disproved by a minimal reproduction) but an external/unresolvable
+parameter type on the callee's own declaration - fixed with a same-file
+name-match fallback for exactly that failure shape. Re-verified on the real
+gson checkout: 38 findings drop to 33, all HIGH, all true-positive - 100%
+of what was reviewed, up from 94.3%. `validation/runs/gson/round2-followup.md`.
+
 Phases 2-4 and criterion-2 new-code parity (pending a Developer Edition
 SonarQube instance, or acceptance that Community Edition caps this) remain
 open.
@@ -264,14 +273,14 @@ failure.
   non-Java languages · Truth-specific `NULL_CHECK_ONLY`/`TAUTOLOGICAL_ORACLE`
   weak-oracle patterns (D-31 added Truth as a recognized oracle for
   `NO_RECOGNIZED_ORACLE`/`CATCH_ORACLE_WITHOUT_FAIL` only; the other two
-  rules still only recognize JUnit/AssertJ shapes) · extend
-  `OracleRecognizer`'s helper traversal to same-compilation-unit **public
-  static** helpers, not only private ones (D-32 found two real gson false
-  positives behind this exact boundary) · investigate JavaParser
-  symbol-solver resolution of overloaded calls whose argument is a lambda
-  (D-32's `assertThrowsStackOverflow(() -> ...)` case - three correctly-
-  hedged but avoidable `INCONCLUSIVE` findings). Each gets its own design
-  pass at its milestone, not now.
+  rules still only recognize JUnit/AssertJ shapes) &#x2713; ~~extend
+  `OracleRecognizer`'s helper traversal to same-compilation-unit public
+  static helpers~~ done, D-33 &#x2713; ~~investigate JavaParser symbol-solver
+  resolution of overloaded calls whose argument is a lambda~~ done, D-33 -
+  turned out not to be about lambdas at all (an unresolvable parameter type
+  on the callee's own declaration), fixed with a same-file name-match
+  fallback. Each remaining item gets its own design pass at its milestone,
+  not now.
 
 ## Kill and pivot criteria
 

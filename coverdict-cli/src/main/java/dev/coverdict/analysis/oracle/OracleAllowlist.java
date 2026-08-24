@@ -26,6 +26,7 @@ final class OracleAllowlist {
         HAMCREST_MATCHER_ASSERT, MOCKITO, MOCKITO_IN_ORDER, MOCKITO_BDD, TRUTH);
 
     private static final String VERIFY = "verify";
+    private static final String ASSERT_THAT = "assertThat";
 
     private static final List<String> ORACLE_SUGGESTIVE_PREFIXES =
         List.of("assert", VERIFY, "check", "expect", "should", "require", "fail");
@@ -42,7 +43,7 @@ final class OracleAllowlist {
             return "fail".equals(methodName);
         }
         if (HAMCREST_MATCHER_ASSERT.equals(declaringTypeFqn)) {
-            return "assertThat".equals(methodName);
+            return ASSERT_THAT.equals(methodName);
         }
         if (MOCKITO.equals(declaringTypeFqn)) {
             return VERIFY.equals(methodName) || "verifyNoInteractions".equals(methodName) || "verifyNoMoreInteractions".equals(methodName);
@@ -60,14 +61,14 @@ final class OracleAllowlist {
      */
     static boolean isChainAnchor(String declaringTypeFqn, String methodName) {
         if (ASSERTJ_ASSERTIONS.equals(declaringTypeFqn)) {
-            return "assertThat".equals(methodName) || "assertThatThrownBy".equals(methodName)
+            return ASSERT_THAT.equals(methodName) || "assertThatThrownBy".equals(methodName)
                 || "assertThatCode".equals(methodName) || "assertThatExceptionOfType".equals(methodName);
         }
         if (MOCKITO_BDD.equals(declaringTypeFqn)) {
             return "then".equals(methodName);
         }
         return TRUTH.equals(declaringTypeFqn)
-            && ("assertThat".equals(methodName) || "assertWithMessage".equals(methodName));
+            && (ASSERT_THAT.equals(methodName) || "assertWithMessage".equals(methodName));
     }
 
     static boolean isOracleSuggestiveName(String methodName) {

@@ -281,6 +281,32 @@ labeling error (the labeler missed that its private helper already
 contained real Truth assertions) - noted for the record in
 `validation/runs/gson/round2/precision-summary.md`, not silently rewritten.
 
+**D-33 · Both D-32 backlog gaps closed: broader helper traversal, plus a
+same-file name-match fallback** (2026-08-24)
+Two fixes to `OracleRecognizer`, both sharing a new `isLocalHelperCandidate`
+predicate (private-or-static, same compilation unit). (1) The existing
+helper-traversal condition (`decl.isPrivate()`) is broadened to
+private-**or**-static - a same-file `public static` test-support helper
+(gson's `DefaultTypeAdaptersTest.assertEqualsDate`/`assertEqualsTime`) is
+now followed, closing both round-2 false positives. (2) A minimal
+JavaParser reproduction (real `junit.jar`, `ReflectionTypeSolver`)
+disproved the round-2 hypothesis that lambda **arguments** caused
+`CircularReferenceTest`'s `INCONCLUSIVE` findings: an external/unresolvable
+**parameter type** on the callee's own declaration fails call resolution
+identically whether the call site's argument is a lambda or not - the
+lambda was never the variable. `resolve()` gained a third, narrow fallback
+for exactly this: a bare (unqualified) call whose full resolution and
+import-anchoring both fail now also tries a same-compilation-unit name
+match against private-or-static declarations; exactly one match resolves
+it, more than one (real ambiguity) or a qualified call leaves it
+unresolved rather than guessing. Verified on the real gson checkout: 38
+findings drop to 33, all HIGH, all true-positive per round 2's own review
+(100% of what was reviewed, up from 94.3%) - the one finding that
+correctly remains (`SqlTypesGsonTest#testNullSerializationAndDeserialization`)
+is a genuine cross-file case, a different, still-open D-17 boundary
+neither fix touched. `docs/rules/README.md`'s "Helper traversal" section
+updated to match. See `validation/runs/gson/round2-followup.md`.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

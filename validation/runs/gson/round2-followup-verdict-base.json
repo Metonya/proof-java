@@ -1,0 +1,1132 @@
+{
+  "schemaVersion" : "0.1.0",
+  "tool" : {
+    "name" : "coverdict",
+    "version" : "0.1.0-SNAPSHOT"
+  },
+  "analysis" : {
+    "status" : "incomplete",
+    "exitCode" : 3,
+    "incompleteReasons" : [
+      {
+        "code" : "CHANGED_JAVA_OUTSIDE_MODULES",
+        "message" : "Changed path 'extras/src/main/java/com/google/gson/interceptors/Intercept.java' is not under any declared module root.",
+        "path" : "extras/src/main/java/com/google/gson/interceptors/Intercept.java"
+      },
+      {
+        "code" : "CHANGED_JAVA_OUTSIDE_MODULES",
+        "message" : "Changed path 'extras/src/main/java/com/google/gson/interceptors/JsonPostDeserializer.java' is not under any declared module root.",
+        "path" : "extras/src/main/java/com/google/gson/interceptors/JsonPostDeserializer.java"
+      },
+      {
+        "code" : "CHANGED_JAVA_OUTSIDE_MODULES",
+        "message" : "Changed path 'extras/src/test/java/com/google/gson/interceptors/InterceptorTest.java' is not under any declared module root.",
+        "path" : "extras/src/test/java/com/google/gson/interceptors/InterceptorTest.java"
+      },
+      {
+        "code" : "CHANGED_JAVA_OUTSIDE_MODULES",
+        "message" : "Changed path 'extras/src/test/java/com/google/gson/typeadapters/RuntimeTypeAdapterFactoryTest.java' is not under any declared module root.",
+        "path" : "extras/src/test/java/com/google/gson/typeadapters/RuntimeTypeAdapterFactoryTest.java"
+      },
+      {
+        "code" : "CHANGED_JAVA_OUTSIDE_MODULES",
+        "message" : "Changed path 'metrics/src/main/java/com/google/gson/metrics/ParseBenchmark.java' is not under any declared module root.",
+        "path" : "metrics/src/main/java/com/google/gson/metrics/ParseBenchmark.java"
+      },
+      {
+        "code" : "CHANGED_JAVA_OUTSIDE_MODULES",
+        "message" : "Changed path 'proto/src/main/java/com/google/gson/protobuf/LegacyProtoTypeAdapterFactory.java' is not under any declared module root.",
+        "path" : "proto/src/main/java/com/google/gson/protobuf/LegacyProtoTypeAdapterFactory.java"
+      },
+      {
+        "code" : "CHANGED_JAVA_OUTSIDE_MODULES",
+        "message" : "Changed path 'proto/src/main/java/com/google/gson/protobuf/ProtoTypeAdapter.java' is not under any declared module root.",
+        "path" : "proto/src/main/java/com/google/gson/protobuf/ProtoTypeAdapter.java"
+      },
+      {
+        "code" : "CHANGED_JAVA_OUTSIDE_MODULES",
+        "message" : "Changed path 'proto/src/main/java/com/google/gson/protobuf/StructTypeAdapter.java' is not under any declared module root.",
+        "path" : "proto/src/main/java/com/google/gson/protobuf/StructTypeAdapter.java"
+      },
+      {
+        "code" : "CHANGED_JAVA_OUTSIDE_MODULES",
+        "message" : "Changed path 'proto/src/test/java/com/google/gson/protobuf/functional/LegacyProtoTypeAdapterFactoryTest.java' is not under any declared module root.",
+        "path" : "proto/src/test/java/com/google/gson/protobuf/functional/LegacyProtoTypeAdapterFactoryTest.java"
+      },
+      {
+        "code" : "CHANGED_JAVA_OUTSIDE_MODULES",
+        "message" : "Changed path 'proto/src/test/java/com/google/gson/protobuf/functional/StructTypeAdapterTest.java' is not under any declared module root.",
+        "path" : "proto/src/test/java/com/google/gson/protobuf/functional/StructTypeAdapterTest.java"
+      },
+      {
+        "code" : "CHANGED_JAVA_OUTSIDE_MODULES",
+        "message" : "Changed path 'proto/src/test/java/com/google/gson/protobuf/functional/TestMessages.java' is not under any declared module root.",
+        "path" : "proto/src/test/java/com/google/gson/protobuf/functional/TestMessages.java"
+      },
+      {
+        "code" : "CHANGED_JAVA_OUTSIDE_MODULES",
+        "message" : "Changed path 'test-shrinker/src/test/java/com/google/gson/it/ShrinkingIT.java' is not under any declared module root.",
+        "path" : "test-shrinker/src/test/java/com/google/gson/it/ShrinkingIT.java"
+      },
+      {
+        "code" : "UNPARSEABLE_TEST_SOURCE",
+        "message" : "Test source 'gson/src/test/java/com/google/gson/functional/Java17RecordTest.java' could not be parsed at the configured language level; skipped, run continues.",
+        "path" : "gson/src/test/java/com/google/gson/functional/Java17RecordTest.java",
+        "module" : "gson"
+      }
+    ]
+  },
+  "inputs" : {
+    "diffMode" : "base-ref",
+    "findingsScope" : "all",
+    "baseRef" : "dae37cf0fe12235b76fb09f01118a0a8c8823f42~50",
+    "resolved" : {
+      "base" : "27d9ba1eeeeb156540cf5397504a4f9f256e911f",
+      "mergeBase" : "27d9ba1eeeeb156540cf5397504a4f9f256e911f",
+      "head" : "dae37cf0fe12235b76fb09f01118a0a8c8823f42",
+      "dirty" : true
+    },
+    "languageLevel" : 11,
+    "encoding" : "UTF-8",
+    "exclusions" : [ ],
+    "modules" : [
+      {
+        "id" : "gson",
+        "root" : "gson",
+        "sourceRoots" : [
+          "gson/src/main/java"
+        ],
+        "testRoots" : [
+          "gson/src/test/java"
+        ],
+        "reports" : [
+          {
+            "path" : "gson/target/site/jacoco/jacoco.xml",
+            "freshness" : "unverified"
+          }
+        ]
+      }
+    ]
+  },
+  "coverage" : {
+    "overall" : {
+      "jacoco-line" : {
+        "numeratorName" : "coveredLines",
+        "numerator" : 5094,
+        "denominatorName" : "executableLines",
+        "denominator" : 5515,
+        "percent" : 92.4
+      },
+      "strict-line" : {
+        "numeratorName" : "fullyCoveredLines",
+        "numerator" : 5037,
+        "denominatorName" : "executableLines",
+        "denominator" : 5515,
+        "percent" : 91.3
+      },
+      "sonar-compatible" : {
+        "numeratorName" : "coveredBranchesPlusCoveredLines",
+        "numerator" : 7522,
+        "denominatorName" : "branchesPlusExecutableLines",
+        "denominator" : 8267,
+        "percent" : 91.0
+      }
+    },
+    "newCode" : {
+      "jacoco-line" : {
+        "numeratorName" : "coveredLines",
+        "numerator" : 147,
+        "denominatorName" : "executableLines",
+        "denominator" : 151,
+        "percent" : 97.4
+      },
+      "strict-line" : {
+        "numeratorName" : "fullyCoveredLines",
+        "numerator" : 146,
+        "denominatorName" : "executableLines",
+        "denominator" : 151,
+        "percent" : 96.7
+      },
+      "sonar-compatible" : {
+        "numeratorName" : "coveredBranchesPlusCoveredLines",
+        "numerator" : 251,
+        "denominatorName" : "branchesPlusExecutableLines",
+        "denominator" : 259,
+        "percent" : 96.9
+      }
+    }
+  },
+  "changedFiles" : [
+    {
+      "path" : "extras/src/main/java/com/google/gson/interceptors/Intercept.java",
+      "classification" : "unknown"
+    },
+    {
+      "path" : "extras/src/main/java/com/google/gson/interceptors/JsonPostDeserializer.java",
+      "classification" : "unknown"
+    },
+    {
+      "path" : "extras/src/test/java/com/google/gson/interceptors/InterceptorTest.java",
+      "classification" : "unknown"
+    },
+    {
+      "path" : "extras/src/test/java/com/google/gson/typeadapters/RuntimeTypeAdapterFactoryTest.java",
+      "classification" : "unknown"
+    },
+    {
+      "path" : "metrics/src/main/java/com/google/gson/metrics/ParseBenchmark.java",
+      "classification" : "unknown"
+    },
+    {
+      "path" : "proto/src/main/java/com/google/gson/protobuf/LegacyProtoTypeAdapterFactory.java",
+      "classification" : "unknown"
+    },
+    {
+      "path" : "proto/src/main/java/com/google/gson/protobuf/ProtoTypeAdapter.java",
+      "classification" : "unknown"
+    },
+    {
+      "path" : "proto/src/main/java/com/google/gson/protobuf/StructTypeAdapter.java",
+      "classification" : "unknown"
+    },
+    {
+      "path" : "proto/src/test/java/com/google/gson/protobuf/functional/LegacyProtoTypeAdapterFactoryTest.java",
+      "classification" : "unknown"
+    },
+    {
+      "path" : "proto/src/test/java/com/google/gson/protobuf/functional/StructTypeAdapterTest.java",
+      "classification" : "unknown"
+    },
+    {
+      "path" : "proto/src/test/java/com/google/gson/protobuf/functional/TestMessages.java",
+      "classification" : "unknown"
+    },
+    {
+      "path" : "test-shrinker/src/test/java/com/google/gson/it/ShrinkingIT.java",
+      "classification" : "unknown"
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/FieldNamingPolicy.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 0,
+      "coveredNewLines" : 0,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/FieldNamingStrategy.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 0,
+      "coveredNewLines" : 0,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/FormattingStyle.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 0,
+      "coveredNewLines" : 0,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/Gson.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 2,
+      "coveredNewLines" : 2,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/GsonBuilder.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 1,
+      "coveredNewLines" : 1,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/JsonArray.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 0,
+      "coveredNewLines" : 0,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/JsonDeserializer.java",
+      "module" : "gson",
+      "classification" : "non-executable"
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/JsonObject.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 0,
+      "coveredNewLines" : 0,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/JsonParseException.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 0,
+      "coveredNewLines" : 0,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/JsonPrimitive.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 7,
+      "coveredNewLines" : 7,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/JsonSerializer.java",
+      "module" : "gson",
+      "classification" : "non-executable"
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/LongSerializationPolicy.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 0,
+      "coveredNewLines" : 0,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/ToNumberPolicy.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 0,
+      "coveredNewLines" : 0,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/TypeAdapter.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 0,
+      "coveredNewLines" : 0,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/TypeAdapterFactory.java",
+      "module" : "gson",
+      "classification" : "non-executable"
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/ConstructorConstructor.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 3,
+      "coveredNewLines" : 3,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/Excluder.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 19,
+      "coveredNewLines" : 19,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/GsonTypes.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 6,
+      "coveredNewLines" : 6,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/LazilyParsedNumber.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 1,
+      "coveredNewLines" : 1,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/LinkedTreeMap.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 5,
+      "coveredNewLines" : 5,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/NonNullElementWrapperList.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 3,
+      "coveredNewLines" : 3,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/NumberLimits.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 0,
+      "coveredNewLines" : 0,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/PreJava9DateFormatProvider.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 0,
+      "coveredNewLines" : 0,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/ReflectionAccessFilterHelper.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 0,
+      "coveredNewLines" : 0,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/TroubleshootingGuide.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 0,
+      "coveredNewLines" : 0,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/bind/JavaTimeTypeAdapters.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 0,
+      "coveredNewLines" : 0,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/bind/JsonAdapterAnnotationTypeAdapterFactory.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 6,
+      "coveredNewLines" : 6,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 30,
+      "coveredNewLines" : 30,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/bind/MapTypeAdapterFactory.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 10,
+      "coveredNewLines" : 10,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/bind/ObjectTypeAdapter.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 1,
+      "coveredNewLines" : 1,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/bind/ReflectiveTypeAdapterFactory.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 3,
+      "coveredNewLines" : 3,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/bind/TypeAdapterRuntimeTypeWrapper.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 4,
+      "coveredNewLines" : 4,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/bind/TypeAdapters.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 28,
+      "coveredNewLines" : 26,
+      "uncoveredNewRanges" : [
+        [
+          715,
+          715
+        ],
+        [
+          743,
+          743
+        ]
+      ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/bind/util/ISO8601Utils.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 0,
+      "coveredNewLines" : 0,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/reflect/ReflectionHelper.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 1,
+      "coveredNewLines" : 0,
+      "uncoveredNewRanges" : [
+        [
+          300,
+          300
+        ]
+      ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/internal/sql/SqlTimestampTypeAdapter.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 0,
+      "coveredNewLines" : 0,
+      "uncoveredNewRanges" : [ ]
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/package-info.java",
+      "module" : "gson",
+      "classification" : "non-executable"
+    },
+    {
+      "path" : "gson/src/main/java/com/google/gson/stream/JsonReader.java",
+      "module" : "gson",
+      "classification" : "mapped",
+      "newLines" : 21,
+      "coveredNewLines" : 20,
+      "uncoveredNewRanges" : [
+        [
+          1884,
+          1884
+        ]
+      ]
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/DefaultInetAddressTypeAdapterTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/GsonTypeAdapterTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/JsonArrayAsListTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/JsonArrayTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/JsonObjectAsMapTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/JsonPrimitiveTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/MixedStreamTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/ToNumberPolicyTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/functional/CollectionTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/functional/DefaultTypeAdaptersTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/functional/GsonVersionDiagnosticsTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/functional/Java17RecordTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/functional/JavaUtilConcurrentAtomicTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/functional/MapAsArrayTypeAdapterTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/functional/MapTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/functional/NamingPolicyTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/functional/NumberLimitsTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/functional/ParameterizedTypesTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/functional/PrimitiveCharacterTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/functional/PrimitiveTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/functional/ReadersWritersTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/functional/ReflectionAccessFilterTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/functional/SecurityTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/functional/ToNumberPolicyFunctionalTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/functional/TypeHierarchyAdapterTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/internal/ConstructorConstructorTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/internal/LazilyParsedNumberTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/internal/LinkedTreeMapTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/internal/bind/JsonTreeReaderTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/internal/bind/JsonTreeWriterTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/metrics/PerformanceTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/stream/JsonReaderTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    },
+    {
+      "path" : "gson/src/test/java/com/google/gson/stream/JsonWriterTest.java",
+      "module" : "gson",
+      "classification" : "excluded"
+    }
+  ],
+  "findings" : [
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/GsonBuilderTest.java",
+      "startLine" : 178,
+      "endLine" : 186,
+      "testMethod" : "com.google.gson.GsonBuilderTest#testRegisterTypeAdapterForCoreType()",
+      "message" : "Test 'testRegisterTypeAdapterForCoreType' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "dd284bc02ae9aae9"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/GsonBuilderTest.java",
+      "startLine" : 358,
+      "endLine" : 364,
+      "testMethod" : "com.google.gson.GsonBuilderTest#testSetDateFormatWithValidPattern()",
+      "message" : "Test 'testSetDateFormatWithValidPattern' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "6ccc9dbefe6dac3c"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/GsonBuilderTest.java",
+      "startLine" : 397,
+      "endLine" : 408,
+      "testMethod" : "com.google.gson.GsonBuilderTest#testSetDateFormatValidStyle()",
+      "message" : "Test 'testSetDateFormatValidStyle' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "8b8e01d4ee533371"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/JsonArrayTest.java",
+      "startLine" : 34,
+      "endLine" : 37,
+      "testMethod" : "com.google.gson.JsonArrayTest#testEqualsOnEmptyArray()",
+      "message" : "Test 'testEqualsOnEmptyArray' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "118106add5445152"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/JsonNullTest.java",
+      "startLine" : 31,
+      "endLine" : 37,
+      "testMethod" : "com.google.gson.JsonNullTest#testEqualsAndHashcode()",
+      "message" : "Test 'testEqualsAndHashcode' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "2c542605055c760b"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/JsonObjectTest.java",
+      "startLine" : 156,
+      "endLine" : 159,
+      "testMethod" : "com.google.gson.JsonObjectTest#testEqualsOnEmptyObject()",
+      "message" : "Test 'testEqualsOnEmptyObject' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "c6506de8afe41044"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/JsonPrimitiveTest.java",
+      "startLine" : 290,
+      "endLine" : 300,
+      "testMethod" : "com.google.gson.JsonPrimitiveTest#testEqualsAcrossTypes()",
+      "message" : "Test 'testEqualsAcrossTypes' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "29348087476aa7f8"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/JsonPrimitiveTest.java",
+      "startLine" : 307,
+      "endLine" : 328,
+      "testMethod" : "com.google.gson.JsonPrimitiveTest#testEqualsAndHashCodeAcrossNumberTypes()",
+      "message" : "Test 'testEqualsAndHashCodeAcrossNumberTypes' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "155f627a2e1475c8"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/functional/EnumTest.java",
+      "startLine" : 84,
+      "endLine" : 91,
+      "testMethod" : "com.google.gson.functional.EnumTest#testCollectionOfEnumsDeserialization()",
+      "message" : "Test 'testCollectionOfEnumsDeserialization' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "2c17463210792e6f"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/functional/TypeHierarchyAdapterTest.java",
+      "startLine" : 139,
+      "endLine" : 146,
+      "testMethod" : "com.google.gson.functional.TypeHierarchyAdapterTest#testRegisterSubTypeFirstAllowed()",
+      "message" : "Test 'testRegisterSubTypeFirstAllowed' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "c41cc1b56dbc224c"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/internal/LinkedTreeMapTest.java",
+      "startLine" : 193,
+      "endLine" : 208,
+      "testMethod" : "com.google.gson.internal.LinkedTreeMapTest#testEqualsAndHashCode()",
+      "message" : "Test 'testEqualsAndHashCode' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "6733a627db0da9db"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/internal/bind/JsonElementReaderTest.java",
+      "startLine" : 111,
+      "endLine" : 119,
+      "testMethod" : "com.google.gson.internal.bind.JsonElementReaderTest#testNulls()",
+      "message" : "Test 'testNulls' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "af365d40d76a634b"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/internal/bind/JsonElementReaderTest.java",
+      "startLine" : 167,
+      "endLine" : 173,
+      "testMethod" : "com.google.gson.internal.bind.JsonElementReaderTest#testEmptyArray()",
+      "message" : "Test 'testEmptyArray' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "28f8495b7b3adf58"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/internal/bind/JsonElementReaderTest.java",
+      "startLine" : 175,
+      "endLine" : 187,
+      "testMethod" : "com.google.gson.internal.bind.JsonElementReaderTest#testNestedArrays()",
+      "message" : "Test 'testNestedArrays' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "f9d24b9f545355f6"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/internal/bind/JsonElementReaderTest.java",
+      "startLine" : 206,
+      "endLine" : 212,
+      "testMethod" : "com.google.gson.internal.bind.JsonElementReaderTest#testEmptyObject()",
+      "message" : "Test 'testEmptyObject' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "4181920add2ddd00"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/internal/bind/JsonTreeReaderTest.java",
+      "startLine" : 282,
+      "endLine" : 293,
+      "testMethod" : "com.google.gson.internal.bind.JsonTreeReaderTest#testOverrides()",
+      "message" : "Test 'testOverrides' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "4bcd8116ddfc6fe5"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/internal/bind/JsonTreeWriterTest.java",
+      "startLine" : 281,
+      "endLine" : 297,
+      "testMethod" : "com.google.gson.internal.bind.JsonTreeWriterTest#testOverrides()",
+      "message" : "Test 'testOverrides' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "5d5e2193d524a205"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/internal/sql/SqlTypesGsonTest.java",
+      "startLine" : 54,
+      "endLine" : 59,
+      "testMethod" : "com.google.gson.internal.sql.SqlTypesGsonTest#testNullSerializationAndDeserialization()",
+      "message" : "Test 'testNullSerializationAndDeserialization' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "cb624996e8118b50"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/internal/sql/SqlTypesGsonTest.java",
+      "startLine" : 72,
+      "endLine" : 77,
+      "testMethod" : "com.google.gson.internal.sql.SqlTypesGsonTest#testDefaultSqlDateDeserialization()",
+      "message" : "Test 'testDefaultSqlDateDeserialization' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "d015c3d63c0f4538"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/internal/sql/SqlTypesGsonTest.java",
+      "startLine" : 105,
+      "endLine" : 110,
+      "testMethod" : "com.google.gson.internal.sql.SqlTypesGsonTest#testDefaultSqlTimeDeserialization()",
+      "message" : "Test 'testDefaultSqlTimeDeserialization' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "1a4e360967f2ec4c"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/internal/sql/SqlTypesGsonTest.java",
+      "startLine" : 122,
+      "endLine" : 128,
+      "testMethod" : "com.google.gson.internal.sql.SqlTypesGsonTest#testDefaultSqlTimestampDeserialization()",
+      "message" : "Test 'testDefaultSqlTimestampDeserialization' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "7628a7b91130092e"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/metrics/PerformanceTest.java",
+      "startLine" : 118,
+      "endLine" : 127,
+      "testMethod" : "com.google.gson.metrics.PerformanceTest#testLargeCollectionSerialization()",
+      "message" : "Test 'testLargeCollectionSerialization' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "fb97597b642edc83"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/metrics/PerformanceTest.java",
+      "startLine" : 154,
+      "endLine" : 165,
+      "testMethod" : "com.google.gson.metrics.PerformanceTest#testByteArraySerialization()",
+      "message" : "Test 'testByteArraySerialization' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "6468f8a833d80395"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/metrics/PerformanceTest.java",
+      "startLine" : 169,
+      "endLine" : 189,
+      "testMethod" : "com.google.gson.metrics.PerformanceTest#testByteArrayDeserialization()",
+      "message" : "Test 'testByteArrayDeserialization' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "0d0a369cafb0057d"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/metrics/PerformanceTest.java",
+      "startLine" : 200,
+      "endLine" : 215,
+      "testMethod" : "com.google.gson.metrics.PerformanceTest#testSerializeClasses()",
+      "message" : "Test 'testSerializeClasses' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "503beef1f13c2df9"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/metrics/PerformanceTest.java",
+      "startLine" : 217,
+      "endLine" : 229,
+      "testMethod" : "com.google.gson.metrics.PerformanceTest#testDeserializeClasses()",
+      "message" : "Test 'testDeserializeClasses' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "aad1e1c65579858c"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/metrics/PerformanceTest.java",
+      "startLine" : 231,
+      "endLine" : 248,
+      "testMethod" : "com.google.gson.metrics.PerformanceTest#testLargeObjectSerializationAndDeserialization()",
+      "message" : "Test 'testLargeObjectSerializationAndDeserialization' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "c76992e15a140496"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/metrics/PerformanceTest.java",
+      "startLine" : 250,
+      "endLine" : 266,
+      "testMethod" : "com.google.gson.metrics.PerformanceTest#testSerializeExposedClasses()",
+      "message" : "Test 'testSerializeExposedClasses' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "ab1087c15f743aa7"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/metrics/PerformanceTest.java",
+      "startLine" : 268,
+      "endLine" : 280,
+      "testMethod" : "com.google.gson.metrics.PerformanceTest#testDeserializeExposedClasses()",
+      "message" : "Test 'testDeserializeExposedClasses' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "7f6462be74d83702"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/metrics/PerformanceTest.java",
+      "startLine" : 282,
+      "endLine" : 294,
+      "testMethod" : "com.google.gson.metrics.PerformanceTest#testLargeGsonMapRoundTrip()",
+      "message" : "Test 'testLargeGsonMapRoundTrip' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "5cec45fd86a3ff00"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/stream/JsonReaderTest.java",
+      "startLine" : 1643,
+      "endLine" : 1648,
+      "testMethod" : "com.google.gson.stream.JsonReaderTest#testBomIgnoredAsFirstCharacterOfDocument()",
+      "message" : "Test 'testBomIgnoredAsFirstCharacterOfDocument' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "cb647e6ee4a7cd55"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/stream/JsonReaderTest.java",
+      "startLine" : 2001,
+      "endLine" : 2008,
+      "testMethod" : "com.google.gson.stream.JsonReaderTest#testSkipVeryLongUnquotedString()",
+      "message" : "Test 'testSkipVeryLongUnquotedString' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "ebd2ec8f08828374"
+    },
+    {
+      "rule" : "NO_RECOGNIZED_ORACLE",
+      "severity" : "WARNING",
+      "confidence" : "HIGH",
+      "module" : "gson",
+      "path" : "gson/src/test/java/com/google/gson/stream/JsonReaderTest.java",
+      "startLine" : 2018,
+      "endLine" : 2024,
+      "testMethod" : "com.google.gson.stream.JsonReaderTest#testSkipVeryLongQuotedString()",
+      "message" : "Test 'testSkipVeryLongQuotedString' contains no recognized assertion, verification, or expected exception.",
+      "suggestedAction" : "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
+      "fingerprint" : "692b469cd8ff6ca0"
+    }
+  ],
+  "warnings" : [
+    {
+      "code" : "CHANGED_FILES_EXCLUDED",
+      "message" : "33 changed file(s) excluded from new-code coverage by --coverage-exclusions or a test root."
+    },
+    {
+      "code" : "CHANGED_LINES_ABSENT_FROM_REPORT",
+      "message" : "209 changed line(s) across 33 file(s) are absent from the bound report(s) and excluded from new-code numerators/denominators; the report may be older than this diff."
+    },
+    {
+      "code" : "MISSING_SOURCE_FILE",
+      "message" : "Coverage reported for 'gson/src/main/java/com/google/gson/internal/GsonBuildConfig.java' but the file was not found on disk under any declared source root.",
+      "path" : "gson/src/main/java/com/google/gson/internal/GsonBuildConfig.java",
+      "module" : "gson"
+    }
+  ]
+}
