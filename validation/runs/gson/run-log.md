@@ -140,3 +140,29 @@ executable lines, 123 test files, 1 module (this phase's scope).
 agent (`classify_findings.py` + `fill_gson_labels.py` in this directory
 document the exact derivation); user spot-check is a follow-up, not part
 of this session. Full analysis in `precision-summary.md`.
+
+## Round 2 (D-31: Google Truth added to the oracle allowlist)
+
+Same checkout, same `jacoco.xml` (no rebuild needed - only the coverdict
+CLI itself changed). Re-ran the same two commands (`--base <pin>~50`,
+`--no-vcs`) with a freshly built `coverdict.jar`. Results:
+`validation/runs/gson/round2/verdict-base.json`,
+`validation/runs/gson/round2/verdict-no-vcs.json`.
+
+Findings dropped from 1090 to 38 (-96.5%). All 38 reviewed (under the
+100-per-rule cap, no sampling needed). HIGH-tier `NO_RECOGNIZED_ORACLE`
+precision: 94.3% (33/35) - crosses the required ≥90%. `CATCH_ORACLE_
+WITHOUT_FAIL` produced zero findings this round (both round-1 findings
+resolved: one was a real Truth-recognition false positive, the other
+turned out to already be a labeling error from round 1 - see
+`round2/precision-summary.md`'s correction note).
+
+Two new, distinct false positives surfaced (not present as false positives
+in round 1's Truth-dominated sample): both trace to `OracleRecognizer`'s
+helper traversal only following **private** same-file helpers, not
+**public static** ones - a narrower, separate gap from Truth-recognition.
+Three `CircularReferenceTest` findings are `INCONCLUSIVE` due to a
+JavaParser symbol-solver limitation resolving overloaded calls with a
+lambda argument - also unrelated to Truth, correctly hedged rather than
+wrongly claimed HIGH. Both are documented as new backlog items, not fixed
+in this session.
