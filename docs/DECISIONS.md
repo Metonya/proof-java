@@ -155,6 +155,17 @@ concern. A changed line absent from an otherwise-mapped file's report (stale
 report) is counted and warned, never inferred from file mtime — a timestamp
 would break byte-determinism across checkouts and is easy to spoof.
 
+**D-27 · Five-way changed-file classification, checked in a fixed order** (2026-08-24)
+`unknown`/`excluded`/`non-executable`/`mapped`/`unsupported` (M0-CLI-INPUT.md),
+resolved module-first (longest declared root wins), report-presence before
+name-based rules (`module-info.java` sometimes has real report data - the
+name is only a fallback excuse for zero data). A changed test file is
+`excluded`, not incomplete: JaCoCo does not report test code, so its absence
+is not missing evidence. Schema's `changedFile.module` is no longer required
+- a path outside every declared module root is the one case with no valid
+value for it (D-25 precedent: relaxing a constraint cannot break a
+previously-valid document).
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

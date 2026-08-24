@@ -155,10 +155,10 @@
     "changedFile": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "module", "classification"],
+      "required": ["path", "classification"],
       "properties": {
         "path": { "$ref": "#/$defs/path" },
-        "module": { "type": "string", "minLength": 1 },
+        "module": { "type": "string", "minLength": 1, "description": "Omitted (never null) when classification=unknown because the path is not under any declared module root (D-27)." },
         "classification": { "enum": ["mapped", "excluded", "non-executable", "unsupported", "unknown"] },
         "newLines": { "type": "integer", "minimum": 0 },
         "coveredNewLines": { "type": "integer", "minimum": 0 },

@@ -32,10 +32,7 @@ public final class ExclusionFilter {
         if (globs.isEmpty()) {
             return files;
         }
-        List<Pattern> patterns = new ArrayList<>(globs.size());
-        for (String glob : globs) {
-            patterns.add(toPattern(glob));
-        }
+        List<Pattern> patterns = compile(globs);
         List<ResolvedSourceFile> kept = new ArrayList<>();
         for (ResolvedSourceFile file : files) {
             if (!matchesAny(file.repoRelativePath(), patterns)) {
@@ -45,7 +42,16 @@ public final class ExclusionFilter {
         return kept;
     }
 
-    private static boolean matchesAny(String path, List<Pattern> patterns) {
+    /** Compiles once so a caller checking many paths (e.g. the changed-file classifier) never recompiles per path. */
+    public static List<Pattern> compile(List<String> globs) {
+        List<Pattern> patterns = new ArrayList<>(globs.size());
+        for (String glob : globs) {
+            patterns.add(toPattern(glob));
+        }
+        return patterns;
+    }
+
+    public static boolean matchesAny(String path, List<Pattern> patterns) {
         for (Pattern p : patterns) {
             if (p.matcher(path).matches()) {
                 return true;
