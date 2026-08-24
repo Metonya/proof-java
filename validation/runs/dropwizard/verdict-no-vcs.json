@@ -1,0 +1,84 @@
+{
+  "schemaVersion" : "0.1.0",
+  "tool" : {
+    "name" : "coverdict",
+    "version" : "0.1.0-SNAPSHOT"
+  },
+  "analysis" : {
+    "status" : "complete",
+    "exitCode" : 0,
+    "incompleteReasons" : [ ]
+  },
+  "inputs" : {
+    "diffMode" : "no-vcs",
+    "findingsScope" : "all",
+    "languageLevel" : 11,
+    "encoding" : "UTF-8",
+    "exclusions" : [ ],
+    "modules" : [
+      {
+        "id" : "dropwizard-util",
+        "root" : "dropwizard-util",
+        "sourceRoots" : [
+          "dropwizard-util/src/main/java"
+        ],
+        "testRoots" : [
+          "dropwizard-util/src/test/java"
+        ],
+        "reports" : [
+          {
+            "path" : "dropwizard-util/target/site/jacoco/jacoco.xml",
+            "freshness" : "unverified"
+          }
+        ]
+      },
+      {
+        "id" : "dropwizard-validation",
+        "root" : "dropwizard-validation",
+        "sourceRoots" : [
+          "dropwizard-validation/src/main/java"
+        ],
+        "testRoots" : [
+          "dropwizard-validation/src/test/java"
+        ],
+        "reports" : [
+          {
+            "path" : "dropwizard-validation/target/site/jacoco/jacoco.xml",
+            "freshness" : "unverified"
+          }
+        ]
+      }
+    ]
+  },
+  "coverage" : {
+    "overall" : {
+      "jacoco-line" : {
+        "numeratorName" : "coveredLines",
+        "numerator" : 419,
+        "denominatorName" : "executableLines",
+        "denominator" : 494,
+        "percent" : 84.8
+      },
+      "strict-line" : {
+        "numeratorName" : "fullyCoveredLines",
+        "numerator" : 413,
+        "denominatorName" : "executableLines",
+        "denominator" : 494,
+        "percent" : 83.6
+      },
+      "sonar-compatible" : {
+        "numeratorName" : "coveredBranchesPlusCoveredLines",
+        "numerator" : 548,
+        "denominatorName" : "branchesPlusExecutableLines",
+        "denominator" : 676,
+        "percent" : 81.1
+      }
+    },
+    "newCode" : {
+      "status" : "unavailable_no_vcs"
+    }
+  },
+  "changedFiles" : [ ],
+  "findings" : [ ],
+  "warnings" : [ ]
+}

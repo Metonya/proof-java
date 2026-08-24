@@ -312,9 +312,44 @@ peak working set 425 MB - notably higher than gson's despite a smaller
 analyzed tree, likely repo-size overhead from `--repo` pointing at the
 whole 30+-module checkout; not investigated further.
 
-Phase 4 and criterion-2 new-code parity (pending a Developer Edition
-SonarQube instance, or acceptance that Community Edition caps this) remain
-open.
+**Phase 4 (dropwizard) done (2026-08-25):** all of criterion 5's four
+real-repo phases are now run. Corpus harness gained real multi-module
+binding (D-37): `run-corpus-phase.ps1` and `sonar-parity.ps1` both take
+module-id/root arrays instead of a single scalar pair, one reactor build
+(`mvn -pl modA,modB -am`), one coverdict invocation binding every module's
+own `--module`/`--source-roots`/`--test-roots`/`--report`. Modules:
+`dropwizard-util` (leaf, no `dropwizard-*` dependency) + `dropwizard-
+validation` (depends on `dropwizard-util`) - a real reactor dependency
+edge, 105 `@Test` methods total, chosen small to stay clear of the D-35
+memory risk. `-LanguageLevel 11` (this repo's `maven.compiler.release`,
+not the harness's 17 default) and JaCoCo `0.8.14` (this repo's pinned
+version, not the harness's 0.8.13 default). Criterion 4: **0 findings**
+across every rule/tier over all 105 tests - both modules are ~1083
+`assertThat(...)` (assertj) plus 2 Mockito `verify(...)`, already fully
+covered by D-34's allowlist, no `@Disabled`/`@Ignore` methods; a real,
+corroborated result (non-trivial coverage numbers prove the scan ran), not
+a silent gap - see `validation/runs/dropwizard/precision-summary.md`.
+Criterion 2 (overall): **exact match**, 81.1 vs SonarQube's 81.1 (delta 0);
+the reactor-scan sonar-parity path worked on the first attempt, no repeat
+of the earlier single-module `-pl` + `sonar:sonar` failure (dropwizard's
+two modules are real `<module>` entries of the root aggregator, unlike
+gson/assertj's module dirs). Criterion 6: cold 4608.4 ms, warm median
+4294.5 ms, warm p95 4443.1 ms, peak working set 603 MB - the highest of any
+phase despite the smallest analyzed tree, confirming D-36's open question:
+`--repo` pointing at the whole 34-module checkout drives overhead
+independent of analyzed size. See D-37.
+
+**Manifest correction (D-38):** the phase-4 "forces" column claimed "mixed
+JUnit 4+5"; verified false at the pinned commit (`git grep` for JUnit 4
+imports/annotations across the whole repo returns nothing, every module
+pom excludes `junit:junit`, all 321 `@Test` methods are JUnit 5) -
+`release/4.0.x` is fully migrated. Corrected in
+`docs/M0-VALIDATION-MANIFEST.md` to "multi-module Maven, report-to-module
+binding"; JUnit 4 handling stays validated by gson (phase 1) instead.
+
+Criterion-2 new-code parity (pending a Developer Edition SonarQube
+instance, or acceptance that Community Edition caps this) remains open -
+the only open item left in M1c.
 
 M1 exit codes: `0` complete analysis regardless of findings; `1` reserved for
 the M3 finding-based quality gate and never emitted by v0.1; `2` invalid

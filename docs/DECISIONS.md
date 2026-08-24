@@ -478,6 +478,69 @@ analyzed size. Not investigated further this session (out of scope for a
 measurement phase); worth a closer look before trusting benchmark numbers
 across repos of very different total size.
 
+**D-37 · M1c-2 phase 4 (dropwizard): real multi-module binding added to the
+corpus harness; `dropwizard-util` + `dropwizard-validation` chosen; 0
+findings; multi-module sonar parity PASS on the first attempt** (2026-08-25)
+`run-corpus-phase.ps1`'s `-ModuleId`/`-ModuleRoot` scalars became
+`-ModuleIds`/`-ModuleRoots` arrays: one `mvn -pl modA,modB -am` reactor
+build, one jacoco.xml resolved per module, and every `--module`/
+`--source-roots`/`--test-roots`/`--report` flag repeated once per module in
+a single coverdict invocation - proving `ModuleBinder`'s real multi-module
+path for the first time (previously only unit-tested via a degenerate
+same-root case, see `ModuleBinderTest`). `sonar-parity.ps1` gained the same
+shape (`-ModuleDirs`/`-JacocoXmlRelativePaths` arrays): more than one module
+switches it to a reactor scan (`-pl <dirs> -am sonar:sonar`, no per-module
+`sonar.sources`/`sonar.tests` override - each submodule's own pom supplies
+its layout, Sonar attributes each XML's lines to whichever module's source
+tree they fall under). The known single-module `-pl` + `sonar:sonar`
+"Maven session does not declare a top level project" failure (gson/assertj
+era) **did not reproduce** here - `dropwizard-util`/`dropwizard-validation`
+are real `<module>` entries of the root aggregator pom, unlike the earlier
+phases' module directories, so the standard reactor-scan path applied
+cleanly. `benchmark-phase.ps1` needed no change (`-JarArgs` was already
+generic).
+
+**Module choice**: `dropwizard-util` (7 test files, no `dropwizard-*`
+dependency - the reactor's leaf) and `dropwizard-validation` (10 test
+files, depends on `dropwizard-util` at compile scope) - a real dependency
+edge, not two arbitrary unrelated modules, and small enough (105 `@Test`
+methods total) to stay well clear of the D-35 memory risk that hit assertj.
+`maven.compiler.release` is 11 here, not the harness's 17 default -
+`-LanguageLevel 11` passed explicitly; JaCoCo is `0.8.14`
+(`dropwizard-dependencies`), not the harness's 0.8.13 default.
+
+**Result**: 0 findings across every rule and confidence tier, over all 105
+`@Test` methods (`analysis.status: complete`, no incomplete reasons) - both
+modules' tests are ~1083 `assertThat(...)` (assertj) plus 2 Mockito
+`verify(...)` calls, all already covered by D-34's allowlist, with zero
+`@Disabled`/`@Ignore` methods. Criterion 4's HIGH bar is met vacuously (n=0),
+the same shape as junit-framework's n=1 - a real result, corroborated by
+non-trivial coverage numbers proving the scan executed, not a silent gap
+(see `validation/runs/dropwizard/precision-summary.md` for the full
+reasoning). Sonar parity (criterion 2): exact match, 81.1 vs 81.1 (delta 0),
+jacoco-line/line_coverage also exact (84.8 vs 84.8) as a bonus cross-check.
+Benchmark (criterion 6): cold 4608.4 ms, warm median 4294.5 ms, warm p95
+4443.1 ms, peak working set 603 MB - the highest of any phase despite the
+smallest analyzed source tree (105 tests, 2 small modules), confirming the
+open question D-36 flagged: `--repo` pointing at the whole 34-module
+dropwizard checkout, not just the two bound modules, drives runtime/memory
+overhead independent of analyzed size. Still not investigated further (out
+of scope for a measurement phase).
+
+**D-38 · dropwizard corpus pin has no JUnit 4 - manifest's "mixed JUnit 4+5"
+forces claim corrected** (2026-08-25)
+`docs/M0-VALIDATION-MANIFEST.md`'s phase-4 row listed dropwizard's forces as
+"multi-module Maven, mixed JUnit 4+5, report-to-module binding". Checked
+directly against the pinned checkout: `git grep` for
+`import org.junit.Test;`, `@RunWith`, `import org.junit.Rule;`, and
+`import static org.junit.Assert` across the whole repo returns zero matches;
+every module pom explicitly `<exclusion>`s `junit:junit`; all 321 `@Test`
+methods repo-wide are `org.junit.jupiter.api.Test`. `release/4.0.x` is fully
+migrated to JUnit 5 - the manifest's claim is stale, likely predating that
+migration. Corrected to "multi-module Maven, report-to-module binding" in
+the manifest; JUnit 4 handling stays validated by gson (phase 1) and the
+allowlist's own D-24 coverage, not by this phase.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

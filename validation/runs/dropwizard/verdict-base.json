@@ -1,0 +1,122 @@
+{
+  "schemaVersion" : "0.1.0",
+  "tool" : {
+    "name" : "coverdict",
+    "version" : "0.1.0-SNAPSHOT"
+  },
+  "analysis" : {
+    "status" : "incomplete",
+    "exitCode" : 3,
+    "incompleteReasons" : [
+      {
+        "code" : "CHANGED_JAVA_OUTSIDE_MODULES",
+        "message" : "Changed path 'dropwizard-hibernate/src/test/java/io/dropwizard/hibernate/JerseyIntegrationTest.java' is not under any declared module root.",
+        "path" : "dropwizard-hibernate/src/test/java/io/dropwizard/hibernate/JerseyIntegrationTest.java"
+      }
+    ]
+  },
+  "inputs" : {
+    "diffMode" : "base-ref",
+    "findingsScope" : "all",
+    "baseRef" : "87940b9728fa6cce6598a0433da97ace373ee828~50",
+    "resolved" : {
+      "base" : "14d041bbe9227acb22c97d4db4e01ba09059a3af",
+      "mergeBase" : "14d041bbe9227acb22c97d4db4e01ba09059a3af",
+      "head" : "87940b9728fa6cce6598a0433da97ace373ee828",
+      "dirty" : false
+    },
+    "languageLevel" : 11,
+    "encoding" : "UTF-8",
+    "exclusions" : [ ],
+    "modules" : [
+      {
+        "id" : "dropwizard-util",
+        "root" : "dropwizard-util",
+        "sourceRoots" : [
+          "dropwizard-util/src/main/java"
+        ],
+        "testRoots" : [
+          "dropwizard-util/src/test/java"
+        ],
+        "reports" : [
+          {
+            "path" : "dropwizard-util/target/site/jacoco/jacoco.xml",
+            "freshness" : "unverified"
+          }
+        ]
+      },
+      {
+        "id" : "dropwizard-validation",
+        "root" : "dropwizard-validation",
+        "sourceRoots" : [
+          "dropwizard-validation/src/main/java"
+        ],
+        "testRoots" : [
+          "dropwizard-validation/src/test/java"
+        ],
+        "reports" : [
+          {
+            "path" : "dropwizard-validation/target/site/jacoco/jacoco.xml",
+            "freshness" : "unverified"
+          }
+        ]
+      }
+    ]
+  },
+  "coverage" : {
+    "overall" : {
+      "jacoco-line" : {
+        "numeratorName" : "coveredLines",
+        "numerator" : 419,
+        "denominatorName" : "executableLines",
+        "denominator" : 494,
+        "percent" : 84.8
+      },
+      "strict-line" : {
+        "numeratorName" : "fullyCoveredLines",
+        "numerator" : 413,
+        "denominatorName" : "executableLines",
+        "denominator" : 494,
+        "percent" : 83.6
+      },
+      "sonar-compatible" : {
+        "numeratorName" : "coveredBranchesPlusCoveredLines",
+        "numerator" : 548,
+        "denominatorName" : "branchesPlusExecutableLines",
+        "denominator" : 676,
+        "percent" : 81.1
+      }
+    },
+    "newCode" : {
+      "jacoco-line" : {
+        "numeratorName" : "coveredLines",
+        "numerator" : 0,
+        "denominatorName" : "executableLines",
+        "denominator" : 0,
+        "percent" : null
+      },
+      "strict-line" : {
+        "numeratorName" : "fullyCoveredLines",
+        "numerator" : 0,
+        "denominatorName" : "executableLines",
+        "denominator" : 0,
+        "percent" : null
+      },
+      "sonar-compatible" : {
+        "numeratorName" : "coveredBranchesPlusCoveredLines",
+        "numerator" : 0,
+        "denominatorName" : "branchesPlusExecutableLines",
+        "denominator" : 0,
+        "percent" : null
+      }
+    }
+  },
+  "changedFiles" : [
+    {
+      "path" : "dropwizard-hibernate/src/test/java/io/dropwizard/hibernate/JerseyIntegrationTest.java",
+      "classification" : "unknown"
+    }
+  ],
+  "findings" : [ ],
+  "warnings" : [ ]
+}

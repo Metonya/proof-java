@@ -15,7 +15,7 @@ pinned by SHA; a re-pin is a manifest edit, never a silent bump.
 | 1 canary | `google/gson` | `dae37cf0fe12235b76fb09f01118a0a8c8823f42` | small, fast smoke run; JUnit 4 suite |
 | 2 fluent | `assertj/assertj` | `4c5ab4862668e769d0e72492f400bd919469455d` | fluent/custom assertion DSL recognition |
 | 3 constructs | `junit-team/junit-framework` | `9cd9a3cfb6cd98aec355bd49fc8d801058762441` | Gradle build; dynamic-test and nested source constructs |
-| 4 multi-module | `dropwizard/dropwizard` (`release/4.0.x`) | `87940b9728fa6cce6598a0433da97ace373ee828` | multi-module Maven, mixed JUnit 4+5, report-to-module binding |
+| 4 multi-module | `dropwizard/dropwizard` (`release/4.0.x`) | `87940b9728fa6cce6598a0433da97ace373ee828` | multi-module Maven, report-to-module binding |
 
 Phase 3 is a Gradle-built repository. Per D-23 this is not "Gradle support":
 the CLI consumes source roots and JaCoCo XML explicitly (D-01/D-02), so the

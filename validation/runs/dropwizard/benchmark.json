@@ -1,0 +1,41 @@
+﻿{
+    "phase":  "dropwizard",
+    "machine":  "Windows 11 Pro 26200, x86-64",
+    "jdk":  "openjdk version \"17.0.17\" 2025-10-21 | OpenJDK Runtime Environment Temurin-17.0.17+10 (build 17.0.17+10) | OpenJDK 64-Bit Server VM Temurin-17.0.17+10 (build 17.0.17+10, mixed mode, sharing)",
+    "coldMillis":  4608.4,
+    "warmMillisAll":  [
+                          4196.2,
+                          4209.4,
+                          4294.5,
+                          4318.5,
+                          4443.1
+                      ],
+    "warmMedianMillis":  4294.5,
+    "warmP95Millis":  4443.1,
+    "peakWorkingSetMb":  603,
+    "jarArgs":  [
+                    "--repo",
+                    "C:\\Users\\Mert\\Desktop\\coverdict-corpus\\dropwizard",
+                    "--no-vcs",
+                    "--module",
+                    "dropwizard-util=dropwizard-util",
+                    "--module",
+                    "dropwizard-validation=dropwizard-validation",
+                    "--source-roots",
+                    "dropwizard-util=dropwizard-util/src/main/java",
+                    "--source-roots",
+                    "dropwizard-validation=dropwizard-validation/src/main/java",
+                    "--test-roots",
+                    "dropwizard-util=dropwizard-util/src/test/java",
+                    "--test-roots",
+                    "dropwizard-validation=dropwizard-validation/src/test/java",
+                    "--report",
+                    "dropwizard-util=dropwizard-util/target/site/jacoco/jacoco.xml",
+                    "--report",
+                    "dropwizard-validation=dropwizard-validation/target/site/jacoco/jacoco.xml",
+                    "--language-level",
+                    "11",
+                    "--out",
+                    "C:\\Users\\Mert\\Desktop\\coverdict\\validation\\runs\\dropwizard\\bench-out.json"
+                ]
+}
