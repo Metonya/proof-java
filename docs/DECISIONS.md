@@ -209,6 +209,32 @@ directories and repeated runs on this machine) before committing to it - the
 plan's documented fallback (restrict checked-in goldens to `--no-vcs`, prove
 diff modes only via two-run byte equality) was not needed.
 
+**D-30 · M1c-2 phase 1: corpus harness design, edition limit, calibration
+round 1 result** (2026-08-24)
+Three reusable PowerShell/Python scripts (`validation/scripts/`) drive every
+M1c-2 phase: `run-corpus-phase.ps1` (clone/checkout/JaCoCo-bind/coverdict-run),
+`sonar-parity.ps1`, `benchmark-phase.ps1`, plus `scaffold_labels.py` for the
+labeling-protocol sample. Exercised end to end on the gson canary; phases
+2-4 are parameter changes, not new code. JaCoCo is bound via CLI goals
+(`prepare-agent`/`report`), never a permanent pom edit - a corpus repo's own
+hardcoded `<argLine>` (gson precedent) may need a local, throwaway patch to
+its *cloned* pom only, never committed. `sonar-maven-plugin:sonar` must run
+from inside the target module's own directory, not via reactor `-pl`
+(`-pl` + `:sonar` fails with "Maven session does not declare a top level
+project" on this scanner version) - `sonar-parity.ps1` takes a module
+directory, not a repo root. The local SonarQube instance is confirmed
+**Community Edition**: branch/PR analysis is unsupported, so M1c criterion 2
+is measurable only for **overall** scope until a Developer Edition instance
+is available or the corpus's own git history is used to simulate a PR (not
+attempted here) - documented as an open limit, not a silent pass (hard rule
+3a). Calibration round 1 (kill criteria) on gson: `NO_RECOGNIZED_ORACLE`
+HIGH-tier precision is 4.2% (4/96, seeded sample, seed 42) against a
+required ≥90%, with a single dominant, confirmed root cause across every
+false positive - Google Truth (`com.google.common.truth.Truth.assertThat`)
+is absent from the D-24 allowlist. The rule is not removed or downgraded on
+one round; the fix is scoped (extend D-24) and deferred to a future session,
+with round 2 defined as re-running this same seeded sample afterward.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

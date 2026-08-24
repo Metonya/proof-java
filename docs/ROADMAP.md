@@ -190,6 +190,40 @@ Still open, all requiring the pinned M1c validation corpus
 (rule precision labeling), criterion 5 (the four real-repo phases), and
 criterion 6 (analyzer-only benchmark harness - none exists yet).
 
+**M1c-2 phase 1 (gson canary) done (2026-08-24):** reusable harness added
+(`validation/scripts/run-corpus-phase.ps1`, `sonar-parity.ps1`,
+`benchmark-phase.ps1`, `scaffold_labels.py`) and exercised end to end on
+`google/gson` @ pinned commit, real results archived under
+`validation/runs/gson/`. See D-30.
+
+- **Criterion 2** (overall scope only): `sonar-compatible` matched the local
+  SonarQube instance's `coverage` measure exactly (91.0 vs 91.0, delta 0.0,
+  well within ±0.1) - `jacoco-line`/`line_coverage` also matched exactly as
+  a bonus cross-check. New-code parity is **not measurable** on this local
+  instance: it is Community Edition, which does not support branch/PR
+  analysis. Documented limit, not a silent pass (hard rule 3a).
+- **Criterion 4:** calibration round 1 of 2 (kill criteria). A 100-item
+  seeded sample (seed 42) of `NO_RECOGNIZED_ORACLE` findings scored 4.2%
+  HIGH-tier precision (4/96) against the required ≥90%. Root cause
+  identified and confirmed on every sampled false positive: gson's test
+  suite uses Google Truth (`com.google.common.truth.Truth.assertThat`),
+  which is absent from the D-24 recognized-oracle allowlist - both direct
+  calls and calls reached through the engine's own same-compilation-unit
+  helper traversal (confirmed working correctly). A concrete, scoped fix is
+  identified (add Truth to D-24) but not implemented in this session; round
+  2 is a re-run of this same sample after that change.
+- **Criterion 5:** 1 of 4 real-repo phases run (gson canary). The harness
+  is repo-agnostic; phases 2-4 (assertj, junit-framework, dropwizard) are
+  parameter changes to the same three scripts, not new code.
+- **Criterion 6:** harness exists and produced real numbers on gson - cold
+  182.5 ms, warm median 182.5 ms, warm p95 184.5 ms, peak working set
+  57.1 MB (Windows 11 Pro 26200, JDK 17.0.17 Temurin, 5515 executable
+  lines / 123 test files / 1 module).
+
+Phases 2-4 and criterion-2 new-code parity (pending a Developer Edition
+SonarQube instance, or acceptance that Community Edition caps this) remain
+open.
+
 M1 exit codes: `0` complete analysis regardless of findings; `1` reserved for
 the M3 finding-based quality gate and never emitted by v0.1; `2` invalid
 invocation/input; `3` incomplete or unverified-required evidence; `4` internal

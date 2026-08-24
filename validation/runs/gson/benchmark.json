@@ -1,0 +1,33 @@
+﻿{
+    "phase":  "gson",
+    "machine":  "Windows 11 Pro 26200, x86-64",
+    "jdk":  "openjdk version \"17.0.17\" 2025-10-21 | OpenJDK Runtime Environment Temurin-17.0.17+10 (build 17.0.17+10) | OpenJDK 64-Bit Server VM Temurin-17.0.17+10 (build 17.0.17+10, mixed mode, sharing)",
+    "coldMillis":  182.5,
+    "warmMillisAll":  [
+                          178,
+                          181.8,
+                          182.5,
+                          183.4,
+                          184.5
+                      ],
+    "warmMedianMillis":  182.5,
+    "warmP95Millis":  184.5,
+    "peakWorkingSetMb":  57.1,
+    "jarArgs":  [
+                    "--repo",
+                    ".",
+                    "--no-vcs",
+                    "--module",
+                    "gson=gson",
+                    "--source-roots",
+                    "gson=gson/src/main/java",
+                    "--test-roots",
+                    "gson=gson/src/test/java",
+                    "--report",
+                    "gson=gson/target/site/jacoco/jacoco.xml",
+                    "--language-level",
+                    "11",
+                    "--out",
+                    "coverdict-verdict.json"
+                ]
+}

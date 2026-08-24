@@ -50,6 +50,29 @@ java -jar coverdict.jar analyze --repo <corpus-repo> \
 The exact per-repo invocation (module ids, report paths, exclusions) is
 recorded in the run log next to its results, since it differs per repo.
 
+## Corpus phase harness (M1c-2)
+
+`validation/scripts/` holds three reusable, repo-agnostic scripts that run
+each corpus phase's commands above without new code per phase (D-30):
+
+- `run-corpus-phase.ps1` — clone/checkout the pinned commit, bind JaCoCo via
+  CLI goals (no permanent pom edit), run coverdict in `--base <pin>~50` and
+  `--no-vcs`.
+- `sonar-parity.ps1` — overall-scope `sonar-compatible` vs SonarQube UI
+  comparison (must be run from inside the target module's own directory,
+  not via reactor `-pl`; new-code parity needs a non-Community-Edition
+  instance, currently unavailable).
+- `benchmark-phase.ps1` — cold + 5-warm wall time and peak working-set
+  memory around a coverdict invocation.
+- `scaffold_labels.py` — seeded 100-sample (per rule) CSV scaffold from a
+  verdict JSON's `findings[]`, per the labeling protocol below.
+
+Each phase's real output is archived under `validation/runs/<phase-name>/`
+(run-log.md, verdict JSONs, benchmark.json, sonar-parity.md, labels.csv) —
+real measurements, not byte-deterministic goldens, so not pinned in
+`validation/SHA256SUMS`. See `validation/runs/gson/` for the phase 1
+canary.
+
 ## Fixture and schema integrity
 
 `validation/SHA256SUMS` pins every rule fixture, JaCoCo XML fixture, unified
