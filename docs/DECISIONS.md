@@ -702,6 +702,46 @@ too - it disables every method just as effectively. The spec's "still
 analyzed" is the load-bearing half: skipping disabled tests would quietly
 shrink the denominator (hard rule 3a).
 
+**D-44 · Release artifacts are generated and gated by a `release` profile;
+dual-license elections are recorded explicitly** (2026-08-25)
+`RELEASE-CONTRACT.md` promised a generated `NOTICE`, a full transitive
+dependency/license inventory, and a `SHA-256SUMS` per release, and stated that
+"a release with a missing or stale inventory does not ship". None of it
+existed: no `license-maven-plugin` in any pom, no NOTICE, no inventory, no
+checksums, and M0 deliverable 7 was marked **Done** on `LICENSE` plus the
+contract document alone. Nothing would have failed if a release had been cut.
+
+`mvn -P release clean package` now produces `target/release/` containing the
+shaded jar, a generated `NOTICE` (fixed header + the freshly generated
+inventory, so it cannot go stale against the real tree), `THIRD-PARTY.txt`,
+`LICENSE`, and a `SHA-256SUMS` that `sha256sum -c` actually verifies. It is a
+profile, not the default build, because `mvn verify` runs on every change and
+these goals resolve the full transitive tree.
+
+**Two real problems surfaced while making the hard-rule-9 gate work, both
+found by running it rather than by reading:**
+
+1. `excludedLicenses` is a **literal pipe-separated list, not a regex**. The
+   first widening attempt (`.*(LGPL|Lesser General Public).*`) matched nothing
+   and the build passed - a gate that silently never fires, which is worse
+   than no gate. Reverted to literals and proven by a negative test:
+   removing the JavaParser election makes the build FAIL, restoring it makes
+   it pass.
+2. Ant's `<checksum>` task writes the bare digest with no file name, which is
+   not a verifiable sumfile. The two-column format is now written explicitly,
+   matching `validation/SHA256SUMS`'s layout so one `sha256sum -c` reads both.
+
+**Dual-license elections** live in `license-overrides.properties` at the repo
+root. JavaParser is `LGPL-3.0 OR Apache-2.0` and lists LGPL first, so the gate
+fired on it - correctly, since nothing had ever recorded which option
+coverdict exercises beyond a prose comment. Javassist turned out to be
+*triple*-licensed (`Apache-2.0 OR LGPL-2.1 OR MPL-1.1`) and was passing only
+because its pom happens to list Apache first; that election is now recorded
+too, so an upstream reordering cannot silently change what coverdict ships
+under. These are elections on genuinely multi-licensed artifacts, never a way
+to silence the gate - a single-licensed LGPL dependency has no Apache option
+to elect and still fails the build (D-20).
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

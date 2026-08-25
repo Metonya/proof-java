@@ -123,4 +123,78 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <!--
+        Assembles the release bundle RELEASE-CONTRACT.md promises (D-44):
+        the executable jar, a generated NOTICE, the transitive
+        dependency/license inventory, and SHA-256SUMS over all of them.
+        Runs after shade (package phase) and consumes the inventory the
+        parent's license-maven-plugin execution already produced - in a
+        reactor the parent's generate-resources precedes this module's
+        package.
+
+        Run with: mvn -P release clean package
+      -->
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>release-bundle</id>
+                <phase>package</phase>
+                <goals><goal>run</goal></goals>
+                <configuration>
+                  <target>
+                    <property name="releaseDir" value="${maven.multiModuleProjectDirectory}/target/release"/>
+                    <property name="inventory" value="${releaseDir}/THIRD-PARTY.txt"/>
+
+                    <!-- The contract's "a release with a missing or stale
+                         inventory does not ship" is only real if its absence
+                         stops the build. -->
+                    <fail message="THIRD-PARTY.txt missing - run the release profile from the reactor root so the inventory is generated first">
+                      <condition>
+                        <not><available file="${inventory}"/></not>
+                      </condition>
+                    </fail>
+
+                    <!-- NOTICE is generated, never hand-maintained: a fixed
+                         header plus the freshly generated inventory, so it
+                         cannot go stale relative to the actual dependency
+                         tree. -->
+                    <concat destfile="${releaseDir}/NOTICE" encoding="UTF-8" outputencoding="UTF-8">
+                      <fileset file="${basedir}/../src/release/NOTICE-header.txt"/>
+                      <fileset file="${inventory}"/>
+                    </concat>
+
+                    <copy file="${project.build.directory}/coverdict.jar" todir="${releaseDir}"/>
+                    <copy file="${maven.multiModuleProjectDirectory}/LICENSE" todir="${releaseDir}"/>
+
+                    <!-- Integrity: every artifact ships a SHA-256SUMS file.
+                         Ant's <checksum> writes the bare digest with no file
+                         name, which is not a verifiable sumfile - `sha256sum
+                         -c` cannot read it. So the digest is captured into a
+                         property per file and the two-column format is written
+                         explicitly, matching validation/SHA256SUMS's own
+                         layout so one `sha256sum -c` works on both. -->
+                    <checksum algorithm="SHA-256" property="jar.sha256" file="${releaseDir}/coverdict.jar"/>
+                    <checksum algorithm="SHA-256" property="notice.sha256" file="${releaseDir}/NOTICE"/>
+                    <checksum algorithm="SHA-256" property="thirdparty.sha256" file="${releaseDir}/THIRD-PARTY.txt"/>
+                    <checksum algorithm="SHA-256" property="license.sha256" file="${releaseDir}/LICENSE"/>
+                    <echo file="${releaseDir}/SHA-256SUMS" encoding="UTF-8" append="false">${license.sha256} *LICENSE${line.separator}${notice.sha256} *NOTICE${line.separator}${thirdparty.sha256} *THIRD-PARTY.txt${line.separator}${jar.sha256} *coverdict.jar${line.separator}</echo>
+
+                    <echo message="Release bundle ready: ${releaseDir}"/>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

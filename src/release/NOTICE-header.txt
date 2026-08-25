@@ -1,0 +1,16 @@
+coverdict
+Copyright 2026 The coverdict authors
+
+This product includes software developed at the coverdict project
+(https://github.com/coverdict/coverdict).
+
+Licensed under the Apache License, Version 2.0. See LICENSE for the full text.
+
+This distribution is a single executable jar (D-01) that bundles the
+third-party dependencies listed below. Where a dependency is offered under
+more than one license, the license coverdict elects is recorded in
+license-overrides.properties at the repository root and is the one shown here.
+
+--------------------------------------------------------------------------
+Third-party dependencies
+--------------------------------------------------------------------------

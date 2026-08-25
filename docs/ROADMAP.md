@@ -55,7 +55,10 @@ Deliverables:
    **Done** (2026-08-23): `docs/SECURITY-POLICY.md`.
 7. Define the release contract: Apache-2.0 `LICENSE`, generated `NOTICE` and
    dependency inventory, distribution channel, checksums, and support window.
-   **Done** (2026-08-23): `LICENSE` + `docs/RELEASE-CONTRACT.md`.
+   **Done** (2026-08-23): `LICENSE` + `docs/RELEASE-CONTRACT.md`. The contract
+   was only prose until 2026-08-25: `mvn -P release clean package` now really
+   generates NOTICE, the transitive inventory and a verifiable SHA-256SUMS,
+   with the hard-rule-9 LGPL gate proven to fail the build (D-44).
 
 M0 is done only when all seven artifacts are reviewable and no required product or
 input decision remains implicit. Contract spikes may be discarded; they are not

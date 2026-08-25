@@ -48,6 +48,8 @@
     <fixture.hamcrest.version>2.2</fixture.hamcrest.version>
     <fixture.truth.version>1.4.5</fixture.truth.version>
     <dependency.plugin.version>3.8.1</dependency.plugin.version>
+    <license.plugin.version>2.5.0</license.plugin.version>
+    <antrun.plugin.version>3.1.0</antrun.plugin.version>
 
     <!-- coverdict scans itself with a local SonarQube; host URL and token stay
          outside the repo (SONAR_HOST_URL / SONAR_TOKEN). -->
@@ -139,6 +141,15 @@
           <artifactId>maven-dependency-plugin</artifactId>
           <version>${dependency.plugin.version}</version>
         </plugin>
+        <plugin>
+          <!-- RELEASE-CONTRACT.md: NOTICE and the transitive dependency/license
+               inventory are GENERATED at release build time, never hand-maintained.
+               Bound in the `release` profile below, not the default build, so an
+               ordinary `mvn verify` stays fast. -->
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>license-maven-plugin</artifactId>
+          <version>${license.plugin.version}</version>
+        </plugin>
       </plugins>
     </pluginManagement>
 
@@ -162,4 +173,62 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <!--
+        RELEASE-CONTRACT.md's license/notice/integrity obligations, made real
+        and executable (D-44). Deliberately a profile, not the default build:
+        `mvn verify` runs on every change and must stay fast, while these
+        goals resolve the full transitive tree and are only meaningful when an
+        artifact is actually being shipped.
+
+        Run with: mvn -P release clean package
+      -->
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>license-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <!-- The full transitive dependency/license inventory. The
+                     contract says a release with a missing or stale inventory
+                     does not ship, so this is bound to the build rather than
+                     produced by hand on release day. -->
+                <id>inventory</id>
+                <phase>generate-resources</phase>
+                <goals><goal>aggregate-add-third-party</goal></goals>
+                <configuration>
+                  <outputDirectory>${project.build.directory}/release</outputDirectory>
+                  <thirdPartyFilename>THIRD-PARTY.txt</thirdPartyFilename>
+                  <includeTransitiveDependencies>true</includeTransitiveDependencies>
+                  <excludedScopes>test</excludedScopes>
+                  <sortArtifactByName>true</sortArtifactByName>
+                  <!-- Dual-licensed artifacts: which option coverdict elects.
+                       See the file's own header - an election, not a bypass. -->
+                  <overrideFile>${maven.multiModuleProjectDirectory}/license-overrides.properties</overrideFile>
+                  <!-- hard rule 9 / D-20: LGPL must not appear at any scope.
+                       The build fails rather than shipping an artifact whose
+                       own generated inventory contradicts the policy - the
+                       first automated enforcement of that rule. -->
+                  <failOnBlacklist>true</failOnBlacklist>
+                  <!-- LITERAL license names, pipe-separated - NOT a regex.
+                       Verified empirically: a regex form (".*LGPL.*") matched
+                       nothing at all and the gate silently passed, which is
+                       worse than no gate. These strings are the ones this
+                       dependency tree actually produces; a new LGPL artifact
+                       whose pom spells it differently would need its spelling
+                       added here, so the negative test below is what keeps
+                       this honest rather than the list being exhaustive. -->
+                  <excludedLicenses>GNU Lesser General Public License|GNU Lesser General Public License (LGPL)|GNU Lesser General Public License, Version 2.1|GNU Lesser General Public License v3.0|LGPL|LGPL 2.1|LGPL-2.1|LGPL-3.0|GNU Library General Public License</excludedLicenses>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
