@@ -221,4 +221,96 @@ class Junit4OracleGapsTest {
         Finding finding = result.findings().get(0);
         assertFalse(finding.message().contains("disabled"), finding.message());
     }
+
+    // --- @Test(expected = ...) (TestMethods.hasExpectedExceptionAnnotation) ---
+    //
+    // Spec'd in docs/rules/README.md and part of D-24's original allowlist,
+    // but had zero coverage anywhere - not a fixture, not a unit test, and not
+    // even the gson corpus run (the only real JUnit 4 sample: verified by
+    // grepping the pinned checkout, zero uses of this form). Found by reading
+    // JaCoCo's own line coverage for TestMethods.java, not by spec review.
+
+    @Test
+    void testExpectedAnnotationIsRecognizedAsAnOracle() throws IOException {
+        Files.writeString(testDir().resolve("ThrowsAnnotationTest.java"), String.join("\n",
+            "package com.example;",
+            "",
+            "import org.junit.Test;",
+            "",
+            "public class ThrowsAnnotationTest {",
+            "    @Test(expected = IllegalArgumentException.class)",
+            "    public void rejectsBadInput() {",
+            "        Integer.parseInt(\"nope\");",
+            "    }",
+            "}",
+            ""));
+
+        OracleScanResult result = OracleRuleEngine.scan(repoRoot, List.of(module()), 17, "UTF-8", null);
+
+        assertTrue(result.findings().isEmpty(),
+            "@Test(expected = ...) is itself a complete oracle: " + result.findings());
+    }
+
+    /**
+     * {@code Test.None} is JUnit 4's own default value for {@code expected}
+     * (every plain {@code @Test} carries it implicitly) - {@link
+     * dev.coverdict.analysis.oracle.TestMethods#hasExpectedExceptionAnnotation}
+     * must not mistake that default for a real exception expectation, or
+     * every JUnit 4 test would silently stop needing an oracle at all.
+     */
+    @Test
+    void theDefaultTestNoneValueDoesNotCountAsExpectingAnException() throws IOException {
+        Files.writeString(testDir().resolve("PlainAnnotationTest.java"), String.join("\n",
+            "package com.example;",
+            "",
+            "import org.junit.Test;",
+            "",
+            "public class PlainAnnotationTest {",
+            "    @Test",
+            "    public void noAssertionHere() {",
+            "        System.out.println(\"nothing verified\");",
+            "    }",
+            "}",
+            ""));
+
+        OracleScanResult result = OracleRuleEngine.scan(repoRoot, List.of(module()), 17, "UTF-8", null);
+
+        assertEquals(1, result.findings().size(), result.findings().toString());
+        assertEquals("NO_RECOGNIZED_ORACLE", result.findings().get(0).rule());
+    }
+
+    // --- fieldTypeOwner's fully-qualified-in-source branch (D-43's own gap) ---
+    //
+    // My own D-43 addition only ever tested the imported form
+    // (`import org.junit.rules.ExpectedException;` then `ExpectedException
+    // thrown`). A field declared with its type spelled out in full, with no
+    // import at all, takes a different branch inside fieldTypeOwner
+    // (`anchorableTypes.contains(declaredType)` on the fully-qualified string)
+    // that nothing exercised.
+
+    @Test
+    void aFullyQualifiedExpectedExceptionFieldWithNoImportIsStillRecognized() throws IOException {
+        Files.writeString(testDir().resolve("FullyQualifiedRuleTest.java"), String.join("\n",
+            "package com.example;",
+            "",
+            "import org.junit.Rule;",
+            "import org.junit.Test;",
+            "",
+            "public class FullyQualifiedRuleTest {",
+            "    @Rule",
+            "    public org.junit.rules.ExpectedException thrown = org.junit.rules.ExpectedException.none();",
+            "",
+            "    @Test",
+            "    public void rejectsBadInput() {",
+            "        thrown.expect(IllegalArgumentException.class);",
+            "        Integer.parseInt(\"nope\");",
+            "    }",
+            "}",
+            ""));
+
+        OracleScanResult result = OracleRuleEngine.scan(repoRoot, List.of(module()), 17, "UTF-8", null);
+
+        assertTrue(result.findings().isEmpty(),
+            "a fully-qualified field type must anchor exactly like an imported one: " + result.findings());
+    }
 }

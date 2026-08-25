@@ -380,6 +380,44 @@ class AnalyzeCommandTest {
         assertEquals(80.0, doc.at("/coverage/overall/jacoco-line/percent").asDouble());
     }
 
+    /**
+     * The other half of {@code analyze}'s {@code catch (AnalysisException)}
+     * branch: with {@code --findings-scope changed}, a failed diff means there
+     * is no changed-file set to scan test sources against, so the oracle scan
+     * is skipped entirely rather than re-run over "no files" - a real,
+     * reachable branch (not dead code) that no prior test happened to select,
+     * since every other AnalysisException test here uses the {@code all}
+     * default.
+     */
+    @Test
+    void aFailedDiffWithFindingsScopeChangedSkipsTheOracleScanEntirely() throws IOException, InterruptedException {
+        initGitRepo(repoRoot);
+        Files.createDirectories(repoRoot.resolve("src/main/java/com/example"));
+        Files.writeString(repoRoot.resolve("src/main/java/com/example/Calc.java"), "class Calc {}\n");
+        Files.createDirectories(repoRoot.resolve("src/test/java/com/example"));
+        Files.writeString(repoRoot.resolve("src/test/java/com/example/CalcTest.java"),
+            noOracleTestSource("CalcTest", "noAssertionHere"));
+        commitAll(repoRoot, "base");
+        Path outFile = outputDir.resolve("verdict.json");
+
+        int exitCode = run("analyze", "--base", "no-such-ref", "--findings-scope", "changed",
+            "--repo", repoRoot.toString(),
+            "--report", FIXTURES.resolve("mixed-coverage.xml").toString(),
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.INCOMPLETE.value(), exitCode);
+        assertTrue(validate(outFile).isEmpty(), validate(outFile).toString());
+
+        JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(outFile));
+        assertEquals("incomplete", doc.at("/analysis/status").asText());
+        assertEquals("UNRESOLVABLE_REF", doc.at("/analysis/incompleteReasons/0/code").asText());
+        // The real oracle-less test above is never even looked at: no second
+        // UNPARSEABLE_TEST_SOURCE/finding-related reason, and findings is
+        // empty rather than reflecting a scan that didn't run.
+        assertEquals(1, doc.at("/analysis/incompleteReasons").size());
+        assertTrue(doc.at("/findings").isEmpty(), doc.at("/findings").toString());
+    }
+
     @Test
     void diffModeRunsAreByteIdenticalAcrossTwoInvocations() throws IOException, InterruptedException {
         initGitRepo(repoRoot);

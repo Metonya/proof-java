@@ -223,9 +223,7 @@ final class OracleRecognizer {
     }
 
     private static boolean hasOuterChainedCall(MethodCallExpr call) {
-        return call.getParentNode()
-            .filter(p -> p instanceof MethodCallExpr mce && mce.getScope().map(s -> s == call).orElse(false))
-            .isPresent();
+        return outerChainLink(call).isPresent();
     }
 
     private static MethodCallExpr outermostChainCall(MethodCallExpr call) {
