@@ -30,21 +30,19 @@ import dev.coverdict.analysis.subprocess.ClasspathListFile;
  */
 public final class PerTestClasspathLoader {
 
+    private static final String WARNING_CODE = "PER_TEST_CLASSPATH_MISSING";
+    private static final String EVIDENCE_LABEL = "Per-test";
+
     private PerTestClasspathLoader() {
     }
 
     public static Result load(Path repoRoot, String moduleId, String listFilePath) {
         ClasspathListFile parsed = ClasspathListFile.load(repoRoot, listFilePath);
         if (!parsed.ok()) {
-            return missing(moduleId, listFilePath, parsed.problem());
+            return new Result(List.of(), List.of(),
+                List.of(parsed.toWarning(WARNING_CODE, EVIDENCE_LABEL, moduleId, listFilePath)));
         }
         return new Result(parsed.classPathElements(), parsed.codePaths(), List.of());
-    }
-
-    private static Result missing(String moduleId, String listFilePath, String detail) {
-        return new Result(List.of(), List.of(), List.of(new AnalysisReason("PER_TEST_CLASSPATH_MISSING",
-            "Per-test classpath list '" + listFilePath + "' for module '" + moduleId + "' " + detail
-                + "; per-test evidence skipped for this module.", null, moduleId)));
     }
 
     /** {@code warnings} is non-empty exactly when {@code classPathElements}/{@code codePaths} are both empty. */

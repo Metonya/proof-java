@@ -7,7 +7,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
+
+import dev.coverdict.analysis.model.AnalysisReason;
 
 /**
  * Shared parsing for a PIT classpath list file: one entry per line, `#`
@@ -15,15 +18,18 @@ import java.util.Set;
  * {@code codePaths} (PIT's "code under test", distinct from dependency
  * jars on the same classpath). Both {@code --per-test-classpath} and
  * {@code --mutation-classpath} use this identical shape but keep their own
- * loader wrapper (different warning codes/messages per evidence layer,
- * SonarQube java:S1192 precedent) - this class is only the parsing they
- * both delegate to, not a public-facing loader itself.
+ * thin loader wrapper (SonarQube java:S1192 precedent - a distinct warning
+ * code/message per evidence layer) - {@link #toWarning} parameterizes that
+ * last difference too, so the wrapper is pure delegation with nothing left
+ * to duplicate (SonarQube CPD had still flagged the two wrappers'
+ * identically-shaped load/missing methods even with different string
+ * literals inside).
  *
  * @param problem null on success; otherwise a detail phrase ("could not be
  *                read (...)", "names no compiled-output directory on the
- *                classpath") the caller's own warning message embeds
- *                verbatim - {@code classPathElements}/{@code codePaths} are
- *                both empty whenever this is non-null.
+ *                classpath") {@link #toWarning} embeds verbatim -
+ *                {@code classPathElements}/{@code codePaths} are both empty
+ *                whenever this is non-null.
  */
 public record ClasspathListFile(List<String> classPathElements, List<String> codePaths, String problem) {
 
@@ -67,5 +73,17 @@ public record ClasspathListFile(List<String> classPathElements, List<String> cod
 
     public boolean ok() {
         return problem == null;
+    }
+
+    /**
+     * @throws IllegalStateException if called on a successful load - {@link #problem} is null then, there is nothing to warn about.
+     */
+    public AnalysisReason toWarning(String warningCode, String evidenceLabel, String moduleId, String listFilePath) {
+        if (ok()) {
+            throw new IllegalStateException("toWarning() called on a successful ClasspathListFile load");
+        }
+        return new AnalysisReason(warningCode,
+            evidenceLabel + " classpath list '" + listFilePath + "' for module '" + moduleId + "' " + problem
+                + "; " + evidenceLabel.toLowerCase(Locale.ROOT) + " evidence skipped for this module.", null, moduleId);
     }
 }
