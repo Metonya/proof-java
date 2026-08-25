@@ -445,11 +445,26 @@ failure.
   or PIT defect, but a real class of risk for reflection-heavy test
   fixtures, worth a documented product limitation at M4.
 
-  **Not yet done:** the same four gates on junit-framework (Gradle - D-51's
-  `EntryPoint` calling model is unverified against a Gradle-built
-  classpath, the one remaining open question from D-51). Two of three
-  corpus repos now pass; junit-framework is the last data point before
-  L2's feasibility spike can be called complete.
+  **junit-framework (Gradle) attempted; calling model confirmed, gates
+  blocked on a real bytecode-version ceiling (D-53).** The `EntryPoint`
+  calling model D-51 left unverified for Gradle now is: a `--init-script`
+  (never touches `build.gradle.kts`) solved Isolated Projects and
+  Configuration Cache obstacles specific to this repo, `git status` stayed
+  empty. But `junit-vintage-engine`'s test/testFixtures source sets
+  compile at Java 25 (no `--release` constraint, unlike its main source
+  set's Java 7 target) and PIT 1.15.8's ASM cannot read that bytecode - the
+  same ceiling Faz 0 hit in coverdict's own build, this time in code
+  coverdict doesn't control. A recompile workaround (reading, not writing,
+  the target repo) fixed one module's testFixtures before uncovering the
+  same problem in a sibling module's - stopped rather than chasing a
+  cascading fix.
+
+  **M2's spike is complete on three corpus repos with an honest, mixed
+  result:** clean pass (coverdict, assertj), pass with one root-caused
+  bounded exception (dropwizard), and one real, documented ceiling
+  (junit-framework) that ROADMAP's kill criterion already anticipates -
+  "cut for that repo's shape." Not a mechanism failure: the calling model
+  and all four gates hold everywhere PIT can read the bytecode.
 - **M3 — First build integration + CI.** Ship Maven or Gradle first as decided
   from M0 dogfood, then the other only on demand. Add report provenance manifest,
   changed-findings baseline, quality-gate exit codes, and evaluate SARIF (O-02).
@@ -515,7 +530,10 @@ failure.
   unexplained on a dogfood repository, L2 is cut for that repo's shape; if
   it fails on all of them, L2 is cut and the product remains L0+L1(+L3).
   Passed on coverdict and assertj; passed with one root-caused, bounded
-  exception on dropwizard; junit-framework still open.
+  exception on dropwizard; cut for junit-framework's shape specifically
+  (D-53 - PIT's ASM cannot read that repo's test-source bytecode), which
+  is this criterion resolving as designed, not an open question. M2's
+  spike is done: three repos, three different outcomes, all understood.
 - If dogfood users do not repeat the workflow or findings are predominantly
   ignored/waived, stop integration work and revisit the product wedge.
 - If `sonar-compatible` parity fails against the pinned internal setup, remove

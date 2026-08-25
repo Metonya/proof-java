@@ -344,5 +344,66 @@ dokunmadığını söylüyor, aksi hâlde çokluk 1 olmazdı):
 3/4 repo (coverdict, assertj, dropwizard) dört kapının en az üçünü tam
 geçti; dropwizard'ın determinizm kapısı **%99.96** ile neredeyse geçti,
 kök nedeni SUT'un reflection kullanımına ait olarak izole edildi — L2
-motorunun kendi hatası değil. junit-framework (Gradle) hâlâ denenmedi;
-D-51'in "doğrulanmadı" notu sadece o repo için geçerliliğini koruyor.
+motorunun kendi hatası değil.
+
+## 10. junit-framework (Gradle) — çağırma modeli çalıştı, kapsam fazı gerçek bir bytecode kısıtına takıldı
+
+### Çağırma modeli kısmı: sorun yok
+
+Gradle projeleri için `mvn dependency:build-classpath` eşdeğeri yok;
+`--init-script` ile (repo'nun kendi dosyalarına dokunmadan, harici bir
+Gradle mekanizmasıyla) test runtime classpath'i çıkaran bir script yazıldı.
+İki gerçek Gradle-özel engel çıktı ve çözüldü:
+
+1. **Isolated Projects modu** (`org.gradle.unsafe.isolated-projects`, bu
+   repoda etkin) `allprojects{}`/`subprojects{}` ile çapraz-proje erişimini
+   reddediyor — `gradle.beforeProject { }` + o projenin kendi
+   `afterEvaluate { }`'i içinde görev kaydı ile çözüldü.
+2. **Configuration Cache** (Isolated Projects onu zorunlu kılıyor,
+   devre dışı bırakılamıyor) `doLast` içinde `Project`/`extensions`
+   referansı tutmayı reddediyor — `FileCollection`'ı **konfigürasyon
+   zamanında** yakalayıp `doLast`'a sadece o referansı taşımakla çözüldü.
+
+Sonuç: `git status` koşum boyunca temiz kaldı — D-51'in "hedef repoya
+dokunmadan" iddiası Gradle'da da doğrulandı, **kapsam fazı hiç
+çalışmamış olsa bile**.
+
+### Kapsam fazı: gerçek, çözülmemiş bir bytecode engeli
+
+`junit-vintage-engine` modülünün **ana** kaynak kümesi Java 7 hedefiyle
+derleniyor (major version 51 — kütüphanenin kendi geriye-uyumluluk
+politikası). Ama **test** ve **testFixtures** kaynak kümelerinin hiçbir
+`--release` kısıtı yok — Gradle daemon'ının kendi JDK'sıyla (bu makinede
+JDK 25) derleniyorlar, **major version 69**. PIT 1.15.8'in ASM'i bunu
+okuyamıyor (`IllegalArgumentException: Unsupported class file major
+version 69`) — Faz 0'da coverdict'in kendi derlemesinde çözdüğümüz sorunun
+aynısı, ama bu sefer sorun bizim toolchain'imizde değil, **hedef repo'nun
+kendi test kodunda**.
+
+**Denenen düzeltme:** hedef repo'ya dokunmadan, sadece test/testFixtures
+kaynaklarını kendi `javac --release 21`'imizle ayrı bir dizine derleyip
+PIT'i oraya yöneltmek (D-51'in ruhuna uygun — okuma var, repo'ya yazma
+yok). İşe yaradı ama **kartopu gibi büyüdü**: `junit-vintage-engine`'in
+kendi testFixtures'ı derlendi, ama test kaynakları `TrackLogRecords`,
+`DisabledInEclipse`, `assertPreconditionViolationNotEmptyFor` gibi
+**başka modüllerin** (`junit-platform-commons`, muhtemelen başkaları)
+testFixtures'larına da ihtiyaç duyuyor — onlar da aynı JDK25 sorununu
+taşıyor. Bir modülü kurtarmak için art arda başka modülleri kurtarmak
+gerekiyor; bu noktada durduruldu.
+
+### Sonuç: kapsam dışı değil, gerçek bir sınır
+
+Bu, "denenmedi" değil — **denendi, çağırma modeli sorunsuz çalıştı,
+kapsam fazı belgelenmiş, gerçek bir teknik sınıra takıldı.** ROADMAP'in
+kill kriteri tam olarak bunun için var: "L2 o repo'nun şekli için
+kesilir." junit-framework'ün şekli — kütüphane kodu eski bir Java sürümü
+hedefliyor ama test altyapısı build makinesinin JDK'sıyla (sabitlenmemiş,
+`gradle-daemon-jvm.properties` neyi işaret ediyorsa) derleniyor — PIT
+1.15.8 ile şu an **çalışmıyor**. D-53 bunu kaydediyor.
+
+**Not, gelecekteki bir oturum için:** Bu sınır PIT'in ASM sürümüne özgü,
+kalıcı değil. PIT'in daha yeni bir sürümü (ASM'in Java 25 desteği
+eklenmiş bir sürümü) çıkarsa, ya da coverdict test/testFixtures
+kaynaklarının **tamamını** (kaç modül olursa olsun) kendi `javac`'ıyla
+`--release`'i main ile eşleştirerek yeniden derleyen genel bir mekanizma
+kurarsa, bu engel kalkar. Şu an için M2'nin kapsamı dışında.

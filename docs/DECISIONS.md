@@ -927,6 +927,50 @@ now.
 mismatch on 416 comparable records; 3/3 sampled multiplicity=1 claims
 verified causally). Evidence: `validation/runs/pit-spike/dropwizard/`.
 
+**D-53 · junit-framework (Gradle) confirms D-51's calling model, then hits
+a real PIT/ASM bytecode-version ceiling - cut for this repo's shape, not
+a mechanism failure** (2026-08-25)
+Two things were tested separately and should not be conflated.
+
+**The calling model held.** No Gradle equivalent of `mvn dependency:
+build-classpath` exists, so a `--init-script` (external to the repo,
+never touches `build.gradle.kts`) was written to dump the test runtime
+classpath. Two Gradle-specific obstacles, both solved without touching the
+target repo: (1) Isolated Projects (enabled in this repo) rejects
+`allprojects{}`/`subprojects{}` cross-project access from init scripts -
+solved with `gradle.beforeProject { }` plus that project's own
+`afterEvaluate { }`; (2) Configuration Cache (mandatory once Isolated
+Projects is on, cannot be disabled) rejects capturing `Project`/
+`extensions` inside `doLast` - solved by capturing the `FileCollection` at
+configuration time and only carrying that reference into execution.
+`git status` stayed empty throughout, extending D-51's "zero target-repo
+build-file changes" claim to Gradle.
+
+**The coverage phase did not run.** `junit-vintage-engine`'s main source
+set targets Java 7 (major version 51, the library's own compatibility
+policy), but its test and testFixtures source sets carry no `--release`
+constraint and compile at whatever JDK the Gradle daemon uses (major
+version 69, Java 25, on this machine) - the same class-file-version
+ceiling Faz 0 hit and fixed in coverdict's own build (`windows-dev-
+environment` memory note), except this time in code coverdict does not
+control. A repo-external fix was attempted (recompiling test +
+testFixtures sources with our own `javac --release 21`, reading but never
+writing into the target repo) and worked for the module's own
+testFixtures, but the test sources also depend on sibling modules'
+testFixtures (`junit-platform-commons` at minimum) carrying the identical
+JDK25 problem - each fix uncovered another module needing the same
+treatment. Stopped there rather than chasing a cascading recompile of the
+repo's test infrastructure.
+
+This is the kill criterion working as designed, not a spike failure: L2
+via PIT 1.15.8 cannot currently analyze a repo whose test/testFixtures
+bytecode exceeds what PIT's bundled ASM reads, and junit-framework's test
+infrastructure does, on this toolchain. Not necessarily permanent - a
+future PIT release with newer ASM, or a general (not per-module)
+recompile-to-match-main-release mechanism in coverdict itself, could lift
+it - but out of M2's scope. Evidence: `validation/runs/pit-spike/
+junit-framework/`.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not
