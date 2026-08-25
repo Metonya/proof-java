@@ -37,6 +37,14 @@
     <json-schema-validator.version>1.5.6</json-schema-validator.version>
     <javaparser.version>3.26.2</javaparser.version>
 
+    <!-- D-51/D-55: L2's engine, embedded and shaded into coverdict.jar itself -
+         never a build-tool plugin the target repo installs (Apache-2.0, hard
+         rule 9 clear). Pinned to 1.15.8, the version M2's four gates were
+         proven against (D-53); 1.25.9 lifts the Java 25 ASM ceiling but hits
+         a new, unresolved zero-block collection failure under it (D-54). -->
+    <pitest.version>1.15.8</pitest.version>
+    <pitest.junit5.plugin.version>1.2.1</pitest.junit5.plugin.version>
+
     <!-- Test-only fixture harness (docs/rules/README.md fixture convention): downloaded
          as jars via maven-dependency-plugin, never added as project dependencies, so the
          oracle engine's own resolution never accidentally benefits from these being on
@@ -97,6 +105,29 @@
         <groupId>com.github.javaparser</groupId>
         <artifactId>javaparser-symbol-solver-core</artifactId>
         <version>${javaparser.version}</version>
+      </dependency>
+      <dependency>
+        <!-- D-55: coverage-phase-only caller (DefaultCoverageGenerator +
+             CoverageData.createCoverage()), never EntryPoint - the mutation
+             phase this pulls in is never invoked. -->
+        <groupId>org.pitest</groupId>
+        <artifactId>pitest</artifactId>
+        <version>${pitest.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.pitest</groupId>
+        <artifactId>pitest-entry</artifactId>
+        <version>${pitest.version}</version>
+      </dependency>
+      <dependency>
+        <!-- SPI-only: registers org.pitest.testapi.TestPluginFactory so PIT's
+             own test discovery finds JUnit5 suites. Its META-INF/services
+             file collides by name with pitest-core's JUnit4 registration -
+             ServicesResourceTransformer in coverdict-cli's shade config
+             merges them; see D-55. -->
+        <groupId>org.pitest</groupId>
+        <artifactId>pitest-junit5-plugin</artifactId>
+        <version>${pitest.junit5.plugin.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
