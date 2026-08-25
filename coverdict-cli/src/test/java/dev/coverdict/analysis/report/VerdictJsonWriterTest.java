@@ -102,7 +102,7 @@ class VerdictJsonWriterTest {
                 "com.example.CalcTest#printsResultOnly()",
                 "Test 'printsResultOnly' contains no recognized assertion, verification, or expected exception.",
                 "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.",
-                "3f9a1c2b4d5e6a70"));
+                "3f9a1c2b4d5e6a70", null));
 
         return new VerdictDocument("0.1.0", "0.1.0-TEST", false,
             List.of(new AnalysisReason("CHANGED_JAVA_OUTSIDE_MODULES", "outside every module", "build-tools/Outside.java")),

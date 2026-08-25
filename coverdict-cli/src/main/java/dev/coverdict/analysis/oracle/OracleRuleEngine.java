@@ -163,7 +163,7 @@ public final class OracleRuleEngine {
         int startLine = range != null ? range.begin.line : 1;
         int endLine = range != null ? range.end.line : startLine;
         out.add(new Finding(ruleId, severity, rf.confidence(), file.moduleId(), file.repoRelativePath(),
-            startLine, endLine, signature, message, suggestedAction, fingerprint));
+            startLine, endLine, signature, message, suggestedAction, fingerprint, null));
     }
 
     /** docs/rules/README.md: {@code <Outer>[.<Inner>...]#<name>(<parameter types as written>)}. */

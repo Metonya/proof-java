@@ -34,7 +34,7 @@ class TextRendererTest {
         String maliciousPath = "src/test/java/com/example/" + ESC + "[31mEvilTest.java";
         String maliciousMessage = "message with a bell " + BEL + " in it";
         Finding finding = new Finding("NO_RECOGNIZED_ORACLE", Severity.WARNING, Confidence.HIGH, "root",
-            maliciousPath, 1, 1, "com.example.EvilTest#m()", maliciousMessage, "suggestion", "0123456789abcdef");
+            maliciousPath, 1, 1, "com.example.EvilTest#m()", maliciousMessage, "suggestion", "0123456789abcdef", null);
 
         VerdictDocument doc = new VerdictDocument("0.1.0", "0.1.0-TEST", true, List.of(),
             17, "UTF-8", List.of(), List.of(module()), "no-vcs", "all", null, MetricsEngine.compute(List.of()),

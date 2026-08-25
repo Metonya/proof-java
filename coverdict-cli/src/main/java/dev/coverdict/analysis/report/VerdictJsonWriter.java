@@ -252,6 +252,9 @@ public final class VerdictJsonWriter {
         if (finding.testMethod() != null) {
             g.writeStringField("testMethod", finding.testMethod());
         }
+        if (finding.productionMethod() != null) {
+            g.writeStringField("productionMethod", finding.productionMethod());
+        }
         g.writeStringField("message", finding.message());
         g.writeStringField("suggestedAction", finding.suggestedAction());
         g.writeStringField("fingerprint", finding.fingerprint());
