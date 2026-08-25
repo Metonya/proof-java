@@ -19,7 +19,7 @@ import dev.coverdict.analysis.model.ChangedFile;
 import dev.coverdict.analysis.model.Finding;
 import dev.coverdict.analysis.model.LineRange;
 import dev.coverdict.analysis.pertest.PerTestEntry;
-import dev.coverdict.analysis.pertest.PerTestLine;
+import dev.coverdict.analysis.pertest.PerTestJsonWriter;
 import dev.coverdict.analysis.pertest.PerTestModuleEvidence;
 import dev.coverdict.analysis.vcs.VcsIdentity;
 
@@ -132,10 +132,10 @@ public final class VerdictJsonWriter {
             g.writeStartObject();
             g.writeStringField("id", module.moduleId());
             g.writeArrayFieldStart("entries");
-            writePerTestEntries(g, module.entries());
+            PerTestJsonWriter.writeEntries(g, sortedPerTestEntries(module.entries()));
             g.writeEndArray();
             g.writeArrayFieldStart("ambient");
-            writePerTestEntries(g, module.ambient());
+            PerTestJsonWriter.writeEntries(g, sortedPerTestEntries(module.ambient()));
             g.writeEndArray();
             g.writeEndObject();
         }
@@ -143,28 +143,11 @@ public final class VerdictJsonWriter {
         g.writeEndObject();
     }
 
-    private static void writePerTestEntries(JsonGenerator g, List<PerTestEntry> entries) throws IOException {
-        List<PerTestEntry> sorted = entries.stream()
+    /** Schema ordering rule: perTest entries/ambient sort by (className, methodName) - the shared writer itself stays unsorted (D-55). */
+    private static List<PerTestEntry> sortedPerTestEntries(List<PerTestEntry> entries) {
+        return entries.stream()
             .sorted(Comparator.comparing(PerTestEntry::className).thenComparing(PerTestEntry::methodName))
             .toList();
-        for (PerTestEntry entry : sorted) {
-            g.writeStartObject();
-            g.writeStringField("className", entry.className());
-            g.writeStringField("methodName", entry.methodName());
-            g.writeArrayFieldStart("lines");
-            for (PerTestLine line : entry.lines()) {
-                g.writeStartObject();
-                g.writeNumberField("line", line.line());
-                g.writeArrayFieldStart("tests");
-                for (String test : line.tests()) {
-                    g.writeString(test);
-                }
-                g.writeEndArray();
-                g.writeEndObject();
-            }
-            g.writeEndArray();
-            g.writeEndObject();
-        }
     }
 
     private static void writeInputs(JsonGenerator g, VerdictDocument doc) throws IOException {

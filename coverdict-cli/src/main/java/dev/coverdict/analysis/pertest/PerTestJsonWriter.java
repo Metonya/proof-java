@@ -14,6 +14,15 @@ import com.fasterxml.jackson.core.JsonGenerator;
  * deterministic field-by-field style). This is the exporter-to-driver wire
  * format {@link CoverdictLineExporter} writes and {@link PerTestJsonReader}
  * reads back in the parent process - never the verdict schema itself.
+ *
+ * <p>{@link #writeEntries} is also called directly by {@code
+ * dev.coverdict.analysis.report.VerdictJsonWriter} (a different, larger
+ * consumer of the same {@link PerTestEntry}/{@link PerTestLine} shape) so
+ * the {@code className}/{@code methodName}/{@code lines}/{@code tests}
+ * nesting is written in exactly one place - the wire format here is
+ * unsorted (already deterministic from {@link BlockLineResolver}), while
+ * the verdict schema's own ordering contract means the verdict writer
+ * sorts its list before calling in.
  */
 public final class PerTestJsonWriter {
 
@@ -36,7 +45,7 @@ public final class PerTestJsonWriter {
         }
     }
 
-    private static void writeEntries(JsonGenerator g, List<PerTestEntry> entries) throws IOException {
+    public static void writeEntries(JsonGenerator g, List<PerTestEntry> entries) throws IOException {
         for (PerTestEntry entry : entries) {
             g.writeStartObject();
             g.writeStringField("className", entry.className());
