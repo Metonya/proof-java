@@ -1,10 +1,17 @@
 # L0 rule specifications — shared contract (M0 deliverable 4)
 
-Applies to all four v0.1 rules: `NO_RECOGNIZED_ORACLE`,
+Applies to all four v0.1 L0 rules: `NO_RECOGNIZED_ORACLE`,
 `TAUTOLOGICAL_ORACLE`, `CATCH_ORACLE_WITHOUT_FAIL`, `NULL_CHECK_ONLY`.
 Detection uses JavaParser + Symbol Solver (D-10); parser success alone is not
 semantic resolution (M1b). False positives cost more than false negatives
 (hard rule 2a): when in doubt, a rule stays silent or reports INCONCLUSIVE.
+
+L3's `PSEUDO_TESTED_METHOD` (M5, `docs/rules/PSEUDO_TESTED_METHOD.md`) does
+**not** follow this contract: it anchors on a production method (not a test
+method), its evidence comes from a real PIT mutation run (not AST
+traversal), and it has its own fixture-free spec. The fingerprint
+definition below is shared between both rule families; everything else on
+this page is L0-specific.
 
 ## Test method recognition
 

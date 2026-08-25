@@ -1036,6 +1036,151 @@ appends coverdict's own jar location (self-located via
 `getProtectionDomain().getCodeSource().getLocation()`) to the classpath
 file it writes for the module under analysis.
 
+**D-56 · L3's mutator set is gregor `RETURNS`+`VOID_METHOD_CALLS`, never
+Descartes - and `setFullMutationMatrix(true)` forces `"XML"` into
+`outputFormats`** (2026-08-25)
+Descartes (LGPL-3.0) can never be a dependency (hard rule 9/D-09/D-20), so
+M5 approximates its extreme mutation with the closest Apache-2.0 gregor
+mutators PIT ships: `RETURNS` (`EMPTY_RETURNS`, `FALSE_RETURNS`,
+`NULL_RETURNS`, `PRIMITIVE_RETURNS`, `TRUE_RETURNS` - confirmed via `javap`
+on `ReturnsMutatorGroup`) and `VOID_METHOD_CALLS`. Two known gaps versus
+real extreme mutation, documented rather than hidden: gregor's `RETURNS`
+mutators only replace the return *value*, not the method body, so side
+effects before a `return` still execute where Descartes would remove them
+entirely; and no gregor mutator approximates extreme mutation for a `void`
+method at all (`VOID_METHOD_CALLS` only removes void calls made *from
+within* the mutated method). `PSEUDO_TESTED_METHOD`'s confidence reflects
+this: `HIGH` only when every surviving mutant is `RETURNS`-family, `MEDIUM`
+when `VOID_METHOD_CALLS` is mixed in.
+
+`javap` on `EntryPoint.checkMatrixMode` confirms `setFullMutationMatrix(true)`
+throws `PitError("Full mutation matrix is only supported in the output
+format XML.")` unless `"XML"` is in `outputFormats` - not optional, and the
+resulting `mutations.xml` lands in the private per-run temp directory and
+is never read (`CoverdictMutationListener`, registered under the second,
+real output-format name, is what's actually consumed). Listener
+activation is two-gated: `javap` on `SettingsFactory.findListeners()`
+shows the SPI-discovered listener set is filtered by output-format *name*
+before `provides()` is even consulted, so `CoverdictMutationListener.name()`
+must appear in `outputFormats` - its `provides()` is deliberately left at
+the interface's default `LEGACY_MODE` feature rather than a custom one.
+
+Unlike L2's `PerTestModuleEvidence` (whose `BlockLineResolver` warnings
+never reach the parent process - a gap found while building this),
+`MutationModuleEvidence`'s wire format carries its own `warnings` list, so
+a `MUTATION_TRUNCATED` past the 200k-mutant cap is visible to `--mutation-
+report`'s warnings the same way `PER_TEST_TRUNCATED` should be but isn't.
+
+**D-57 · M2 spike's `MINION_DIED` cascade was the spike harness's own
+missing `commons-text`, not an L2/L3 mechanism defect** (2026-08-25)
+`FINDINGS.md` §7/§8 recorded the cascade's cause as an open guess
+(`useClasspathJar` or a temp-jar-path issue). Re-reading the raw logs
+while planning M5 finds the actual trigger at `validation/runs/pit-
+spike/entrypoint-poc/pit-run.log:345`: `NoClassDefFoundError: org/apache/
+commons/text/StringEscapeUtils` inside `XMLReportListener.clean`, thrown
+from the spike's own hand-built driver `main` thread. That thread's death
+triggers a shutdown hook that deletes the temp instrumentation-agent jar;
+every subsequent minion PIT spawns then fails to attach with `agent
+library failed to init: instrument`, repeating every ~15s until the log
+ends - a cascade, not a root cause, and specific to the spike's
+classpath, which never included `commons-text` (a `pitest-entry` compile
+dependency the spike never declared). `coverdict.jar`'s shaded classpath
+carries it correctly (confirmed: `unzip -l` shows `org/apache/commons/
+text/StringEscapeUtils.class` present). Not corrected as a silent edit to
+FINDINGS.md's original text (docs conventions: a reversal gets a new
+entry, the original stays in git history) - this entry is that
+correction, and a pointer was added at FINDINGS.md §7/§8.
+
+**D-58 · `SubprocessWorkspace`'s driver classpath must be the current
+JVM's own `java.class.path`, launched via a backslash-normalized
+`@argfile`, not a single self-located class's origin passed as a literal
+`-cp`** (2026-08-25)
+The L2/L3 subprocess launch (originally D-55's design, `PerTestRunner`/
+`MutationRunner`) resolved the child driver's own `-cp` by self-locating
+one class's protection domain. That is `coverdict.jar` in production -
+correct, since D-55 shaded PIT into it - but resolves to a bare `target/
+classes` directory with no PIT jars on it when running under Maven/
+Surefire, since PIT stays an unshaded separate dependency there. First
+found running `MutationRunnerIT` for real (the first time either runner
+was ever exercised end-to-end against a live PIT run, not just the
+`--no-vcs` rejection paths `AnalyzeCommandTest` covers): `NoClassDefFoundError:
+org.pitest.mutationtest.config.ReportOptions`. Fixed by using `java.class.
+path` instead (`SubprocessWorkspace.ownRuntimeClasspathEntries()`) - it
+collapses to the same single shaded jar in production and correctly
+carries PIT's separate jars everywhere else.
+
+That classpath is long enough to need a Java `@argfile` rather than a
+literal `-cp` argument (Windows' ~8191-char command-line limit - the same
+reason `ReportOptions`' own classpath input goes through a file, D-51).
+A second bug surfaced immediately: a quoted `@argfile` token
+(`-cp "C:\Users\...`) containing a real Windows path silently
+mis-tokenizes - backslash is special inside a quoted `@argfile` token -
+and the child fails with `ClassNotFoundException` for its own main class,
+not even PIT's. Reproduced in isolation (`java @argfile Hi` with a
+backslash path fails; the identical path with `/` instead succeeds).
+Fixed by normalizing every classpath entry to `/` before quoting - the
+JVM accepts `/` in classpath entries on Windows exactly like `\`.
+
+**D-59 · A real `--mutation-report` run's process count grows fast and
+unpredictably in at least one dogfood environment - root cause not
+isolated, budget lowered as a safety margin instead of a fix**
+(2026-08-25)
+Running `MutationRunnerIT` against coverdict's own repo (a single diff-
+scoped target, `setFullMutationMatrix(true)`, `numberOfThreads=1`) after
+D-58's fixes: process count climbed past 60 `java.exe` processes within
+roughly two minutes, consuming multiple GB and twice bringing free system
+memory below 2GB. Isolated manual reproduction attempts (the identical
+`MutationDriver` invocation via a hand-built `ProcessBuilder`, same
+classpath, same target, `Verbosity.VERBOSE`) consistently found `0`
+mutation test units and exited cleanly in under a second - the storm
+reproduces only when driven through the real `MutationRunner` code path
+from inside a Surefire-forked test JVM, which live debugging in this
+session could not further isolate without repeated, escalating risk to
+the development machine (three near-OOM incidents during this
+investigation, each recovered by killing every `java.exe` process this
+session had spawned). Full-matrix mode's higher cost (every mutant must
+be tested against its complete covering-test set, not stopped at the
+first kill) and PIT's own per-unit minion spawn behavior at
+`numberOfThreads=1` are both plausible contributors, neither confirmed.
+
+`SubprocessWorkspace.destroyProcessTree` (D-58 sibling fix: `taskkill /F
+/T` on Windows before `destroyForcibly()`, since a killed immediate child
+never took PIT's own grandchild minions with it) verified to return
+process count to baseline every time a run was allowed to reach its own
+timeout or complete naturally, across every observed instance. That
+makes the failure mode bounded rather than open-ended, which is why this
+ships rather than blocking M5 entirely - but bounded still means "up to
+however large the count gets before the budget fires." `MutationRunner.
+DEFAULT_BUDGET` and `--mutation-timeout`'s default both drop from 15 to 5
+minutes as a direct consequence: erring toward failing fast and cleaning
+up a smaller mess, not toward a generous window this session could not
+prove is safe. Root-causing the spawn rate itself (candidates: an
+explicit `ReportOptions.setMutationUnitSize` instead of PIT's auto
+sizing, or profiling one real run with `Verbosity.VERBOSE` end-to-end
+rather than killed mid-flight) is unresolved follow-up work, not done
+here.
+
+**D-60 · O-05 resolved: coverdict builds its own diff-scoped mutation
+target mapping, ArcMutate rejected** (2026-08-25)
+`ChangedClassTargets.globsFor` (originally `PerTestCollector`'s private
+`targetClassGlobs`, extracted for reuse) already does the git-diff-to-
+FQCN-glob mapping D-12 flagged as unresolved: mapped changed `.java`
+files under a module's declared source roots become `<FQCN>*` globs fed
+to `ReportOptions.setTargetClasses`. No new mechanism needed for M5 - the
+same mapping that scopes L2's `--per-test-report` targets scopes L3's.
+ArcMutate stays rejected: it is a commercial dependency D-02's "verdict
+layer over engines, never own engines, but the engines stay open where
+we can reach them" stance does not need, and coverdict's own mapping was
+already proven working before M5 started.
+
+One limit carries forward undiminished: `setTargetTests` stays
+`Glob.toGlobPredicates(List.of("*"))` - hedges are diff-scoped, the *test
+suite PIT runs to find them* is not. A diff-scoped mutation run still
+discovers and executes every test that might cover a changed class,
+exactly like L2 already does. "Diff-scoped mutation" bounds mutant
+generation, not test-execution time - the same limit D-12 first named,
+now resolved as designed rather than left open.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not
@@ -1048,8 +1193,6 @@ instrumentation, experimental Java 17 support, no parallel execution.
 
 **O-02 · SARIF as an additional output format** — would give GitHub code
 scanning and IDE problem-panel integration nearly free. Evaluate with CI work.
-**O-05 · Build our own diff-scoped mutation mapping, or make ArcMutate an
-optional integration** — see D-12. Decide at M5.
 **O-07 · Kotlin/Android as a supported target** — D-10 (JavaParser) does not
 extend to Kotlin syntax; would need its own AST/symbol-resolution frontend.
 JaCoCo reads Kotlin bytecode fine, but inline functions copy code to call
@@ -1057,4 +1200,5 @@ sites and break line attribution; Android adds its own report layout,
 flavor/variant matrix, and generated sources. Out of scope unless a dogfood
 repo (M0 item 1) forces it.
 
-Resolved: O-01 is **coverdict**; O-03 is D-13/D-18; O-04 is D-23; O-06 is D-04.
+Resolved: O-01 is **coverdict**; O-03 is D-13/D-18; O-04 is D-23; O-05 is
+D-60; O-06 is D-04.

@@ -161,6 +161,14 @@ questions coverdict has to solve by writing its own reset choreography. See
   L3 mutation, not by L0–L2. Must be documented as a limit, not hidden.
 - Static tautology detection is heuristic; the ground truth for "verifies
   nothing" is mutation (L3). L0 is the fast approximation, L3 the slow proof.
+- `PSEUDO_TESTED_METHOD` (M5, D-56) approximates Descartes' extreme mutation
+  with gregor's `RETURNS`+`VOID_METHOD_CALLS` mutators, the closest
+  Apache-2.0 substitute PIT ships (Descartes is LGPL-3.0 and can never be a
+  dependency, hard rule 9). Two gaps, not yet measured against real
+  Descartes output on any corpus repo: gregor's `RETURNS` mutators replace
+  only the return *value*, so side effects before a `return` still execute
+  where Descartes would remove the whole body; and no gregor mutator
+  approximates extreme mutation for a `void` method at all. See §14.
 
 ## 11. Validation repo selection (feeds ROADMAP M0/M1)
 
@@ -215,3 +223,52 @@ solved by consuming PIT's own public extension points. What remains open
 (M2 Faz 2, not yet run): whether PIT's own per-test isolation holds stable
 under test-order shuffling and parallel execution on larger corpus repos, and
 what the coverage-collection phase actually costs at their scale.
+
+## 14. Mutation engine choice for L3 (M5, 2026-08-25)
+
+Nothing in this document discussed pseudo-tested-method detection, extreme
+mutation, or PIT's own gregor mutators before M5 - the gap itself was worth
+recording, since the idea (approximate Descartes with PIT's built-in
+mutators rather than shell out to an LGPL process) was never evaluated or
+rejected here, just never proposed.
+
+**Pseudo-tested method**: a method that is *covered* (tests execute it) but
+has no mutant a covering test kills - the tests reach the code without
+observing what it does. Distinct from an uncovered method (L1's job) and
+from a method with no recognized oracle (L0's job): this is the case
+neither layer can see, since coverage is real and an assertion may well
+exist, just not one that would fail if the method's logic broke.
+
+**Descartes' extreme mutation** replaces an entire method body with a
+trivial stand-in (`return null;`, `return true;`, an empty block) rather
+than gregor's fine-grained single-instruction mutations (negate a
+condition, change one arithmetic operator, alter one return value). This
+makes Descartes' mutants a much closer proxy for "does any test verify
+this method does anything at all" - which is exactly the pseudo-tested
+question - but Descartes is LGPL-3.0 and D-09/D-20 bar it from ever being
+a coverdict dependency at any scope, so it was never a candidate to run
+even as a user-installed external process for this particular rule (unlike
+D-09's original framing, which anticipated Descartes running standalone
+for other purposes).
+
+**D-56's substitute**: gregor's `RETURNS` mutator family (`EMPTY_RETURNS`,
+`FALSE_RETURNS`, `NULL_RETURNS`, `PRIMITIVE_RETURNS`, `TRUE_RETURNS`) plus
+`VOID_METHOD_CALLS`. `RETURNS` mutants change only the returned value,
+never the body executed to compute it - a method with a real side effect
+before its `return` (a mutable field write, a call to another object) still
+performs that side effect under a `RETURNS` mutant, where Descartes'
+whole-body replacement would not. `VOID_METHOD_CALLS` only removes void
+calls made *from within* the mutated method itself, which is not body
+replacement either, and provides no meaningful approximation of extreme
+mutation for a method whose own return type is `void`.
+
+**Not done**: no side-by-side run of Descartes and coverdict's gregor
+substitute against the same corpus method exists yet, so the practical
+precision gap between "extreme mutation" and "RETURNS+VOID_METHOD_CALLS
+mutation" is unmeasured, not merely undocumented. `PSEUDO_TESTED_METHOD`'s
+confidence tiers (D-56: `HIGH` for pure-`RETURNS` survivors, `MEDIUM` when
+`VOID_METHOD_CALLS` is mixed in) are a design choice made from reading
+gregor's own mutator source, not from measured precision against a labeled
+corpus - ROADMAP's M5 kill criterion (two dogfood repos, manually verified
+`PSEUDO_TESTED_METHOD` precision under 90% downgrades or cuts the rule)
+is the actual validation this section's judgment still needs.

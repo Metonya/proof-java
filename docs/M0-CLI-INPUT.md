@@ -108,6 +108,39 @@ rationale (suppressions) carry an explicit `reason` field instead.
 - `perTest` is entirely absent from the output JSON (not present-but-empty)
   unless `--per-test-report` was set.
 
+## L3 mutation evidence (D-46/D-56)
+
+- `--mutation-report` — collects mutant kill-set evidence for changed
+  production classes via the same embedded PIT, gregor `RETURNS`+
+  `VOID_METHOD_CALLS` mutators (D-56's approximation of Descartes' extreme
+  mutation - Descartes stays LGPL and out of process, hard rule 9).
+  Diff-scoped the same way as `--per-test-report` (O-05/D-60: reuses the
+  same changed-file-to-FQCN-glob mapping). Requires a diff mode; rejected
+  under `--no-vcs`, exit 2. `setFullMutationMatrix(true)` - every test that
+  kills a mutant, not just the first - needs `numberOfThreads=1`'s
+  determinism and costs more than L2's coverage-only pass. D-46: evidence
+  only; `mutation` in the output never adds a `Finding` by itself, but
+  `PSEUDO_TESTED_METHOD` (a real finding, `docs/rules/PSEUDO_TESTED_METHOD.md`)
+  is computed from it automatically whenever the flag is set.
+- `--mutation-classpath <id>=<file>` — same list-file shape and purpose as
+  `--per-test-classpath`, a separate flag and warning namespace
+  (`MUTATION_CLASSPATH_MISSING`) because the two evidence layers are
+  independently opt-in.
+- `--mutation-timeout <seconds>` — wall-clock budget per module before the
+  mutation subprocess (and, on Windows, its entire process tree - D-58)
+  is force-killed. Default 300s (5 minutes) - deliberately conservative,
+  not generous: D-59 found process count growing unpredictably fast in at
+  least one environment for even a small diff-scoped target, root cause
+  unresolved. Raise this only after confirming a target environment
+  doesn't reproduce that growth.
+- A module whose mutation run fails, times out, or has a mutant left in a
+  non-final status: warned (`MUTATION_COLLECTION_FAILED`,
+  `MUTATION_BUDGET_EXCEEDED`, or `MUTATION_INCONCLUSIVE_STATUS`
+  respectively), never blocks the rest of the run - same never-abort
+  contract as L2.
+- `mutation` is entirely absent from the output JSON unless
+  `--mutation-report` was set.
+
 ## Exclusions (D-05)
 
 - `--coverage-exclusions <glob[,glob...]>` — `sonar.coverage.exclusions`

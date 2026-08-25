@@ -191,6 +191,17 @@ Mutasyon fazı (kapsam fazından sonraki adım) `MINION_DIED` ile çöktü —
 ilgisi yok** (kapsam fazı zaten tamamlanmış ve doğru çıktıyı üretmişti);
 araştırılmadı, mutasyon entegrasyonu (L3/M5) zamanı gelince ele alınacak.
 
+**D-57 düzeltmesi (M5 planlaması, 2026-08-25):** Yukarıdaki `useClasspathJar`
+tahmini yanlıştı. Ham log yeniden okunduğunda gerçek tetikleyici görüldü:
+`entrypoint-poc/pit-run.log:345`'te `NoClassDefFoundError: org/apache/
+commons/text/StringEscapeUtils` — spike'ın elle kurulmuş sürücü
+classpath'inde `commons-text` (pitest-entry'nin bir compile bağımlılığı)
+hiç deklare edilmemişti. Sürücünün `main` thread'i bu istisnayla ölünce
+shutdown hook geçici agent jar'ını siliyor, sonraki her minion `agent
+library failed to init: instrument` ile ölüyor — çöküş bu döngü. Ürün
+yolunda (`coverdict.jar`, shaded) `commons-text` mevcut ve tekrarlanamıyor
+(D-57, D-58).
+
 **Doğrulanmadı:** Gradle hedefinde (junit-framework) aynı çağırma modeli.
 Maven'ın `dependency:build-classpath`'i burada kullanıldı; Gradle'ın
 eşdeğeri (`gradle dependencies` / `--write-locks` çıktısından classpath
@@ -219,7 +230,11 @@ PIT'in kapsam fazı saniyeler içinde bitiyor.
 jar yoluyla ilgili bir `MINION_DIED` riski taşıyor. Araştırılmadı, L3/M5
 zamanı gelince ele alınacak. Faz 2b–2e'nin tamamı sadece kapsam fazının
 çıktısını (`coverdict-line-tests.json`, mutasyon başlamadan önce yazılıyor)
-kullandı.
+kullandı. **D-57 düzeltmesi:** kök neden `useClasspathJar` değil, sürücünün
+eksik `commons-text` bağımlılığıydı (yukarıdaki §7 notuna bakın). Ayrıca
+M5 planlamasında farklı bir gecikme daha bulundu ve **D-59** olarak
+kaydedildi: gerçek bir `--mutation-report` koşusu bu ortamda süreç
+sayısını hızla artırabiliyor, kök nedeni bu oturumda da izole edilemedi.
 
 ### Faz 2c — determinizm: GEÇTİ
 

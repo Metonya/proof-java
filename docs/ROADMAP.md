@@ -485,10 +485,20 @@ failure.
   on the combined three-stage HIGH-confidence findings, not on L2 in
   isolation. No deletion suggestion follows from coverage identity alone.
   The CLI evidence layer (`--per-test-report`, D-55) is done; this milestone
-  is the three-stage finding logic consuming it.
-- **M5 — Mutation integration.** Start method-centric with
-  `PSEUDO_TESTED_METHOD`; covering tests are context, not proof that one test is
-  worthless. Resolve diff scoping first (O-05/D-12). IDE surfaces render JSON.
+  is the three-stage finding logic consuming it. **Numbered before M5 but
+  depends on it**: the third stage needs L3's mutant-kill sets, which M5
+  delivers - M4 cannot actually close until M5 has shipped, an ordering
+  inversion this list never flagged until now.
+- **M5 — Mutation integration.** Done: `--mutation-report`/`--mutation-
+  classpath`/`--mutation-timeout`, `PSEUDO_TESTED_METHOD` (method-centric,
+  D-56's gregor `RETURNS`+`VOID_METHOD_CALLS` approximation of Descartes'
+  extreme mutation - covering tests are context, not proof that one test is
+  worthless), diff scoping resolved by reusing L2's own mapping (O-05/D-12,
+  closed by D-60 - no ArcMutate dependency needed). `setFullMutationMatrix
+  (true)` carries the full kill-set M4's third stage needs. Not done: IDE
+  surfaces (still just JSON), and D-59's open process-resource-growth
+  question - `--mutation-report` ships with a deliberately conservative
+  5-minute default timeout as a result, not a verified-safe one.
 - **Backlog:** standalone HTML · AI-assistant skill (agent reads verdict JSON,
   writes tests for gaps it names, reruns, interprets the result through
   coverdict again) · VS Code extension (inline per-line coverage gutter
@@ -550,3 +560,11 @@ failure.
   ignored/waived, stop integration work and revisit the product wedge.
 - If `sonar-compatible` parity fails against the pinned internal setup, remove
   that mode name rather than publishing an approximate compatibility claim.
+- If two dogfood repos' manually-verified `PSEUDO_TESTED_METHOD` precision
+  falls under 90%, downgrade the rule to `INFO` or cut it - gregor's
+  `RETURNS`+`VOID_METHOD_CALLS` approximation of Descartes (D-56) is an
+  unvalidated substitution until measured against real findings, not just
+  against the mechanism working. If D-59's process-resource-growth question
+  is not root-caused before a second dogfood repo is attempted, `--mutation-
+  report` stays off by default and undocumented as a recommended flag,
+  regardless of finding precision.
