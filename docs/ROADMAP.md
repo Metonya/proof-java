@@ -531,8 +531,17 @@ and the bug-repro workflow (shrink a real finding into a new scenario there).
 - **Backlog:** standalone HTML · AI-assistant skill (agent reads verdict JSON,
   writes tests for gaps it names, reruns, interprets the result through
   coverdict again) · VS Code extension (inline per-line coverage gutter
-  annotations, toggleable) · second build integration if not justified in M3 ·
-  non-Java languages · Truth-specific `NULL_CHECK_ONLY`/`TAUTOLOGICAL_ORACLE`
+  annotations, toggleable) · IntelliJ plugin (same gutter/panel concept as the
+  VS Code extension) · one-click "send this verdict to the AI assistant"
+  action from either IDE extension, aimed at popular in-IDE AI tools
+  (Copilot, Cursor, Windsurf, ...) so they can read and act on findings
+  without the user copy-pasting JSON · installable CLI distribution (so
+  people can actually get and run coverdict, not just build it from source)
+  · separate **public** playground repos (distinct from the private
+  `coverdict-playground` testing fixture) seeded with realistic test-quality
+  issues, used for outreach - opening coverdict-found issues against them -
+  once the tool itself is public · second build integration if not justified
+  in M3 · non-Java languages · Truth-specific `NULL_CHECK_ONLY`/`TAUTOLOGICAL_ORACLE`
   weak-oracle patterns (D-31 added Truth as a recognized oracle for
   `NO_RECOGNIZED_ORACLE`/`CATCH_ORACLE_WITHOUT_FAIL` only; the other two
   rules still only recognize JUnit/AssertJ shapes) &#x2713; ~~extend
