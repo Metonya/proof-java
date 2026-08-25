@@ -18,6 +18,8 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -538,17 +540,19 @@ class AnalyzeCommandTest {
 
     // --- --classpath (M0-CLI-INPUT.md's classpath input, wired for real) ---
 
-    @Test
-    void classpathIdNotMatchingAnyDeclaredModuleIsInvalidInvocation() {
+    /** Same validation shape for all three classpath-list flags (SonarQube java:S5976). */
+    @ParameterizedTest
+    @ValueSource(strings = {"--classpath", "--per-test-classpath", "--mutation-classpath"})
+    void classpathIdNotMatchingAnyDeclaredModuleIsInvalidInvocation(String flag) {
         int exitCode = run("analyze", "--no-vcs",
             "--repo", repoRoot.toString(),
             "--module", "app=.",
             "--report", "app=" + FIXTURES.resolve("mixed-coverage.xml"),
-            "--classpath", "typo=deps.txt",
+            flag, "typo=deps.txt",
             "--out", outputDir.resolve("verdict.json").toString());
 
         assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
-        assertTrue(err.toString().contains("--classpath id 'typo'"), err.toString());
+        assertTrue(err.toString().contains(flag + " id 'typo'"), err.toString());
         assertFalse(Files.exists(outputDir.resolve("verdict.json")), "exit 2 must write no JSON");
     }
 
@@ -565,20 +569,6 @@ class AnalyzeCommandTest {
         assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
         assertTrue(err.toString().contains("--per-test-report"), err.toString());
         assertFalse(Files.exists(outFile));
-    }
-
-    @Test
-    void perTestClasspathIdNotMatchingAnyDeclaredModuleIsInvalidInvocation() {
-        int exitCode = run("analyze", "--no-vcs",
-            "--repo", repoRoot.toString(),
-            "--module", "app=.",
-            "--report", "app=" + FIXTURES.resolve("mixed-coverage.xml"),
-            "--per-test-classpath", "typo=deps.txt",
-            "--out", outputDir.resolve("verdict.json").toString());
-
-        assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
-        assertTrue(err.toString().contains("--per-test-classpath id 'typo'"), err.toString());
-        assertFalse(Files.exists(outputDir.resolve("verdict.json")), "exit 2 must write no JSON");
     }
 
     @Test
@@ -607,20 +597,6 @@ class AnalyzeCommandTest {
         assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
         assertTrue(err.toString().contains("--mutation-report"), err.toString());
         assertFalse(Files.exists(outFile));
-    }
-
-    @Test
-    void mutationClasspathIdNotMatchingAnyDeclaredModuleIsInvalidInvocation() {
-        int exitCode = run("analyze", "--no-vcs",
-            "--repo", repoRoot.toString(),
-            "--module", "app=.",
-            "--report", "app=" + FIXTURES.resolve("mixed-coverage.xml"),
-            "--mutation-classpath", "typo=deps.txt",
-            "--out", outputDir.resolve("verdict.json").toString());
-
-        assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
-        assertTrue(err.toString().contains("--mutation-classpath id 'typo'"), err.toString());
-        assertFalse(Files.exists(outputDir.resolve("verdict.json")), "exit 2 must write no JSON");
     }
 
     @Test

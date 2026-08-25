@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.pitest.mutationtest.config.PluginServices;
 import org.pitest.mutationtest.config.ReportOptions;
@@ -81,8 +82,9 @@ public final class MutationDriver {
         EntryPoint entry = new EntryPoint();
         AnalysisResult result = entry.execute(new File(reportDir), options, plugins, env);
 
-        if (result.getError().isPresent()) {
-            System.err.println("MutationDriver: " + result.getError().get().getMessage());
+        Optional<Exception> error = result.getError();
+        if (error.isPresent()) {
+            System.err.println("MutationDriver: " + error.get().getMessage());
             System.exit(1);
         }
     }

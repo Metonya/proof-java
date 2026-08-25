@@ -1,15 +1,10 @@
 package dev.coverdict.analysis.pertest;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 import dev.coverdict.analysis.model.AnalysisReason;
+import dev.coverdict.analysis.subprocess.ClasspathListFile;
 
 /**
  * Reads {@code --per-test-classpath <id>=<file>}: one classpath entry per
@@ -39,41 +34,11 @@ public final class PerTestClasspathLoader {
     }
 
     public static Result load(Path repoRoot, String moduleId, String listFilePath) {
-        List<String> lines;
-        try {
-            lines = Files.readAllLines(repoRoot.resolve(listFilePath), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            return missing(moduleId, listFilePath, "could not be read (" + e.getClass().getSimpleName() + ")");
+        ClasspathListFile parsed = ClasspathListFile.load(repoRoot, listFilePath);
+        if (!parsed.ok()) {
+            return missing(moduleId, listFilePath, parsed.problem());
         }
-
-        List<String> classPathElements = new ArrayList<>();
-        List<String> codePaths = new ArrayList<>();
-        Set<String> seen = new LinkedHashSet<>();
-        for (String rawLine : lines) {
-            resolveLine(repoRoot, rawLine, seen, classPathElements, codePaths);
-        }
-
-        if (codePaths.isEmpty()) {
-            return missing(moduleId, listFilePath, "names no compiled-output directory on the classpath");
-        }
-        return new Result(List.copyOf(classPathElements), List.copyOf(codePaths), List.of());
-    }
-
-    /** One line of a classpath list file (SonarQube java:S135 - kept to a single {@code continue}-free shape, ClasspathLoader's own precedent). */
-    private static void resolveLine(Path repoRoot, String rawLine, Set<String> seen, List<String> classPathElements,
-                                     List<String> codePaths) {
-        String entry = rawLine.trim();
-        if (entry.isEmpty() || entry.startsWith("#")) {
-            return;
-        }
-        Path resolved = repoRoot.resolve(entry);
-        if (!seen.add(resolved.toString())) {
-            return; // same entry named twice - use it once
-        }
-        classPathElements.add(resolved.toString());
-        if (Files.isDirectory(resolved)) {
-            codePaths.add(resolved.toString());
-        }
+        return new Result(parsed.classPathElements(), parsed.codePaths(), List.of());
     }
 
     private static Result missing(String moduleId, String listFilePath, String detail) {

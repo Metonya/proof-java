@@ -146,7 +146,7 @@ public final class SubprocessWorkspace {
     public static void destroyProcessTree(Process process) {
         if (isWindows()) {
             try {
-                new ProcessBuilder("taskkill", "/F", "/T", "/PID", String.valueOf(process.pid()))
+                new ProcessBuilder(taskkillExecutable(), "/F", "/T", "/PID", String.valueOf(process.pid()))
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                     .redirectError(ProcessBuilder.Redirect.DISCARD)
                     .start()
@@ -158,6 +158,23 @@ public final class SubprocessWorkspace {
             }
         }
         process.destroyForcibly();
+    }
+
+    /**
+     * SonarQube java:S4036: a bare {@code "taskkill"} argument resolves
+     * through the process's {@code PATH}, which could be hijacked by an
+     * earlier, attacker-writable directory. {@code %SystemRoot%} (always
+     * {@code C:\Windows}, set by the OS, never user-writable) pins the
+     * real System32 binary directly, with the bare command name as a
+     * last-resort fallback only if that environment variable is somehow
+     * absent.
+     */
+    private static String taskkillExecutable() {
+        String systemRoot = System.getenv("SystemRoot");
+        if (systemRoot == null || systemRoot.isBlank()) {
+            return "taskkill";
+        }
+        return Path.of(systemRoot, "System32", "taskkill.exe").toString();
     }
 
     private static boolean isWindows() {

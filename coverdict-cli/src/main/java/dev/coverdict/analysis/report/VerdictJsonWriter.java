@@ -43,6 +43,7 @@ public final class VerdictJsonWriter {
 
     private static final JsonFactory FACTORY = new JsonFactory();
     private static final String FIELD_MODULE = "module";
+    private static final String FIELD_MODULES = "modules";
 
     private VerdictJsonWriter() {
     }
@@ -131,7 +132,7 @@ public final class VerdictJsonWriter {
         g.writeObjectFieldStart("perTest");
         g.writeStringField("engine", "pitest");
         g.writeStringField("engineVersion", ToolVersion.read().pitestVersion());
-        g.writeArrayFieldStart("modules");
+        g.writeArrayFieldStart(FIELD_MODULES);
         List<PerTestModuleEvidence> sorted = perTestModules.stream()
             .sorted(Comparator.comparing(PerTestModuleEvidence::moduleId))
             .toList();
@@ -162,7 +163,7 @@ public final class VerdictJsonWriter {
         g.writeObjectFieldStart("mutation");
         g.writeStringField("engine", "pitest");
         g.writeStringField("engineVersion", ToolVersion.read().pitestVersion());
-        g.writeArrayFieldStart("modules");
+        g.writeArrayFieldStart(FIELD_MODULES);
         List<MutationModuleEvidence> sorted = mutationModules.stream()
             .sorted(Comparator.comparing(MutationModuleEvidence::moduleId))
             .toList();
@@ -205,7 +206,7 @@ public final class VerdictJsonWriter {
             g.writeString(glob);
         }
         g.writeEndArray();
-        g.writeArrayFieldStart("modules");
+        g.writeArrayFieldStart(FIELD_MODULES);
         List<ModuleInput> modules = doc.modules().stream()
             .sorted(Comparator.comparing(ModuleInput::id))
             .toList();
