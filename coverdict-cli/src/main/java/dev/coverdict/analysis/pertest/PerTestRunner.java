@@ -5,8 +5,10 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -55,12 +57,7 @@ public final class PerTestRunner {
                                                                   List<String> classPathElements,
                                                                   List<String> codePaths,
                                                                   List<String> targetClasses) {
-        Path workDir;
-        try {
-            workDir = Files.createTempDirectory("coverdict-pertest-" + sanitize(moduleId));
-        } catch (IOException e) {
-            throw new PerTestCollectionException("Could not create a temp directory for module '" + moduleId + "'", e);
-        }
+        Path workDir = createPrivateTempDirectory(moduleId);
         try {
             String ownClasspath = ownClasspath();
             // The minion PIT spawns needs org.pitest.coverage.execute.CoverageMinion and
@@ -148,6 +145,40 @@ public final class PerTestRunner {
         } catch (URISyntaxException e) {
             throw new IllegalStateException("Could not resolve coverdict's own classpath for the per-test subprocess", e);
         }
+    }
+
+    /**
+     * SonarQube java:S5443: the OS temp directory is shared/publicly
+     * writable, so the created directory - which briefly holds this
+     * module's classpath list and PIT's coverage output - is restricted to
+     * the current user right after creation, on platforms where that is
+     * actually achievable. {@code Files.createTempDirectory} has no
+     * portable permissions overload; on a POSIX file system, {@code
+     * setPosixFilePermissions} reliably restricts to owner-only. On Windows
+     * there is no equivalent guarantee through the JDK - empirically,
+     * {@code File.setReadable}/{@code setWritable(false, false)} ("deny
+     * everyone else") both return {@code false} (unsupported) rather than
+     * applying an ACL - so this falls back to the OS temp directory's own
+     * default per-user ACL (in practice already user-scoped under {@code
+     * %LOCALAPPDATA%\Temp}) instead of failing the run over an API that
+     * cannot succeed there.
+     */
+    private static Path createPrivateTempDirectory(String moduleId) {
+        Path workDir;
+        try {
+            workDir = Files.createTempDirectory("coverdict-pertest-" + sanitize(moduleId));
+        } catch (IOException e) {
+            throw new PerTestCollectionException("Could not create a temp directory for module '" + moduleId + "'", e);
+        }
+        if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
+            try {
+                Files.setPosixFilePermissions(workDir, PosixFilePermissions.fromString("rwx------"));
+            } catch (IOException e) {
+                throw new PerTestCollectionException(
+                    "Could not restrict the temp directory for module '" + moduleId + "' to the current user", e);
+            }
+        }
+        return workDir;
     }
 
     private static String sanitize(String moduleId) {

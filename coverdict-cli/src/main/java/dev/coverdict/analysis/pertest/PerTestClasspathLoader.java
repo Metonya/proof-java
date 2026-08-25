@@ -50,24 +50,30 @@ public final class PerTestClasspathLoader {
         List<String> codePaths = new ArrayList<>();
         Set<String> seen = new LinkedHashSet<>();
         for (String rawLine : lines) {
-            String entry = rawLine.trim();
-            if (entry.isEmpty() || entry.startsWith("#")) {
-                continue;
-            }
-            Path resolved = repoRoot.resolve(entry);
-            if (!seen.add(resolved.toString())) {
-                continue; // same entry named twice - use it once
-            }
-            classPathElements.add(resolved.toString());
-            if (Files.isDirectory(resolved)) {
-                codePaths.add(resolved.toString());
-            }
+            resolveLine(repoRoot, rawLine, seen, classPathElements, codePaths);
         }
 
         if (codePaths.isEmpty()) {
             return missing(moduleId, listFilePath, "names no compiled-output directory on the classpath");
         }
         return new Result(List.copyOf(classPathElements), List.copyOf(codePaths), List.of());
+    }
+
+    /** One line of a classpath list file (SonarQube java:S135 - kept to a single {@code continue}-free shape, ClasspathLoader's own precedent). */
+    private static void resolveLine(Path repoRoot, String rawLine, Set<String> seen, List<String> classPathElements,
+                                     List<String> codePaths) {
+        String entry = rawLine.trim();
+        if (entry.isEmpty() || entry.startsWith("#")) {
+            return;
+        }
+        Path resolved = repoRoot.resolve(entry);
+        if (!seen.add(resolved.toString())) {
+            return; // same entry named twice - use it once
+        }
+        classPathElements.add(resolved.toString());
+        if (Files.isDirectory(resolved)) {
+            codePaths.add(resolved.toString());
+        }
     }
 
     private static Result missing(String moduleId, String listFilePath, String detail) {

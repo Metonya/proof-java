@@ -31,36 +31,43 @@ public final class PerTestCollector {
         List<AnalysisReason> warnings = new ArrayList<>();
 
         for (ModuleDefinition module : modules) {
-            List<String> targetClasses = targetClassGlobs(module, changedFiles);
-            if (targetClasses.isEmpty()) {
-                continue; // nothing changed in this module's production code - no evidence to collect
-            }
-            String classpathFile = perTestClasspathFilesById.get(module.id());
-            if (classpathFile == null) {
-                warnings.add(new AnalysisReason("PER_TEST_CLASSPATH_MISSING",
-                    "Module '" + module.id() + "' has changed production classes but no --per-test-classpath "
-                        + "bound to it; per-test evidence skipped for this module.", null, module.id()));
-                continue;
-            }
-
-            PerTestClasspathLoader.Result classpath = PerTestClasspathLoader.load(repoRoot, module.id(), classpathFile);
-            if (!classpath.warnings().isEmpty()) {
-                warnings.addAll(classpath.warnings());
-                continue;
-            }
-
-            try {
-                Optional<PerTestModuleEvidence> result = PerTestRunner.run(module.id(), repoRoot,
-                    classpath.classPathElements(), classpath.codePaths(), targetClasses);
-                result.ifPresent(evidence::add);
-            } catch (PerTestCollectionException e) {
-                warnings.add(new AnalysisReason("PER_TEST_COLLECTION_FAILED",
-                    "Module '" + module.id() + "' per-test coverage collection failed (" + e.getMessage()
-                        + "); per-test evidence skipped for this module.", null, module.id()));
-            }
+            collectOneModule(repoRoot, module, changedFiles, perTestClasspathFilesById, evidence, warnings);
         }
 
         return new Result(List.copyOf(evidence), List.copyOf(warnings));
+    }
+
+    /** One module's collection attempt (SonarQube java:S135 - {@link #collect} stays continue-free). */
+    private static void collectOneModule(Path repoRoot, ModuleDefinition module, List<ChangedFile> changedFiles,
+                                          Map<String, String> perTestClasspathFilesById,
+                                          List<PerTestModuleEvidence> evidence, List<AnalysisReason> warnings) {
+        List<String> targetClasses = targetClassGlobs(module, changedFiles);
+        if (targetClasses.isEmpty()) {
+            return; // nothing changed in this module's production code - no evidence to collect
+        }
+        String classpathFile = perTestClasspathFilesById.get(module.id());
+        if (classpathFile == null) {
+            warnings.add(new AnalysisReason("PER_TEST_CLASSPATH_MISSING",
+                "Module '" + module.id() + "' has changed production classes but no --per-test-classpath "
+                    + "bound to it; per-test evidence skipped for this module.", null, module.id()));
+            return;
+        }
+
+        PerTestClasspathLoader.Result classpath = PerTestClasspathLoader.load(repoRoot, module.id(), classpathFile);
+        if (!classpath.warnings().isEmpty()) {
+            warnings.addAll(classpath.warnings());
+            return;
+        }
+
+        try {
+            Optional<PerTestModuleEvidence> result = PerTestRunner.run(module.id(), repoRoot,
+                classpath.classPathElements(), classpath.codePaths(), targetClasses);
+            result.ifPresent(evidence::add);
+        } catch (PerTestCollectionException e) {
+            warnings.add(new AnalysisReason("PER_TEST_COLLECTION_FAILED",
+                "Module '" + module.id() + "' per-test coverage collection failed (" + e.getMessage()
+                    + "); per-test evidence skipped for this module.", null, module.id()));
+        }
     }
 
     private static List<String> targetClassGlobs(ModuleDefinition module, List<ChangedFile> changedFiles) {

@@ -77,8 +77,10 @@ public final class PerTestDriver {
         EntryPoint entry = new EntryPoint();
         AnalysisResult result = entry.execute(new File(reportDir), options, plugins, env);
 
+        // No diagnostic is printed here: PerTestRunner discards this process's
+        // stdout/stderr (a failed run's exit code is all it observes), so a
+        // message here would go nowhere.
         if (result.getError().isPresent()) {
-            System.err.println("PerTestDriver failed: " + result.getError().get());
             System.exit(1);
         }
     }
