@@ -81,6 +81,33 @@ rationale (suppressions) carry an explicit `reason` field instead.
   for JavaParser symbol solving. Absent or partial classpath degrades oracle
   findings to at most MEDIUM/INCONCLUSIVE (D-17); it never silently upgrades.
 
+## L2 per-test evidence (D-46/D-55)
+
+- `--per-test-report` — collects per-test line coverage for changed
+  production classes via an embedded PIT (`org.pitest:pitest*:1.15.8`,
+  shaded into `coverdict.jar` itself - never a separate install, D-51).
+  Diff-scoped automatically: only classes with changed, mapped source lines
+  are targeted. Requires a diff mode; rejected under `--no-vcs`, exit 2
+  (same pattern as `--findings-scope changed`). **Runs the module's entire
+  test suite once** (PIT owns test discovery; there is no way to narrow it
+  to only the tests that might cover the changed lines without already
+  knowing the answer) - budget for that cost, not just the diff size. D-46:
+  evidence only, `perTest` in the output never adds a `Finding` by itself.
+- `--per-test-classpath <id>=<file>` — the exact runtime classpath PIT needs
+  to run that module's tests: one entry per line, same list-file shape as
+  `--classpath` but a different purpose (that one is an optional JavaParser
+  aid; this one is required input PIT cannot run without). Directory entries
+  double as PIT's "code under test" paths; a module with changed classes but
+  no bound `--per-test-classpath` gets a `PER_TEST_CLASSPATH_MISSING`
+  warning, not an error - L2 evidence is always optional (hard rule 3a still
+  applies: absent evidence is visible, never silently green).
+- A module whose bytecode PIT's bundled ASM cannot read (D-53), whose
+  process times out, or whose classpath is otherwise unusable: warned as
+  `PER_TEST_COLLECTION_FAILED`, that module's `perTest` entry is simply
+  missing - never blocks the rest of the run.
+- `perTest` is entirely absent from the output JSON (not present-but-empty)
+  unless `--per-test-report` was set.
+
 ## Exclusions (D-05)
 
 - `--coverage-exclusions <glob[,glob...]>` — `sonar.coverage.exclusions`

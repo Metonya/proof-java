@@ -407,3 +407,34 @@ eklenmiş bir sürümü) çıkarsa, ya da coverdict test/testFixtures
 kaynaklarının **tamamını** (kaç modül olursa olsun) kendi `javac`'ıyla
 `--release`'i main ile eşleştirerek yeniden derleyen genel bir mekanizma
 kurarsa, bu engel kalkar. Şu an için M2'nin kapsamı dışında.
+
+**Güncelleme (2026-08-25, D-54):** Bu not kısmen doğrulandı, kısmen
+yanlış çıktı — "gelecekte daha yeni bir PIT" fikri bu oturumda gerçekten
+denendi.
+
+## 11. PIT 1.25.9 denemesi — ASM tavanı gerçekten kalkıyor, ama yeni bir sıfır-blok sorunu var
+
+`org.pitest.reloc.asm.Opcodes` sabitleri doğrulandı: 1.15.8 `V22=66`'da
+bitiyor, 1.25.9 `V25=69`'dan `V27=71`'e kadar taşıyor — yani §10'un
+ASM parse engeli **gerçekten kalkmış**.
+
+**JDK 17 sürücüsü + Java 25 bytecode (`pit-run-129-jdk17-trimmed.log`):**
+Beklenen sonuç — JDK 17 runtime'ı Java 25 sınıflarını hiç yükleyemiyor
+(`class file version 69.0 > 61.0`), bu PIT'le değil çalıştırma JDK'sıyla
+ilgili, `Found 0 tests`. PIT'in kendisi burada hatasız.
+
+**JDK 25 sürücüsü + Java 25 bytecode, gerçek test classpath'i
+(`pit-run-129-jdk25-trimmed.log`):** ASM engeli yok, `Found 808 tests` —
+test keşfi ve koşumu **gerçekten çalıştı**. Ama exporter
+`totalBlocks=0 matchedBlocks=0 classesSeen=0` — kapsama ajanı hiçbir
+blok kaydetmedi. Ne bir istisna ne bir hata mesajı var; sessizce boş.
+Kök neden bu oturumda izole edilemedi.
+
+**Sonuç:** D-53'ün "daha yeni bir PIT sürümü bu engeli kaldırabilir"
+notu **kısmen doğru** — ASM tavanı gerçekten 1.25.9'da kalkıyor — ama
+**yeni, farklı, çözülmemiş bir engelle** karşılaşıldı. Ayrıca 1.25.9,
+`ReportOptions.setUseClasspathJar()`/`useClasspathJar()`'ı tamamen
+kaldırmış ve `DefaultCoverageGenerator`'ın constructor'ına zorunlu bir
+`TestStatListener` parametresi eklemiş — coverdict'in doğrudan çağırdığı
+API'de gerçek, doğrulanmış bir kırılma, sıfır-blok sorunundan bağımsız.
+D-54 bu bulguları karar olarak kaydediyor; M2/L2 için 1.15.8'de kalınıyor.

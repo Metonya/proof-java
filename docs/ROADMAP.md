@@ -464,7 +464,17 @@ failure.
   bounded exception (dropwizard), and one real, documented ceiling
   (junit-framework) that ROADMAP's kill criterion already anticipates -
   "cut for that repo's shape." Not a mechanism failure: the calling model
-  and all four gates hold everywhere PIT can read the bytecode.
+  and all four gates hold everywhere PIT can read the bytecode. D-54:
+  PIT 1.25.9 lifts the ASM ceiling but hits its own unresolved zero-block
+  failure under JDK25 - staying on 1.15.8.
+
+  **CLI evidence layer done (D-55):** `--per-test-report` calls
+  `EntryPoint.execute()` (not the coverage-phase bypass D-47/D-51 implied -
+  that hit an unreproduced minion crash) from a dedicated `PerTestDriver`
+  subprocess `PerTestRunner` force-kills the moment `CoverdictLineExporter`
+  writes its output file or a timeout elapses, whichever first - never
+  waits for PIT's own mutation phase. Verified end-to-end against
+  coverdict's own repo. Full three-stage finding productization is still M4.
 - **M3 — First build integration + CI.** Ship Maven or Gradle first as decided
   from M0 dogfood, then the other only on demand. Add report provenance manifest,
   changed-findings baseline, quality-gate exit codes, and evaluate SARIF (O-02).
@@ -474,6 +484,8 @@ failure.
   alone never emits a finding. Gate on M2 Faz 2 passing and ≥ 90% precision
   on the combined three-stage HIGH-confidence findings, not on L2 in
   isolation. No deletion suggestion follows from coverage identity alone.
+  The CLI evidence layer (`--per-test-report`, D-55) is done; this milestone
+  is the three-stage finding logic consuming it.
 - **M5 — Mutation integration.** Start method-centric with
   `PSEUDO_TESTED_METHOD`; covering tests are context, not proof that one test is
   worthless. Resolve diff scoping first (O-05/D-12). IDE surfaces render JSON.

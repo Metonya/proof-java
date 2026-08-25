@@ -971,6 +971,71 @@ recompile-to-match-main-release mechanism in coverdict itself, could lift
 it - but out of M2's scope. Evidence: `validation/runs/pit-spike/
 junit-framework/`.
 
+**D-54 · PIT 1.25.9 lifts D-53's ASM ceiling but hits a new, unresolved
+zero-block failure under it - staying on 1.15.8** (2026-08-25)
+`org.pitest.reloc.asm.Opcodes` confirms the ASM bump is real: 1.15.8 tops
+out at `V22=66`, 1.25.9 adds `V25=69` through `V27=71`. But driving 1.25.9's
+coverage phase under JDK 25 (this session's ad hoc probe, not a corpus
+repo) produced `totalBlocks=0 classesSeen=0` - the agent ran, discovered
+tests, and returned nothing. Not reproduced under JDK 17 with JDK 17
+bytecode (coverdict's own shape); the failure is specific to the
+JDK25-driver combination D-53 needed. 1.25.9 also breaks API compatibility
+coverdict would depend on: `ReportOptions.setUseClasspathJar()`/
+`useClasspathJar()` is removed outright, and `DefaultCoverageGenerator`'s
+constructor gains a mandatory `TestStatListener` parameter - a real,
+verified cost independent of the zero-block finding. D-53's "a future PIT
+release could lift this" is narrowed: 1.25.9 is that release for the ASM
+ceiling specifically, but introduces its own blocker, so M2's L2 stays
+pinned to 1.15.8 (`pitest.version` in the parent pom) until both are
+resolved. Not corpus-tested; a repo-level verification is separate work.
+
+**D-55 · L2's CLI wiring calls `EntryPoint.execute()`, not
+`DefaultCoverageGenerator` directly - the coverage-phase bypass D-47/D-51
+implied does not work** (2026-08-25)
+A direct call (`DefaultCoverageGenerator.calculateCoverage()`, reading
+`CoverageData.createCoverage()` off the return value, skipping
+`CoverageExporterFactory` entirely) is API-correct by PIT's own bytecode
+and was expected to sidestep the mutation-phase hang note 2 of the CLI-
+wiring plan flagged. Empirically it does not: the coverage minion PIT
+spawns exits immediately with `UNKNOWN_ERROR` and zero captured output,
+root cause not isolated despite reproducing `EntryPoint`'s exact agent-
+creation sequence by hand. `EntryPoint.execute()` - D-51's already-proven
+calling model - works when two things are added beyond what the spike
+needed: `ReportOptions.setMutators(List.of("DEFAULTS"))` (a narrow set like
+`NULL_RETURNS` too often finds zero mutable points on a diff-scoped
+target, and PIT skips the coverage phase entirely when its mutation
+pre-scan finds nothing - confirmed by reproducing exactly that skip), and
+`ReportOptions.setExportLineCoverage(true)` (silently gates whether
+`CoverageExporter.recordCoverage()` runs at all - its absence was the
+actual reason an early attempt produced no output, not a wiring bug).
+
+The real fix for note 2's hang is process-level, not API-level:
+`PerTestRunner` spawns a dedicated `PerTestDriver` subprocess, polls for
+`CoverdictLineExporter`'s output file (written the moment `recordCoverage()`
+fires, before any mutation work starts), and force-destroys the process the
+moment that file appears or a 120s timeout elapses - whichever first. This
+also resolves D-47's "coverdict must ship a small jar on PIT's tool
+classpath": since `EntryPoint` is called in-process by `PerTestDriver`
+(itself launched from `coverdict.jar`), the exporter is compiled directly
+into `coverdict-cli` and registered via `META-INF/services/
+org.pitest.coverage.CoverageExporterFactory` in the shaded jar - no
+separate artifact. Verified end-to-end against coverdict's own repo
+(`RepoPaths.java`, 3 real per-test entries, `9.8`s wall time including a
+full 214-class test-suite discovery/execution PIT itself performs).
+
+Shading requires `maven-shade-plugin`'s `ServicesResourceTransformer`
+(`coverdict-cli/pom.xml`): `pitest`'s own JUnit4 `TestPluginFactory`
+registration and `pitest-junit5-plugin`'s JUnit5 one collide by filename in
+`META-INF/services`, and the default shade behavior keeps only one -
+verified by unzipping the built jar and confirming both survive.
+
+The minion PIT spawns needs `org.pitest.coverage.execute.CoverageMinion`
+and the exporter class on its own `-cp` - built from `ReportOptions.
+getClassPathElements()`, not the driver JVM's classpath - so `PerTestRunner`
+appends coverdict's own jar location (self-located via
+`getProtectionDomain().getCodeSource().getLocation()`) to the classpath
+file it writes for the module under analysis.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not
