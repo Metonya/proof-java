@@ -21,6 +21,7 @@ import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.expr.UnaryExpr;
 import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
 
+import dev.coverdict.analysis.model.RuleIds;
 import dev.coverdict.analysis.model.Confidence;
 import dev.coverdict.analysis.model.Severity;
 
@@ -32,7 +33,7 @@ import dev.coverdict.analysis.model.Severity;
  */
 final class TautologicalOracleRule {
 
-    static final String RULE_ID = "TAUTOLOGICAL_ORACLE";
+    static final String RULE_ID = RuleIds.TAUTOLOGICAL_ORACLE;
     static final Severity SEVERITY = Severity.WARNING;
     static final String SUGGESTED_ACTION =
         "This assertion holds for any implementation; assert on a value produced by the code under test.";

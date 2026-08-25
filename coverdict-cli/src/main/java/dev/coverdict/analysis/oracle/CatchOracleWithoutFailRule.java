@@ -16,13 +16,14 @@ import com.github.javaparser.ast.stmt.ThrowStmt;
 import com.github.javaparser.ast.stmt.TryStmt;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 
+import dev.coverdict.analysis.model.RuleIds;
 import dev.coverdict.analysis.model.Confidence;
 import dev.coverdict.analysis.model.Severity;
 
 /** docs/rules/CATCH_ORACLE_WITHOUT_FAIL.md */
 final class CatchOracleWithoutFailRule {
 
-    static final String RULE_ID = "CATCH_ORACLE_WITHOUT_FAIL";
+    static final String RULE_ID = RuleIds.CATCH_ORACLE_WITHOUT_FAIL;
     static final Severity SEVERITY = Severity.WARNING;
     static final String SUGGESTED_ACTION =
         "An exception thrown here passes silently; add fail() after the invocation inside try, "

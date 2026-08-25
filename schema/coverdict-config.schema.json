@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coverdict.dev/schema/coverdict-config.schema.json",
+  "title": "coverdict configuration file",
+  "description": "Repo-level configuration (docs/M0-CLI-INPUT.md). Option precedence: command line > config file > documented defaults. Strict JSON: no comments, no unknown keys. Entries that need rationale carry an explicit reason field rather than a comment.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "languageLevel": {
+      "description": "Java language level for JavaParser. CLI --language-level overrides this.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 25
+    },
+    "encoding": {
+      "description": "Charset used to read test sources. CLI --encoding overrides this.",
+      "type": "string",
+      "minLength": 1
+    },
+    "coverageExclusions": {
+      "description": "sonar.coverage.exclusions globs (D-05). CLI --coverage-exclusions overrides this list entirely; the two are never merged.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "findingsScope": {
+      "description": "Which test sources the L0 oracle rules scan. CLI --findings-scope overrides this.",
+      "enum": [
+        "all",
+        "changed"
+      ]
+    },
+    "customOracles": {
+      "description": "fully.qualified.Type#methodPattern entries; glob * is allowed in the method part only (docs/rules/README.md). A resolved call matching an entry is an oracle.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)*#[A-Za-z0-9_$*]+$"
+      }
+    },
+    "suppressions": {
+      "description": "Suppressed findings are not listed but are counted in a SUPPRESSED_FINDINGS warning, so they stay visible (hard rule 3a).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rule",
+          "pathGlob",
+          "reason"
+        ],
+        "properties": {
+          "rule": {
+            "enum": [
+              "NO_RECOGNIZED_ORACLE",
+              "TAUTOLOGICAL_ORACLE",
+              "CATCH_ORACLE_WITHOUT_FAIL",
+              "NULL_CHECK_ONLY"
+            ]
+          },
+          "pathGlob": {
+            "type": "string",
+            "minLength": 1
+          },
+          "testMethodPattern": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

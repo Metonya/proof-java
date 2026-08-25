@@ -576,6 +576,42 @@ affected junit-vintage-engine files never name `Events` in an import either,
 so whether a classpath actually resolves that chain is an open measurement,
 not a fixed bug. Re-measuring it is corpus work, not this change.
 
+**D-40 · `--config` implemented with a hand-written strict reader, not the
+schema validator** (2026-08-25)
+`M0-CLI-INPUT.md` specified `--config <path>` (falling back to
+`coverdict.config.json` at the repo root) in M0 and it was never built - which
+also silently blocked `customOracles` and `suppressions`, since both are
+config-file features. The gap was not recorded anywhere; only an incidental
+javadoc aside in `JacocoXmlParser` mentioned it.
+
+`schema/coverdict-config.schema.json` is checked in as the contract, but the
+**reader is hand-written against `jackson-core`** rather than pulling
+`json-schema-validator` (today test-scope) into the shipped jar: hard rule 9
+makes every runtime dependency a licensing and inventory obligation, and that
+is a poor trade for one small fixed-shape file. The risk this creates - schema
+and parser drifting apart - is covered by
+`ConfigLoaderTest.theCheckedInSchemaAndTheHandWrittenReaderAgree`, which runs
+the same documents through both and requires identical accept/reject. That
+guard **caught a real drift on its first run** (the schema restricted
+`suppressions.rule` to the four rule ids, the reader accepted any string),
+which is why `RuleIds` now exists: one public set the four rule classes, the
+reader, and the schema's enum all resolve against.
+
+Reading is deliberately intolerant - unknown key, duplicate key, wrong value
+type, malformed JSON, a `customOracles` entry that is not
+`Type#methodPattern`, or a suppression missing its mandatory `reason` are all
+exit 2. A misspelled `supressions` that silently suppressed nothing is exactly
+the failure hard rule 3a exists to prevent.
+
+Precedence (`M0-CLI-INPUT.md`: command line > config file > defaults) is
+implemented by asking picocli's `ParseResult.hasMatchedOption` whether the user
+actually typed the option, since the bound field alone cannot distinguish a
+typed value from a default. `coverageExclusions` is **replaced, never merged**
+with `--coverage-exclusions`: merging two half-lists would produce a third list
+nobody authored, against D-05's single-authored-set model. An explicitly empty
+list in the config is preserved as "no exclusions" and stays distinct from
+"unset".
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

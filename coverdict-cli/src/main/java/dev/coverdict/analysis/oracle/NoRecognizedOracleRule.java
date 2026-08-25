@@ -5,13 +5,14 @@ import java.util.Optional;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 
+import dev.coverdict.analysis.model.RuleIds;
 import dev.coverdict.analysis.model.Confidence;
 import dev.coverdict.analysis.model.Severity;
 
 /** docs/rules/NO_RECOGNIZED_ORACLE.md */
 final class NoRecognizedOracleRule {
 
-    static final String RULE_ID = "NO_RECOGNIZED_ORACLE";
+    static final String RULE_ID = RuleIds.NO_RECOGNIZED_ORACLE;
     static final Severity SEVERITY = Severity.WARNING;
     static final String SUGGESTED_ACTION =
         "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.";

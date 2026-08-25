@@ -6,13 +6,14 @@ import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 
+import dev.coverdict.analysis.model.RuleIds;
 import dev.coverdict.analysis.model.Confidence;
 import dev.coverdict.analysis.model.Severity;
 
 /** docs/rules/NULL_CHECK_ONLY.md */
 final class NullCheckOnlyRule {
 
-    static final String RULE_ID = "NULL_CHECK_ONLY";
+    static final String RULE_ID = RuleIds.NULL_CHECK_ONLY;
     static final Severity SEVERITY = Severity.INFO;
     static final String SUGGESTED_ACTION =
         "The only verification is non-nullness; consider asserting on the value's content. Advisory.";

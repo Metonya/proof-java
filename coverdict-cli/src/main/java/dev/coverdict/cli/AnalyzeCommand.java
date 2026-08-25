@@ -34,6 +34,9 @@ import dev.coverdict.analysis.model.ResolvedSourceFile;
 import dev.coverdict.analysis.oracle.ClasspathLoader;
 import dev.coverdict.analysis.oracle.OracleRuleEngine;
 import dev.coverdict.analysis.oracle.OracleScanResult;
+import dev.coverdict.config.ConfigException;
+import dev.coverdict.config.ConfigLoader;
+import dev.coverdict.config.CoverdictConfig;
 import dev.coverdict.analysis.report.ModuleInput;
 import dev.coverdict.analysis.report.NewCodeCoverage;
 import dev.coverdict.analysis.report.ReportInput;
@@ -98,6 +101,9 @@ class AnalyzeCommand implements Callable<Integer> {
     @Option(names = "--test-roots", description = "Repeatable <id>=<dir>[,<dir>...]. Default per module: <root>/src/test/java.")
     private List<String> testRootsArgs = new ArrayList<>();
 
+    @Option(names = "--config", description = "Config file path. Default: coverdict.config.json at the repo root when present. Precedence: command line > config file > defaults.")
+    private String configOption;
+
     @Option(names = "--classpath", description = "Repeatable <id>=<file>, where <file> lists one jar path per line for JavaParser symbol solving (D-17: never silently upgrades confidence).")
     private List<String> classpathArgs = new ArrayList<>();
 
@@ -128,6 +134,16 @@ class AnalyzeCommand implements Callable<Integer> {
         }
         String diffMode = selectedDiffMode();
 
+        Path repoRoot = Path.of(repoOption != null ? repoOption : System.getProperty("user.dir"));
+        CoverdictConfig config;
+        try {
+            config = ConfigLoader.load(repoRoot, configOption);
+            applyConfigPrecedence(config);
+        } catch (ConfigException e) {
+            spec.commandLine().getErr().println("coverdict: " + e.getMessage());
+            return ExitCode.INVALID_INPUT.value(); // no JSON written - the configuration itself was invalid
+        }
+
         if (!FINDINGS_SCOPE_ALL.equals(findingsScopeOption) && !FINDINGS_SCOPE_CHANGED.equals(findingsScopeOption)) {
             spec.commandLine().getErr().println("coverdict: --findings-scope must be 'all' or 'changed', got: " + findingsScopeOption);
             return ExitCode.INVALID_INPUT.value();
@@ -138,7 +154,6 @@ class AnalyzeCommand implements Callable<Integer> {
             return ExitCode.INVALID_INPUT.value();
         }
 
-        Path repoRoot = Path.of(repoOption != null ? repoOption : System.getProperty("user.dir"));
         List<String> exclusions = exclusionsArg == null || exclusionsArg.isBlank()
             ? List.of()
             : Arrays.stream(exclusionsArg.split(",")).map(String::trim).filter(s -> !s.isBlank()).toList();
@@ -172,6 +187,34 @@ class AnalyzeCommand implements Callable<Integer> {
         spec.commandLine().getOut().println("verdict written to " + outOption);
 
         return doc.complete() ? ExitCode.COMPLETE.value() : ExitCode.INCOMPLETE.value();
+    }
+
+    /**
+     * M0-CLI-INPUT.md's precedence rule: command line &gt; config file &gt;
+     * documented defaults. picocli has already applied the CLI value or the
+     * default, and cannot tell those two apart on its own - so the config
+     * value is applied only when the parse result shows the user did not
+     * actually type the option. {@code coverageExclusions} is replaced, never
+     * merged: two half-lists from two sources would be a third list nobody
+     * wrote down (D-05 keeps exclusions a single authored set).
+     */
+    private void applyConfigPrecedence(CoverdictConfig config) {
+        if (config.languageLevel() != null && notTypedOnCommandLine("--language-level")) {
+            languageLevel = config.languageLevel();
+        }
+        if (config.encoding() != null && notTypedOnCommandLine("--encoding")) {
+            encoding = config.encoding();
+        }
+        if (config.findingsScope() != null && notTypedOnCommandLine("--findings-scope")) {
+            findingsScopeOption = config.findingsScope();
+        }
+        if (config.coverageExclusions() != null && notTypedOnCommandLine("--coverage-exclusions")) {
+            exclusionsArg = String.join(",", config.coverageExclusions());
+        }
+    }
+
+    private boolean notTypedOnCommandLine(String optionName) {
+        return !spec.commandLine().getParseResult().hasMatchedOption(optionName);
     }
 
     /** Exactly one of {@link #noVcs}/{@link #uncommitted}/{@link #baseRefOption} is set by the time this is called - {@link #call} already validated that. */
