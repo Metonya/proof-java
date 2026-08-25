@@ -54,6 +54,7 @@ gate (SonarQube) answers too late and only partially. Full argument:
 | `docs/VISION.md` | problem, audience, gap analysis |
 | `docs/DECISIONS.md` | settled decisions, rejected alternatives, open questions |
 | `docs/ROADMAP.md` | milestones, exit criteria, later sketches, kill criteria |
+| `docs/CLI-REFERENCE.md` | what each `analyze` flag does, why, and what it changes in the output |
 | `docs/RESEARCH.md` | distilled evidence: measurements, models, licenses, competitive scan |
 | `docs/M0-*.md` | closed M0 gate artifacts: persona/dogfood, CLI input model, validation manifest |
 | `docs/SECURITY-POLICY.md`, `docs/RELEASE-CONTRACT.md` | untrusted-input policy; what a release ships |
