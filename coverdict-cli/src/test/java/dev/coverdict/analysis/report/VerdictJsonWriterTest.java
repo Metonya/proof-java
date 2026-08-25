@@ -149,6 +149,33 @@ class VerdictJsonWriterTest {
         assertTrue(doc.at("/perTest").isMissingNode(), "perTest must be omitted, not written as null");
     }
 
+    private VerdictDocument documentWithMutation() {
+        VerdictDocument base = workingTreeDocument();
+        dev.coverdict.analysis.mutation.Mutant survived = new dev.coverdict.analysis.mutation.Mutant(
+            "org.pitest.mutationtest.engine.gregor.mutators.returns.NullReturnValsMutator", 40, "SURVIVED", List.of());
+        dev.coverdict.analysis.mutation.MutatedMethod method = new dev.coverdict.analysis.mutation.MutatedMethod(
+            "com.demo.core.IbanValidator", "validate", "(Ljava/lang/String;)Z", 40, 40, List.of(survived));
+        dev.coverdict.analysis.mutation.MutationModuleEvidence moduleEvidence =
+            new dev.coverdict.analysis.mutation.MutationModuleEvidence("root", List.of(method), List.of());
+        return new VerdictDocument(base.schemaVersion(), base.toolVersion(), base.complete(), base.incompleteReasons(),
+            base.languageLevel(), base.encoding(), base.exclusions(), base.modules(), base.diffMode(),
+            base.findingsScope(), base.identity(), base.overallMetrics(), base.newCode(), base.changedFiles(),
+            base.findings(), base.warnings(), base.perTest(), List.of(moduleEvidence));
+    }
+
+    @Test
+    void mutationDocumentValidatesAgainstTheSchema() throws IOException {
+        assertValid(documentWithMutation());
+    }
+
+    @Test
+    void mutationFieldIsEntirelyAbsentWhenNull() throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        VerdictJsonWriter.write(out, workingTreeDocument());
+        JsonNode doc = toNode(out.toByteArray());
+        assertTrue(doc.at("/mutation").isMissingNode(), "mutation must be omitted, not written as null");
+    }
+
     @Test
     void noVcsCompleteDocumentValidatesAgainstTheSchema() throws IOException {
         assertValid(noVcsCompleteDocument());

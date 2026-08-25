@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -28,9 +29,13 @@ import dev.coverdict.analysis.metrics.ExclusionFilter;
 import dev.coverdict.analysis.metrics.MetricSet;
 import dev.coverdict.analysis.metrics.MetricsEngine;
 import dev.coverdict.analysis.model.AnalysisReason;
+import dev.coverdict.analysis.model.Finding;
 import dev.coverdict.analysis.model.ModuleDefinition;
 import dev.coverdict.analysis.model.RepoPaths;
 import dev.coverdict.analysis.model.ResolvedSourceFile;
+import dev.coverdict.analysis.mutation.MutationCollector;
+import dev.coverdict.analysis.mutation.MutationModuleEvidence;
+import dev.coverdict.analysis.mutation.MutationRuleEngine;
 import dev.coverdict.analysis.oracle.ClasspathLoader;
 import dev.coverdict.analysis.oracle.OracleRuleEngine;
 import dev.coverdict.analysis.oracle.OracleScanOptions;
@@ -115,6 +120,15 @@ class AnalyzeCommand implements Callable<Integer> {
     @Option(names = "--per-test-classpath", description = "Repeatable <id>=<file>, where <file> lists PIT's exact test runtime classpath for that module, one entry per line (module output directories and dependency jars) - distinct from --classpath, which is an optional JavaParser aid.")
     private List<String> perTestClasspathArgs = new ArrayList<>();
 
+    @Option(names = "--mutation-report", description = "Collect L3 mutation evidence for changed production classes via PIT (D-56: RETURNS+VOID_METHOD_CALLS gregor mutators; PSEUDO_TESTED_METHOD is the only finding this evidence feeds). Requires a diff mode; rejected under --no-vcs.")
+    private boolean mutationReport;
+
+    @Option(names = "--mutation-classpath", description = "Repeatable <id>=<file>, same list-file shape as --per-test-classpath - a separate flag because L3 mutation evidence is a separate, independently opt-in evidence layer (D-56).")
+    private List<String> mutationClasspathArgs = new ArrayList<>();
+
+    @Option(names = "--mutation-timeout", defaultValue = "900", description = "Wall-clock budget in seconds for one module's mutation run before it is force-killed (default 900s = 15 minutes, D-56).")
+    private long mutationTimeoutSeconds;
+
     @Option(names = "--language-level", defaultValue = "17", description = "Java language level for JavaParser (oracle critic) and recorded as provenance.")
     private int languageLevel;
 
@@ -142,7 +156,8 @@ class AnalyzeCommand implements Callable<Integer> {
      */
     private record Invocation(Path repoRoot, String diffMode, CoverdictConfig config, List<String> exclusions,
                                List<ModuleDefinition> modules, Map<String, List<String>> reportPathsById,
-                               Map<String, String> classpathFilesById, Map<String, String> perTestClasspathFilesById) {
+                               Map<String, String> classpathFilesById, Map<String, String> perTestClasspathFilesById,
+                               Map<String, String> mutationClasspathFilesById) {
     }
 
     /** @throws CliUsageException or ConfigException on any invalid invocation - both exit 2, no JSON written. */
@@ -153,6 +168,7 @@ class AnalyzeCommand implements Callable<Integer> {
         applyConfigPrecedence(config);
         validateFindingsScope(diffMode);
         validatePerTestReport(diffMode);
+        validateMutationReport(diffMode);
 
         List<String> exclusions = exclusionsArg == null || exclusionsArg.isBlank()
             ? List.of()
@@ -162,9 +178,10 @@ class AnalyzeCommand implements Callable<Integer> {
         List<ModuleDefinition> modules = buildModuleDefinitions(reportPathsById.keySet());
         Map<String, String> classpathFilesById = parseClasspathArgs(modules);
         Map<String, String> perTestClasspathFilesById = parsePerTestClasspathArgs(modules);
+        Map<String, String> mutationClasspathFilesById = parseMutationClasspathArgs(modules);
 
         return new Invocation(repoRoot, diffMode, config, exclusions, modules, reportPathsById, classpathFilesById,
-            perTestClasspathFilesById);
+            perTestClasspathFilesById, mutationClasspathFilesById);
     }
 
     /** @throws CliUsageException unless exactly one of --no-vcs/--uncommitted/--base is set. */
@@ -192,6 +209,13 @@ class AnalyzeCommand implements Callable<Integer> {
     private void validatePerTestReport(String diffMode) {
         if (perTestReport && DIFF_MODE_NO_VCS.equals(diffMode)) {
             throw new CliUsageException("--per-test-report requires a diff mode (--uncommitted or --base <ref>), not --no-vcs.");
+        }
+    }
+
+    /** @throws CliUsageException when --mutation-report is combined with --no-vcs (same reason as --per-test-report: no diff, no targets). */
+    private void validateMutationReport(String diffMode) {
+        if (mutationReport && DIFF_MODE_NO_VCS.equals(diffMode)) {
+            throw new CliUsageException("--mutation-report requires a diff mode (--uncommitted or --base <ref>), not --no-vcs.");
         }
     }
 
@@ -349,6 +373,22 @@ class AnalyzeCommand implements Callable<Integer> {
         return byId;
     }
 
+    /** @throws CliUsageException on malformed {@code --mutation-classpath} syntax, or an id that names no declared module (same pattern as {@link #parsePerTestClasspathArgs}). */
+    private Map<String, String> parseMutationClasspathArgs(List<ModuleDefinition> modules) {
+        Map<String, String> byId = parseIdValue(mutationClasspathArgs);
+        if (byId.isEmpty()) {
+            return byId;
+        }
+        java.util.Set<String> declaredIds = modules.stream().map(ModuleDefinition::id).collect(Collectors.toSet());
+        for (String id : byId.keySet()) {
+            if (!declaredIds.contains(id)) {
+                throw new CliUsageException("--mutation-classpath id '" + id + "' does not match any declared --module id "
+                    + declaredIds + ".");
+            }
+        }
+        return byId;
+    }
+
     /** @throws AnalysisException when the overall-coverage evidence itself is bad (exit 3, structured incomplete document, nothing preserved). */
     private VerdictDocument analyze(Invocation inv) {
         Path repoRoot = inv.repoRoot();
@@ -457,11 +497,26 @@ class AnalyzeCommand implements Callable<Integer> {
                 allWarnings.addAll(perTestResult.warnings());
             }
 
+            List<Finding> allFindings = new ArrayList<>(scan.findings());
+            List<MutationModuleEvidence> mutation = null;
+            if (mutationReport) {
+                MutationCollector.Result mutationResult = MutationCollector.collect(repoRoot, evidencedModules,
+                    classification.changedFiles(), inv.mutationClasspathFilesById(),
+                    Duration.ofSeconds(mutationTimeoutSeconds));
+                mutation = mutationResult.modules();
+                allWarnings.addAll(mutationResult.warnings());
+
+                MutationRuleEngine.Result ruleResult = MutationRuleEngine.evaluate(evidencedModules,
+                    classification.changedFiles(), mutation);
+                allFindings.addAll(ruleResult.findings());
+                allWarnings.addAll(ruleResult.warnings());
+            }
+
             boolean complete = allIncompleteReasons.isEmpty();
             return new VerdictDocument(version.schemaVersion(), version.version(), complete,
                 allIncompleteReasons, languageLevel, encoding, exclusions, moduleInputs,
                 diffMode, findingsScopeOption, diffResult.identity(), overall, NewCodeCoverage.available(newCode),
-                classification.changedFiles(), scan.findings(), allWarnings, perTest);
+                classification.changedFiles(), allFindings, allWarnings, perTest, mutation);
         } catch (AnalysisException e) {
             // findings-scope=all does not need the diff that just failed - real
             // oracle evidence is still worth reporting alongside the failure.

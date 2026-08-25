@@ -2,6 +2,7 @@ package dev.coverdict.analysis.mutation;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.List;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -14,6 +15,13 @@ import dev.coverdict.analysis.model.AnalysisReason;
  * PerTestJsonWriter}'s style. This is the listener-to-collector wire format
  * {@link CoverdictMutationListener} writes and {@link MutationJsonReader}
  * reads back in the parent process - never the verdict schema itself.
+ *
+ * <p>{@link #writeMethods} is also called directly by {@code
+ * dev.coverdict.analysis.report.VerdictJsonWriter} (D-55's dedup pattern for
+ * {@code PerTestJsonWriter.writeEntries}): the wire format here is unsorted
+ * (already deterministic from {@link MutationResultAccumulator}'s {@code
+ * TreeMap}), while the verdict schema's own ordering contract means the
+ * verdict writer sorts its module/method lists before calling in.
  */
 public final class MutationJsonWriter {
 
@@ -27,9 +35,7 @@ public final class MutationJsonWriter {
             g.writeStartObject();
             g.writeStringField("moduleId", evidence.moduleId());
             g.writeArrayFieldStart("methods");
-            for (MutatedMethod method : evidence.methods()) {
-                writeMethod(g, method);
-            }
+            writeMethods(g, evidence.methods());
             g.writeEndArray();
             g.writeArrayFieldStart("warnings");
             for (AnalysisReason warning : evidence.warnings()) {
@@ -37,6 +43,12 @@ public final class MutationJsonWriter {
             }
             g.writeEndArray();
             g.writeEndObject();
+        }
+    }
+
+    public static void writeMethods(JsonGenerator g, List<MutatedMethod> methods) throws IOException {
+        for (MutatedMethod method : methods) {
+            writeMethod(g, method);
         }
     }
 

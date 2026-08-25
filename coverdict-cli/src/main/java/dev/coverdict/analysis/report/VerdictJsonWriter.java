@@ -18,6 +18,9 @@ import dev.coverdict.analysis.model.AnalysisReason;
 import dev.coverdict.analysis.model.ChangedFile;
 import dev.coverdict.analysis.model.Finding;
 import dev.coverdict.analysis.model.LineRange;
+import dev.coverdict.analysis.mutation.MutatedMethod;
+import dev.coverdict.analysis.mutation.MutationJsonWriter;
+import dev.coverdict.analysis.mutation.MutationModuleEvidence;
 import dev.coverdict.analysis.pertest.PerTestEntry;
 import dev.coverdict.analysis.pertest.PerTestJsonWriter;
 import dev.coverdict.analysis.pertest.PerTestModuleEvidence;
@@ -115,6 +118,10 @@ public final class VerdictJsonWriter {
                 writePerTest(g, doc.perTest());
             }
 
+            if (doc.mutation() != null) {
+                writeMutation(g, doc.mutation());
+            }
+
             g.writeEndObject();
         }
     }
@@ -147,6 +154,36 @@ public final class VerdictJsonWriter {
     private static List<PerTestEntry> sortedPerTestEntries(List<PerTestEntry> entries) {
         return entries.stream()
             .sorted(Comparator.comparing(PerTestEntry::className).thenComparing(PerTestEntry::methodName))
+            .toList();
+    }
+
+    /** {@code mutation} is entirely opt-in (D-46/D-56): only written when {@code --mutation-report} was set. */
+    private static void writeMutation(JsonGenerator g, List<MutationModuleEvidence> mutationModules) throws IOException {
+        g.writeObjectFieldStart("mutation");
+        g.writeStringField("engine", "pitest");
+        g.writeStringField("engineVersion", ToolVersion.read().pitestVersion());
+        g.writeArrayFieldStart("modules");
+        List<MutationModuleEvidence> sorted = mutationModules.stream()
+            .sorted(Comparator.comparing(MutationModuleEvidence::moduleId))
+            .toList();
+        for (MutationModuleEvidence module : sorted) {
+            g.writeStartObject();
+            g.writeStringField("id", module.moduleId());
+            g.writeArrayFieldStart("methods");
+            MutationJsonWriter.writeMethods(g, sortedMutatedMethods(module.methods()));
+            g.writeEndArray();
+            g.writeEndObject();
+        }
+        g.writeEndArray();
+        g.writeEndObject();
+    }
+
+    /** Schema ordering rule: mutation methods sort by (className, methodName, methodDescription) - the shared writer itself stays unsorted (D-56). */
+    private static List<MutatedMethod> sortedMutatedMethods(List<MutatedMethod> methods) {
+        return methods.stream()
+            .sorted(Comparator.comparing(MutatedMethod::className)
+                .thenComparing(MutatedMethod::methodName)
+                .thenComparing(MutatedMethod::methodDescription))
             .toList();
     }
 
