@@ -91,7 +91,18 @@ public final class OracleRuleEngine {
 
         findings.sort(Comparator.comparing(Finding::path).thenComparingInt(Finding::startLine)
             .thenComparing(Finding::rule).thenComparing(Finding::fingerprint));
-        return new OracleScanResult(findings, incompleteReasons);
+
+        // Applied after sorting and after the cap: suppression hides findings
+        // from the reader's list, it does not change which files were scanned
+        // or how the truncation boundary fell.
+        SuppressionFilter.Result suppression = SuppressionFilter.apply(findings, options.suppressions());
+        List<AnalysisReason> warnings = new ArrayList<>();
+        if (suppression.suppressedCount() > 0) {
+            warnings.add(new AnalysisReason("SUPPRESSED_FINDINGS",
+                suppression.suppressedCount() + " finding(s) matched a configured suppression and are not listed.",
+                null, null, suppression.suppressedCount()));
+        }
+        return new OracleScanResult(suppression.findings(), incompleteReasons, warnings);
     }
 
     private static void scanOneFile(TestSourceFile file, JavaSourceParser parser, CustomOracles customOracles,

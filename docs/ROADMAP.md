@@ -138,10 +138,12 @@ fire on a genuinely oracle-less test.
 - `--config` is implemented (D-40): strict `coverdict.config.json`, schema
   checked in, precedence command line > config > defaults.
 - `customOracles` is implemented (D-41), closing the "D-17 territory" gap all
-  four corpus phases marked out of scope. `suppressions` is still open (also a
-  config-file feature, now unblocked).
-- Rule/path suppression, baselines, and changed-findings-only CI gating are
-  still open (M3 pre-CI work, as originally scoped).
+  four corpus phases marked out of scope.
+- `suppressions` is implemented (D-42) with a `SUPPRESSED_FINDINGS` warning
+  carrying a machine-readable `count`. Baselines and changed-findings-only CI
+  gating remain M3 (pre-CI) work, as originally scoped.
+- Baselines and changed-findings-only CI gating are still open (M3 pre-CI
+  work, as originally scoped); rule/path suppression itself shipped in D-42.
 
 ### M1c — Hardening and validation
 

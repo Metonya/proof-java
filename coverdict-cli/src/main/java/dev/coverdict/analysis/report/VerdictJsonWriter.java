@@ -249,6 +249,9 @@ public final class VerdictJsonWriter {
         if (reason.path() != null) {
             g.writeStringField("path", reason.path());
         }
+        if (reason.count() != null) {
+            g.writeNumberField("count", reason.count());
+        }
         if (reason.module() != null) {
             g.writeStringField(FIELD_MODULE, reason.module());
         }

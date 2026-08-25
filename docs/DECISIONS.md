@@ -645,6 +645,35 @@ three of them optional hooks whose order only the compiler was checking, so
 custom oracles and suppressions arrive via a new `OracleScanOptions` parameter
 object instead of two more positions.
 
+**D-42 · `suppressions` implemented; suppressed findings are counted, and
+`$defs/reason` gains an optional `count`** (2026-08-25)
+docs/rules/README.md scopes suppression as "Configuration-only in **v0.1**"
+(only baselines and changed-only gating are M3), so this was v0.1 debt, not
+M3 work. `SuppressionFilter` withholds a finding when its rule, path glob and
+optional `testMethodPattern` all match, and emits one `SUPPRESSED_FINDINGS`
+warning carrying the count.
+
+**The count is a schema field, not only prose.** `$defs/reason` gains an
+optional `count` (additive, not breaking - no existing document changes, all
+three goldens still validate byte-for-byte). Hard rule 7 makes the JSON the
+product; a number an agent has to regex out of an English sentence is not a
+contract. The alternative - embedding it in `message` alone - was rejected for
+that reason.
+
+Glob matching reuses `ExclusionFilter.compile`/`matchesAny` rather than
+growing a second implementation, so one config file cannot end up with two
+different meanings for `**`, and D-22's platform-independence argument (why
+`FileSystems.getPathMatcher` is avoided) keeps covering this path too.
+
+Suppression is applied **after** sorting and after the findings cap: it
+changes what the reader is shown, never which files were scanned or where the
+truncation boundary fell. An all-suppressed run therefore still reports a
+non-zero count - an empty `findings` array must never be indistinguishable
+from a genuinely clean run (hard rule 3a).
+
+`validation/SHA256SUMS` is updated for the schema edit in the same commit -
+the c4377d2 precedent is that forgetting this is easy and only surfaces later.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

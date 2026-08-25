@@ -362,9 +362,11 @@ class AnalyzeCommand implements Callable<Integer> {
             // findings-scope=changed is rejected in --no-vcs mode by call() already, so "all" always holds here.
             OracleScanResult scan = OracleRuleEngine.scan(repoRoot, evidencedModules, languageLevel, encoding, null, scanOptions);
             List<AnalysisReason> allReasons = new ArrayList<>(scan.incompleteReasons());
+            List<AnalysisReason> noVcsWarnings = new ArrayList<>(warnings);
+            noVcsWarnings.addAll(scan.warnings());
             return new VerdictDocument(version.schemaVersion(), version.version(), allReasons.isEmpty(), allReasons,
                 languageLevel, encoding, exclusions, moduleInputs, diffMode, findingsScopeOption, null, overall,
-                NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), scan.findings(), warnings);
+                NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), scan.findings(), noVcsWarnings);
         }
 
         // Diff-mode phase: a failure here does NOT discard the overall data
@@ -389,6 +391,7 @@ class AnalyzeCommand implements Callable<Integer> {
             allIncompleteReasons.addAll(scan.incompleteReasons());
             List<AnalysisReason> allWarnings = new ArrayList<>(warnings);
             allWarnings.addAll(classification.warnings());
+            allWarnings.addAll(scan.warnings());
 
             boolean complete = allIncompleteReasons.isEmpty();
             return new VerdictDocument(version.schemaVersion(), version.version(), complete,

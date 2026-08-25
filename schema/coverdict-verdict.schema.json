@@ -5,28 +5,64 @@
   "description": "Output contract of the coverdict CLI (experimental during 0.x, D-01). Deterministic: no timestamps or machine-local absolute paths; two clean runs on the same inputs are byte-identical. Ordering rules (all lexicographic by UTF-8 code point unless stated): inputs.modules by id; changedFiles by (module, path); findings by (path, startLine, rule, fingerprint); warnings and analysis.incompleteReasons by (code, path, message). All paths are repo-relative with forward slashes. Percentages are rounded half-up to one decimal.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "tool", "analysis", "inputs", "coverage", "changedFiles", "findings", "warnings"],
+  "required": [
+    "schemaVersion",
+    "tool",
+    "analysis",
+    "inputs",
+    "coverage",
+    "changedFiles",
+    "findings",
+    "warnings"
+  ],
   "properties": {
-    "schemaVersion": { "type": "string", "pattern": "^0\\.[0-9]+\\.[0-9]+$" },
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^0\\.[0-9]+\\.[0-9]+$"
+    },
     "tool": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "version"],
+      "required": [
+        "name",
+        "version"
+      ],
       "properties": {
-        "name": { "const": "coverdict" },
-        "version": { "type": "string", "minLength": 1 }
+        "name": {
+          "const": "coverdict"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "analysis": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["status", "exitCode", "incompleteReasons"],
+      "required": [
+        "status",
+        "exitCode",
+        "incompleteReasons"
+      ],
       "properties": {
-        "status": { "enum": ["complete", "incomplete"] },
-        "exitCode": { "enum": [0, 3] },
+        "status": {
+          "enum": [
+            "complete",
+            "incomplete"
+          ]
+        },
+        "exitCode": {
+          "enum": [
+            0,
+            3
+          ]
+        },
         "incompleteReasons": {
           "type": "array",
-          "items": { "$ref": "#/$defs/reason" }
+          "items": {
+            "$ref": "#/$defs/reason"
+          }
         }
       },
       "description": "status=complete requires exitCode 0 and empty incompleteReasons; status=incomplete requires exitCode 3 and at least one reason. Exit codes 2 and 4 abort before a verdict document is written."
@@ -34,46 +70,109 @@
     "inputs": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["diffMode", "findingsScope", "languageLevel", "encoding", "exclusions", "modules"],
+      "required": [
+        "diffMode",
+        "findingsScope",
+        "languageLevel",
+        "encoding",
+        "exclusions",
+        "modules"
+      ],
       "properties": {
-        "diffMode": { "enum": ["base-ref", "working-tree", "no-vcs"] },
-        "findingsScope": { "enum": ["all", "changed"], "description": "Which test sources the L0 oracle rules scanned (M1b K1): 'all' (default) is every test source under every module's testRoots; 'changed' is only test files touched by the diff. Always written so an empty findings array is never ambiguous between 'nothing wrong' and 'nothing scanned'." },
-        "baseRef": { "type": "string", "minLength": 1 },
+        "diffMode": {
+          "enum": [
+            "base-ref",
+            "working-tree",
+            "no-vcs"
+          ]
+        },
+        "findingsScope": {
+          "enum": [
+            "all",
+            "changed"
+          ],
+          "description": "Which test sources the L0 oracle rules scanned (M1b K1): 'all' (default) is every test source under every module's testRoots; 'changed' is only test files touched by the diff. Always written so an empty findings array is never ambiguous between 'nothing wrong' and 'nothing scanned'."
+        },
+        "baseRef": {
+          "type": "string",
+          "minLength": 1
+        },
         "resolved": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["head", "dirty"],
+          "required": [
+            "head",
+            "dirty"
+          ],
           "properties": {
-            "base": { "$ref": "#/$defs/sha" },
-            "mergeBase": { "$ref": "#/$defs/sha" },
-            "head": { "$ref": "#/$defs/sha" },
-            "dirty": { "type": "boolean" }
+            "base": {
+              "$ref": "#/$defs/sha"
+            },
+            "mergeBase": {
+              "$ref": "#/$defs/sha"
+            },
+            "head": {
+              "$ref": "#/$defs/sha"
+            },
+            "dirty": {
+              "type": "boolean"
+            }
           },
           "description": "Present unless diffMode=no-vcs. base and mergeBase present only in base-ref mode (D-16)."
         },
-        "languageLevel": { "type": "integer", "minimum": 8 },
-        "encoding": { "type": "string", "minLength": 1 },
-        "exclusions": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "languageLevel": {
+          "type": "integer",
+          "minimum": 8
+        },
+        "encoding": {
+          "type": "string",
+          "minLength": 1
+        },
+        "exclusions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
         "modules": {
           "type": "array",
-          "items": { "$ref": "#/$defs/module" }
+          "items": {
+            "$ref": "#/$defs/module"
+          }
         }
       }
     },
     "coverage": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["overall", "newCode"],
+      "required": [
+        "overall",
+        "newCode"
+      ],
       "properties": {
-        "overall": { "$ref": "#/$defs/metricSet" },
+        "overall": {
+          "$ref": "#/$defs/metricSet"
+        },
         "newCode": {
           "oneOf": [
-            { "$ref": "#/$defs/metricSet" },
+            {
+              "$ref": "#/$defs/metricSet"
+            },
             {
               "type": "object",
               "additionalProperties": false,
-              "required": ["status"],
-              "properties": { "status": { "enum": ["unavailable_no_vcs", "unavailable_incomplete"] } }
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "unavailable_no_vcs",
+                    "unavailable_incomplete"
+                  ]
+                }
+              }
             }
           ]
         }
@@ -81,51 +180,116 @@
     },
     "changedFiles": {
       "type": "array",
-      "items": { "$ref": "#/$defs/changedFile" },
+      "items": {
+        "$ref": "#/$defs/changedFile"
+      },
       "description": "Every changed Java path appears exactly once (M1c criterion 3). Empty in no-vcs mode."
     },
     "findings": {
       "type": "array",
-      "items": { "$ref": "#/$defs/finding" }
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
     },
     "warnings": {
       "type": "array",
-      "items": { "$ref": "#/$defs/reason" }
+      "items": {
+        "$ref": "#/$defs/reason"
+      }
     }
   },
   "$defs": {
-    "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-    "path": { "type": "string", "minLength": 1, "pattern": "^[^\\\\]*$", "description": "Repo-relative, forward slashes, no leading ./" },
+    "sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\\\]*$",
+      "description": "Repo-relative, forward slashes, no leading ./"
+    },
     "reason": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["code", "message"],
+      "required": [
+        "code",
+        "message"
+      ],
       "properties": {
-        "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
-        "message": { "type": "string", "minLength": 1 },
-        "path": { "$ref": "#/$defs/path" },
-        "module": { "type": "string" }
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]+$"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "module": {
+          "type": "string"
+        },
+        "count": {
+          "description": "Optional machine-readable quantity for reasons that are inherently about how many (SUPPRESSED_FINDINGS). Absent for every other reason.",
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "module": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "root", "sourceRoots", "testRoots", "reports"],
+      "required": [
+        "id",
+        "root",
+        "sourceRoots",
+        "testRoots",
+        "reports"
+      ],
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
-        "root": { "$ref": "#/$defs/path" },
-        "sourceRoots": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/path" } },
-        "testRoots": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/path" } },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "root": {
+          "$ref": "#/$defs/path"
+        },
+        "sourceRoots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "testRoots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        },
         "reports": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["path", "freshness"],
+            "required": [
+              "path",
+              "freshness"
+            ],
             "properties": {
-              "path": { "$ref": "#/$defs/path" },
-              "freshness": { "enum": ["unverified", "verified"] }
+              "path": {
+                "$ref": "#/$defs/path"
+              },
+              "freshness": {
+                "enum": [
+                  "unverified",
+                  "verified"
+                ]
+              }
             }
           }
         }
@@ -134,40 +298,108 @@
     "metric": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["numeratorName", "numerator", "denominatorName", "denominator", "percent"],
+      "required": [
+        "numeratorName",
+        "numerator",
+        "denominatorName",
+        "denominator",
+        "percent"
+      ],
       "properties": {
-        "numeratorName": { "type": "string", "minLength": 1 },
-        "numerator": { "type": "integer", "minimum": 0 },
-        "denominatorName": { "type": "string", "minLength": 1 },
-        "denominator": { "type": "integer", "minimum": 0 },
-        "percent": { "type": ["number", "null"], "description": "null when denominator is 0 — never reported as 100 or 0 by convention (hard rule 3a)" }
+        "numeratorName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "numerator": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "denominatorName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "denominator": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "percent": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "null when denominator is 0 \u2014 never reported as 100 or 0 by convention (hard rule 3a)"
+        }
       }
     },
     "metricSet": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["jacoco-line", "strict-line", "sonar-compatible"],
+      "required": [
+        "jacoco-line",
+        "strict-line",
+        "sonar-compatible"
+      ],
       "properties": {
-        "jacoco-line": { "$ref": "#/$defs/metric" },
-        "strict-line": { "$ref": "#/$defs/metric" },
-        "sonar-compatible": { "$ref": "#/$defs/metric" }
+        "jacoco-line": {
+          "$ref": "#/$defs/metric"
+        },
+        "strict-line": {
+          "$ref": "#/$defs/metric"
+        },
+        "sonar-compatible": {
+          "$ref": "#/$defs/metric"
+        }
       }
     },
     "changedFile": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "classification"],
+      "required": [
+        "path",
+        "classification"
+      ],
       "properties": {
-        "path": { "$ref": "#/$defs/path" },
-        "module": { "type": "string", "minLength": 1, "description": "Omitted (never null) when classification=unknown because the path is not under any declared module root (D-27)." },
-        "classification": { "enum": ["mapped", "excluded", "non-executable", "unsupported", "unknown"] },
-        "newLines": { "type": "integer", "minimum": 0 },
-        "coveredNewLines": { "type": "integer", "minimum": 0 },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "module": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Omitted (never null) when classification=unknown because the path is not under any declared module root (D-27)."
+        },
+        "classification": {
+          "enum": [
+            "mapped",
+            "excluded",
+            "non-executable",
+            "unsupported",
+            "unknown"
+          ]
+        },
+        "newLines": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "coveredNewLines": {
+          "type": "integer",
+          "minimum": 0
+        },
         "uncoveredNewRanges": {
           "type": "array",
           "items": {
-            "type": "array", "prefixItems": [{ "type": "integer", "minimum": 1 }, { "type": "integer", "minimum": 1 }],
-            "minItems": 2, "maxItems": 2
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "integer",
+                "minimum": 1
+              }
+            ],
+            "minItems": 2,
+            "maxItems": 2
           },
           "description": "Closed line ranges [start, end], ascending, non-overlapping. Line-count fields are present only for classification=mapped."
         }
@@ -176,19 +408,76 @@
     "finding": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["rule", "severity", "confidence", "module", "path", "startLine", "endLine", "message", "suggestedAction", "fingerprint"],
+      "required": [
+        "rule",
+        "severity",
+        "confidence",
+        "module",
+        "path",
+        "startLine",
+        "endLine",
+        "message",
+        "suggestedAction",
+        "fingerprint"
+      ],
       "properties": {
-        "rule": { "enum": ["NO_RECOGNIZED_ORACLE", "TAUTOLOGICAL_ORACLE", "CATCH_ORACLE_WITHOUT_FAIL", "NULL_CHECK_ONLY"] },
-        "severity": { "enum": ["INFO", "WARNING"] },
-        "confidence": { "enum": ["HIGH", "MEDIUM", "LOW", "INCONCLUSIVE"], "description": "Detector certainty, separate from severity (D-17). Unresolved symbols cap at MEDIUM/INCONCLUSIVE." },
-        "module": { "type": "string", "minLength": 1 },
-        "path": { "$ref": "#/$defs/path" },
-        "startLine": { "type": "integer", "minimum": 1 },
-        "endLine": { "type": "integer", "minimum": 1 },
-        "testMethod": { "type": "string", "minLength": 1, "description": "Fully qualified test method signature when the finding anchors to one" },
-        "message": { "type": "string", "minLength": 1 },
-        "suggestedAction": { "type": "string", "minLength": 1, "description": "Plain-language next step. Never suggests deletion below HIGH confidence (hard rule 3); v0.1 rules never suggest deletion at all." },
-        "fingerprint": { "type": "string", "pattern": "^[0-9a-f]{16,64}$", "description": "Stable across runs and unrelated edits; definition per rule spec (M0 deliverable 4)" }
+        "rule": {
+          "enum": [
+            "NO_RECOGNIZED_ORACLE",
+            "TAUTOLOGICAL_ORACLE",
+            "CATCH_ORACLE_WITHOUT_FAIL",
+            "NULL_CHECK_ONLY"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "INFO",
+            "WARNING"
+          ]
+        },
+        "confidence": {
+          "enum": [
+            "HIGH",
+            "MEDIUM",
+            "LOW",
+            "INCONCLUSIVE"
+          ],
+          "description": "Detector certainty, separate from severity (D-17). Unresolved symbols cap at MEDIUM/INCONCLUSIVE."
+        },
+        "module": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "startLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "testMethod": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Fully qualified test method signature when the finding anchors to one"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "suggestedAction": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Plain-language next step. Never suggests deletion below HIGH confidence (hard rule 3); v0.1 rules never suggest deletion at all."
+        },
+        "fingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{16,64}$",
+          "description": "Stable across runs and unrelated edits; definition per rule spec (M0 deliverable 4)"
+        }
       }
     }
   }
