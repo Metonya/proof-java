@@ -3,15 +3,13 @@ package dev.coverdict.analysis.pertest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+import dev.coverdict.analysis.subprocess.SubprocessWorkspace;
 
 /**
  * Spawns {@link PerTestDriver} as a genuinely separate OS process and
@@ -37,6 +35,8 @@ public final class PerTestRunner {
      */
     private static final Duration TIMEOUT = Duration.ofSeconds(120);
 
+    private static final String TEMP_DIR_PREFIX = "coverdict-pertest-";
+
     private PerTestRunner() {
     }
 
@@ -57,7 +57,7 @@ public final class PerTestRunner {
                                                                   List<String> classPathElements,
                                                                   List<String> codePaths,
                                                                   List<String> targetClasses) {
-        Path workDir = createPrivateTempDirectory(moduleId);
+        Path workDir = createWorkDir(moduleId);
         try {
             String ownClasspath = ownClasspath();
             // The minion PIT spawns needs org.pitest.coverage.execute.CoverageMinion and
@@ -67,13 +67,13 @@ public final class PerTestRunner {
             // in (D-55), so appending coverdict's own jar/classes location is sufficient.
             List<String> classPathWithSelf = new java.util.ArrayList<>(classPathElements);
             classPathWithSelf.add(ownClasspath);
-            Path classpathFile = writeLines(workDir, "classpath.txt", classPathWithSelf);
-            Path codePathsFile = writeLines(workDir, "codepaths.txt", codePaths);
-            Path targetClassesFile = writeLines(workDir, "targetclasses.txt", targetClasses);
+            Path classpathFile = writeLines(moduleId, workDir, "classpath.txt", classPathWithSelf);
+            Path codePathsFile = writeLines(moduleId, workDir, "codepaths.txt", codePaths);
+            Path targetClassesFile = writeLines(moduleId, workDir, "targetclasses.txt", targetClasses);
             Path outputFile = workDir.resolve(CoverdictLineExporter.OUTPUT_FILE_NAME);
 
             ProcessBuilder pb = new ProcessBuilder(
-                javaExecutable(), "-cp", ownClasspath,
+                SubprocessWorkspace.javaExecutable(), "-cp", ownClasspath,
                 PerTestDriver.class.getName(),
                 moduleId, workDir.toString(), classpathFile.toString(), codePathsFile.toString(),
                 targetClassesFile.toString());
@@ -103,7 +103,7 @@ public final class PerTestRunner {
                 throw new PerTestCollectionException("Module '" + moduleId + "' produced an unreadable per-test result file", e);
             }
         } finally {
-            deleteQuietly(workDir);
+            SubprocessWorkspace.deleteQuietly(workDir);
         }
     }
 
@@ -125,77 +125,27 @@ public final class PerTestRunner {
         }
     }
 
-    private static Path writeLines(Path dir, String name, List<String> lines) {
+    private static Path createWorkDir(String moduleId) {
         try {
-            return Files.write(dir.resolve(name), lines, StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    private static String javaExecutable() {
-        return Path.of(System.getProperty("java.home"), "bin", "java").toString();
-    }
-
-    /** coverdict's own running jar (or classes directory in tests) - already contains PIT, shaded in (D-55). */
-    private static String ownClasspath() {
-        try {
-            return Path.of(PerTestRunner.class.getProtectionDomain().getCodeSource().getLocation().toURI())
-                .toString();
-        } catch (URISyntaxException e) {
-            throw new IllegalStateException("Could not resolve coverdict's own classpath for the per-test subprocess", e);
-        }
-    }
-
-    /**
-     * SonarQube java:S5443: the OS temp directory is shared/publicly
-     * writable, so the created directory - which briefly holds this
-     * module's classpath list and PIT's coverage output - is restricted to
-     * the current user right after creation, on platforms where that is
-     * actually achievable. {@code Files.createTempDirectory} has no
-     * portable permissions overload; on a POSIX file system, {@code
-     * setPosixFilePermissions} reliably restricts to owner-only. On Windows
-     * there is no equivalent guarantee through the JDK - empirically,
-     * {@code File.setReadable}/{@code setWritable(false, false)} ("deny
-     * everyone else") both return {@code false} (unsupported) rather than
-     * applying an ACL - so this falls back to the OS temp directory's own
-     * default per-user ACL (in practice already user-scoped under {@code
-     * %LOCALAPPDATA%\Temp}) instead of failing the run over an API that
-     * cannot succeed there.
-     */
-    private static Path createPrivateTempDirectory(String moduleId) {
-        Path workDir;
-        try {
-            workDir = Files.createTempDirectory("coverdict-pertest-" + sanitize(moduleId));
-        } catch (IOException e) {
+            return SubprocessWorkspace.createPrivateTempDirectory(TEMP_DIR_PREFIX, moduleId);
+        } catch (UncheckedIOException e) {
             throw new PerTestCollectionException("Could not create a temp directory for module '" + moduleId + "'", e);
         }
-        if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
-            try {
-                Files.setPosixFilePermissions(workDir, PosixFilePermissions.fromString("rwx------"));
-            } catch (IOException e) {
-                throw new PerTestCollectionException(
-                    "Could not restrict the temp directory for module '" + moduleId + "' to the current user", e);
-            }
+    }
+
+    private static Path writeLines(String moduleId, Path dir, String name, List<String> lines) {
+        try {
+            return SubprocessWorkspace.writeLines(dir, name, lines);
+        } catch (UncheckedIOException e) {
+            throw new PerTestCollectionException("Could not write '" + name + "' for module '" + moduleId + "'", e);
         }
-        return workDir;
     }
 
-    private static String sanitize(String moduleId) {
-        return moduleId.replaceAll("[^A-Za-z0-9._-]", "_");
-    }
-
-    private static void deleteQuietly(Path dir) {
-        try (var files = Files.walk(dir)) {
-            files.sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
-                try {
-                    Files.deleteIfExists(p);
-                } catch (IOException ignored) {
-                    // best-effort cleanup of a temp directory - never worth failing the run over
-                }
-            });
-        } catch (IOException ignored) {
-            // best-effort cleanup of a temp directory - never worth failing the run over
+    private static String ownClasspath() {
+        try {
+            return SubprocessWorkspace.ownClasspath(PerTestRunner.class);
+        } catch (IllegalStateException e) {
+            throw new PerTestCollectionException("Could not resolve coverdict's own classpath for the per-test subprocess", e);
         }
     }
 }
