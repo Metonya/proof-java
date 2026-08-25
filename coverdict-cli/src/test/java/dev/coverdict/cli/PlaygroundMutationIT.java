@@ -148,7 +148,8 @@ class PlaygroundMutationIT {
         String err = new String(p.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
         int exit = p.waitFor();
         if (exit != 0) {
-            throw new IOException("mvn " + String.join(" ", goalsAndArgs) + " failed (exit " + exit + "): " + err);
+            throw new IOException("mvn " + String.join(" ", goalsAndArgs) + " failed (exit " + exit + "): "
+                + outBytes.toString(StandardCharsets.UTF_8) + err);
         }
     }
 
