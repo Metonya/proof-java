@@ -477,7 +477,8 @@
             "TAUTOLOGICAL_ORACLE",
             "CATCH_ORACLE_WITHOUT_FAIL",
             "NULL_CHECK_ONLY",
-            "PSEUDO_TESTED_METHOD"
+            "PSEUDO_TESTED_METHOD",
+            "SUBSUMED_TEST"
           ]
         },
         "severity": {
@@ -519,6 +520,15 @@
           "type": "string",
           "minLength": 1,
           "description": "Fully qualified production method signature when the finding anchors to one instead (M5's PSEUDO_TESTED_METHOD; mutually exclusive with testMethod in v0.1's rule set)"
+        },
+        "relatedTestMethod": {
+          "type": "string",
+          "minLength": 1,
+          "description": "M4's SUBSUMED_TEST only: the dominator test whose mutant kill-set is a strict superset of the primary testMethod's - the test that makes the primary one redundant under the mutators this run exercised (D-61). Null for every other rule."
+        },
+        "relatedPath": {
+          "$ref": "#/$defs/path",
+          "description": "M4's SUBSUMED_TEST only: repo-relative path of relatedTestMethod's source file. Null for every other rule."
         },
         "message": {
           "type": "string",

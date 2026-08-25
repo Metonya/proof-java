@@ -1181,6 +1181,119 @@ exactly like L2 already does. "Diff-scoped mutation" bounds mutant
 generation, not test-execution time - the same limit D-12 first named,
 now resolved as designed rather than left open.
 
+**D-61 · M4 reframed: `SUBSUMED_TEST` (mutation kill-set subsumption)
+supersedes `COVERAGE_EQUIVALENT_CANDIDATE`/D-46's three-stage gate**
+(2026-08-25)
+D-46 defined M4 around a symmetric equivalence claim requiring three
+independent layers to agree on the same test pair: L2 coverage-overlap
+Jaccard, L0 assertion-structure match, and L3 matching mutant-kill sets -
+no finding without all three. Reviewed and rejected on two grounds. First,
+a three-way exact-match gate fires almost exclusively on near-literal
+copy-paste tests, a case `SonarQube` CPD already finds for free on this
+same self-scanned codebase (see M1a) - the expensive three-engine motor
+was being built for a case a cheaper tool already covers. Second, and more
+fundamentally, the L0 assertion-structure gate was cutting the one finding
+shape coverdict's other evidence *cannot* get elsewhere: two tests that
+look textually different but exercise identical behavior. Requiring L0
+agreement discards exactly that signal, leaving only the copy-paste case
+Sonar already has - the "extra evidence layer" was actually a narrowing
+filter on the one useful result.
+
+Replacement: **`SUBSUMED_TEST`**, a directional, single-evidence-source
+claim over L3 mutant-kill sets alone (`Mutant.killingTests`, already
+populated by `setFullMutationMatrix(true)` per M5/D-56 specifically for
+this milestone). Not "are A and B equivalent" (symmetric, rare, needs
+corroboration) but "does test A kill any mutant that no other test also
+kills" (directional, a plain fact about the kill matrix, computed in one
+pass): `dominators(t) = (⋂_{m ∈ kills(t)} killingTests(m)) \ {t}`, filtered
+to `|kills(u)| > |kills(t)|`. This is the strict-subset condition `kills(t)
+⊂ kills(u)` restated as a single intersection - O(matrix size), no
+pairwise Jaccard loop, no L0/L2 dependency to gate on. `kills(t) = ∅`
+(nothing killed) and essential tests (some mutant killed by `t` alone) are
+both excluded before any dominator search runs - the former because an
+empty set is a subset of every set and would otherwise report every
+untested-by-mutation test as "subsumed" by everything, the latter because
+it is mathematically impossible for an essential test to be dominated.
+
+L0 and L2 are demoted from required gates to optional message
+enrichment - if `--per-test-report`/oracle signatures are available, the
+finding message notes whether the dominator's assertions look
+textually identical (copy-paste signal) or structurally different
+(the genuinely interesting case), but neither presence nor absence
+changes whether the rule fires. Only `--mutation-report` is required;
+M4 no longer needs `--per-test-report` at all as a precondition.
+
+Known limit carried into the rule doc, not hidden: D-56's `RETURNS`/
+`VOID_METHOD_CALLS`-only mutator set is narrow, so subsumption measured
+against it likely overstates real redundancy - a richer mutator set would
+show fewer tests as subsumed. The finding is phrased as "subsumed under
+the mutators this run exercised," never as an unqualified redundancy
+verdict, and never suggests deletion - D-46's equivalence-partitioned-
+parameterization caution (identical fingerprints can still be genuinely
+distinct tests) carries forward unchanged into the new framing.
+
+**D-62 · D-59 watchdog spike: narrow-scoped `-Pmutation-it` stays well
+inside safe memory/process bounds; the wide-scope growth pattern is not
+reproduced, root cause still open** (2026-08-25)
+Before building anything that depends on live `--mutation-report` runs
+(M4's `SUBSUMED_TEST`), D-59's unconfirmed process-growth risk needed a
+safety net before any further live reproduction attempt, given three
+near-OOM incidents in the session that first observed it.
+`validation/scripts/mutation-watchdog.ps1` (new) wraps a command, samples
+every descendant `java.exe` process's count and summed working set once a
+second via `Get-CimInstance Win32_Process` parent-chain walking, and
+force-kills the entire subtree the instant either threshold is crossed -
+external to and independent of `SubprocessWorkspace.destroyProcessTree`'s
+own after-the-budget cleanup, not a replacement for it.
+
+One premise correction first: `destroyProcessTree` already reaches PIT's
+full minion tree via `taskkill /F /T`, added specifically because of the
+80+-orphan finding that produced D-58/D-59 - the open question is not "why
+doesn't cleanup reach every process" (it does), it is "why does live
+process count grow so fast in the first place, before any budget or
+cleanup logic ever runs."
+
+**Correction, same session, found live:** the first three watchdog runs of
+`mvn -Pmutation-it -pl coverdict-cli test` all reported "peak 1 process,
+~260MB, clean 90s timeout" - and were wrong. The watchdog's own process
+discovery filtered `Get-CimInstance Win32_Process` to `Name = 'java.exe'`
+before walking parent links; a fourth run, watched directly in Task
+Manager by the user rather than through the watchdog's own log, showed the
+real shape of what D-59 first observed: 44 processes and 18+GB, climbing,
+while the watchdog simultaneously reported "count=1" the entire time. The
+narrow `ChangedClassTargets*` target does **not** make this scenario safe -
+it is exactly as exposed as the original D-59 finding, non-deterministic
+between runs (three prior watchdog-wrapped runs this same session did not
+trigger it; the fourth did), and the false "safe" reading above was a
+monitoring-tool defect, not a real result. Root cause of the filter's
+blindness was not fully pinned down (a `javaw.exe`-named or otherwise
+differently-named hop breaking the java.exe-only parent chain at some
+point is the leading theory) and, per the same reasoning that closed the
+rest of this investigation below, was not chased further - the fix (track
+every descendant process regardless of name, no filter at all) removes
+the blind spot without needing to explain it.
+
+With that fix, a fifth run reproduced D-59 again and this time the
+watchdog caught it correctly: 3 seconds into `MutationRunnerIT`'s actual
+mutation phase, descendant count went 4 -> 8 -> 10 and working set 305MB ->
+634MB -> 1.19GB; the watchdog force-killed the whole tree the instant the
+(deliberately tightened, 10-process) threshold was crossed, at 20.2s
+elapsed - well before anything resembling the original 44-process
+incident. `SubprocessWorkspace.destroyProcessTree`'s own after-the-budget
+cleanup was never even reached this time; the external guard fired first,
+which is exactly the division of labor this script exists for.
+
+**Net effect on D-59 and M4:** D-59 is not closed - if anything this
+session hardened the evidence that it is a real, reproducible-but-
+nondeterministic risk on this machine, not a one-off. `SUBSUMED_TEST`
+(D-61) carries exactly the exposure M5 already shipped with (same
+`MutationRunner.DEFAULT_BUDGET`, same diff-scoped targeting, D-60) - no
+better, no worse - and this session's corrected spike is the reason to
+say that with more confidence than before, not less. Running
+`--mutation-report` locally without an external watchdog remains something
+this repo's own documentation should not casually recommend until D-59
+has an actual root cause.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

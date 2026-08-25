@@ -6,12 +6,14 @@ Detection uses JavaParser + Symbol Solver (D-10); parser success alone is not
 semantic resolution (M1b). False positives cost more than false negatives
 (hard rule 2a): when in doubt, a rule stays silent or reports INCONCLUSIVE.
 
-L3's `PSEUDO_TESTED_METHOD` (M5, `docs/rules/PSEUDO_TESTED_METHOD.md`) does
-**not** follow this contract: it anchors on a production method (not a test
-method), its evidence comes from a real PIT mutation run (not AST
-traversal), and it has its own fixture-free spec. The fingerprint
-definition below is shared between both rule families; everything else on
-this page is L0-specific.
+L3's `PSEUDO_TESTED_METHOD` (M5, `docs/rules/PSEUDO_TESTED_METHOD.md`) and
+`SUBSUMED_TEST` (M4, `docs/rules/SUBSUMED_TEST.md`, D-61) do **not** follow
+this contract: both anchor evidence from a real PIT mutation run (not AST
+traversal) rather than a single AST-traversed test method - the former on a
+production method, the latter on a *pair* of test methods - and both have
+their own fixture-free specs. The fingerprint definition below is shared
+across all three rule families; everything else on this page is
+L0-specific.
 
 ## Test method recognition
 

@@ -474,31 +474,43 @@ failure.
   subprocess `PerTestRunner` force-kills the moment `CoverdictLineExporter`
   writes its output file or a timeout elapses, whichever first - never
   waits for PIT's own mutation phase. Verified end-to-end against
-  coverdict's own repo. Full three-stage finding productization is still M4.
+  coverdict's own repo. Now optional enrichment for M4's `SUBSUMED_TEST`
+  (D-61) rather than a required evidence layer - see M4 below.
 - **M3 — First build integration + CI.** Ship Maven or Gradle first as decided
   from M0 dogfood, then the other only on demand. Add report provenance manifest,
   changed-findings baseline, quality-gate exit codes, and evaluate SARIF (O-02).
-- **M4 — L2 redundancy productization.** Redefined by D-46: a
-  `COVERAGE_EQUIVALENT_CANDIDATE` finding requires L2 coverage overlap **and**
-  L0 assertion-structure match **and** L3 matching mutant-kill sets - L2
-  alone never emits a finding. Gate on M2 Faz 2 passing and ≥ 90% precision
-  on the combined three-stage HIGH-confidence findings, not on L2 in
-  isolation. No deletion suggestion follows from coverage identity alone.
-  The CLI evidence layer (`--per-test-report`, D-55) is done; this milestone
-  is the three-stage finding logic consuming it. **Numbered before M5 but
-  depends on it**: the third stage needs L3's mutant-kill sets, which M5
-  delivers - M4 cannot actually close until M5 has shipped, an ordering
-  inversion this list never flagged until now.
+- **M4 — Mutation kill-set subsumption (`SUBSUMED_TEST`).** Redefined by
+  D-61, superseding D-46's `COVERAGE_EQUIVALENT_CANDIDATE` three-stage
+  equivalence gate (L2 overlap + L0 assertion match + L3 kill-set match, all
+  required): that design fired almost exclusively on near-literal copy-paste
+  tests SonarQube CPD already finds for free, and its L0 gate discarded the
+  one finding shape coverdict's other evidence cannot get elsewhere -
+  textually different tests proven behaviorally identical. `SUBSUMED_TEST`
+  asks a directional question over L3 alone - does test A kill any mutant no
+  other test also kills - computed as one kill-matrix intersection per test,
+  no pairwise loop. `--mutation-report` (M5, done) is the only required
+  evidence; L0/L2 become optional message enrichment, not gates. Gate on
+  ≥ 90% precision on HIGH-confidence findings and a bounded firing rate (not
+  a large fraction of a suite flagged at once - suite-reduction literature
+  finds 40-70% "removable" routinely, which would itself be noise here).
+  Depends on M5 exactly as originally scoped (kill-set data), no ordering
+  inversion - M5 shipped before this was written.
 - **M5 — Mutation integration.** Done: `--mutation-report`/`--mutation-
   classpath`/`--mutation-timeout`, `PSEUDO_TESTED_METHOD` (method-centric,
   D-56's gregor `RETURNS`+`VOID_METHOD_CALLS` approximation of Descartes'
   extreme mutation - covering tests are context, not proof that one test is
   worthless), diff scoping resolved by reusing L2's own mapping (O-05/D-12,
   closed by D-60 - no ArcMutate dependency needed). `setFullMutationMatrix
-  (true)` carries the full kill-set M4's third stage needs. Not done: IDE
-  surfaces (still just JSON), and D-59's open process-resource-growth
+  (true)` carries the full kill-set M4's `SUBSUMED_TEST` needs. Not done:
+  IDE surfaces (still just JSON), and D-59's open process-resource-growth
   question - `--mutation-report` ships with a deliberately conservative
-  5-minute default timeout as a result, not a verified-safe one.
+  5-minute default timeout as a result, not a verified-safe one. D-62's
+  watchdog spike (corrected mid-session after an initial false "safe"
+  reading from a monitoring-tool defect) reproduced D-59 again even on the
+  existing narrow-scoped `-Pmutation-it` IT test - 10 processes/1.19GB
+  within 3s of the mutation phase starting, non-deterministic across runs.
+  Root cause still not pinned down - still open, confirmed more real than
+  before, not less.
 - **Backlog:** standalone HTML · AI-assistant skill (agent reads verdict JSON,
   writes tests for gaps it names, reruns, interprets the result through
   coverdict again) · VS Code extension (inline per-line coverage gutter

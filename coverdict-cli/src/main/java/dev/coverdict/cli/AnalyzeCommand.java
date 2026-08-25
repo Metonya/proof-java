@@ -41,6 +41,7 @@ import dev.coverdict.analysis.oracle.OracleRuleEngine;
 import dev.coverdict.analysis.oracle.OracleScanOptions;
 import dev.coverdict.analysis.oracle.OracleScanResult;
 import dev.coverdict.analysis.pertest.PerTestCollector;
+import dev.coverdict.analysis.redundancy.RedundancyRuleEngine;
 import dev.coverdict.config.ConfigException;
 import dev.coverdict.config.ConfigLoader;
 import dev.coverdict.config.CoverdictConfig;
@@ -114,13 +115,13 @@ class AnalyzeCommand implements Callable<Integer> {
     @Option(names = "--classpath", description = "Repeatable <id>=<file>, where <file> lists one jar path per line for JavaParser symbol solving (D-17: never silently upgrades confidence).")
     private List<String> classpathArgs = new ArrayList<>();
 
-    @Option(names = "--per-test-report", description = "Collect L2 per-test line coverage evidence for changed production classes via PIT (D-46: evidence only, never a finding). Requires a diff mode; rejected under --no-vcs.")
+    @Option(names = "--per-test-report", description = "Collect L2 per-test line coverage evidence for changed production classes via PIT (D-46: evidence only, never a finding by itself). Optional message enrichment for SUBSUMED_TEST when --mutation-report is also set (D-61). Requires a diff mode; rejected under --no-vcs.")
     private boolean perTestReport;
 
     @Option(names = "--per-test-classpath", description = "Repeatable <id>=<file>, where <file> lists PIT's exact test runtime classpath for that module, one entry per line (module output directories and dependency jars) - distinct from --classpath, which is an optional JavaParser aid.")
     private List<String> perTestClasspathArgs = new ArrayList<>();
 
-    @Option(names = "--mutation-report", description = "Collect L3 mutation evidence for changed production classes via PIT (D-56: RETURNS+VOID_METHOD_CALLS gregor mutators; PSEUDO_TESTED_METHOD is the only finding this evidence feeds). Requires a diff mode; rejected under --no-vcs.")
+    @Option(names = "--mutation-report", description = "Collect L3 mutation evidence for changed production classes via PIT (D-56: RETURNS+VOID_METHOD_CALLS gregor mutators). Feeds PSEUDO_TESTED_METHOD and SUBSUMED_TEST (D-61's kill-set subsumption). Requires a diff mode; rejected under --no-vcs.")
     private boolean mutationReport;
 
     @Option(names = "--mutation-classpath", description = "Repeatable <id>=<file>, same list-file shape as --per-test-classpath - a separate flag because L3 mutation evidence is a separate, independently opt-in evidence layer (D-56).")
@@ -510,6 +511,10 @@ class AnalyzeCommand implements Callable<Integer> {
                     classification.changedFiles(), mutation);
                 allFindings.addAll(ruleResult.findings());
                 allWarnings.addAll(ruleResult.warnings());
+
+                RedundancyRuleEngine.Result redundancyResult = RedundancyRuleEngine.evaluate(repoRoot,
+                    evidencedModules, mutation);
+                allFindings.addAll(redundancyResult.findings());
             }
 
             boolean complete = allIncompleteReasons.isEmpty();

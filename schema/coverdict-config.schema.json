@@ -58,7 +58,8 @@
               "TAUTOLOGICAL_ORACLE",
               "CATCH_ORACLE_WITHOUT_FAIL",
               "NULL_CHECK_ONLY",
-              "PSEUDO_TESTED_METHOD"
+              "PSEUDO_TESTED_METHOD",
+              "SUBSUMED_TEST"
             ]
           },
           "pathGlob": {
