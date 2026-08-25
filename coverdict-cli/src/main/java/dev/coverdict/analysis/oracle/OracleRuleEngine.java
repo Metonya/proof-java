@@ -32,9 +32,6 @@ import dev.coverdict.analysis.model.ModuleDefinition;
  */
 public final class OracleRuleEngine {
 
-    /** SECURITY-POLICY.md #2: analysis stops with an explicit truncation warning, never a silently capped "complete" run. */
-    private static final int FINDINGS_CAP = 10_000;
-
     static {
         // JavaParser's own PrimitiveType resolution (javaparser-core) does an
         // internal default-locale case conversion; under a Turkish default
@@ -55,39 +52,24 @@ public final class OracleRuleEngine {
 
     public static OracleScanResult scan(Path repoRoot, List<ModuleDefinition> modules, int languageLevel,
                                          String encoding, Set<String> changedPathsOrNull) {
-        return scan(repoRoot, modules, languageLevel, encoding, changedPathsOrNull, List.of());
+        return scan(repoRoot, modules, languageLevel, encoding, changedPathsOrNull, OracleScanOptions.defaults());
     }
 
     /**
-     * @param extraTypeSolvers jar solvers built from {@code --classpath}
-     *                          ({@link ClasspathLoader}), or the fixture
-     *                          harness's own jars in tests. Empty is the
-     *                          normal case and is not a degraded run: D-28's
-     *                          import-anchoring tier resolves the allowlist
-     *                          without any jar. Per D-17 a populated
-     *                          classpath never silently upgrades a finding's
-     *                          confidence - it only lets the symbol solver
-     *                          answer calls it would otherwise leave
-     *                          UNRESOLVED.
+     * @param options classpath solvers, configured custom oracles and
+     *                suppressions, and the findings cap - see
+     *                {@link OracleScanOptions}. The cap is checked before each
+     *                FILE, not each finding: a file's findings are never split
+     *                across the boundary, so the output stays explainable (a
+     *                file's result is whole or absent, never partial) at the
+     *                cost of a truncated run's total possibly exceeding the cap
+     *                slightly. Intentional, not a bug (M1c-1 D-29).
      */
     public static OracleScanResult scan(Path repoRoot, List<ModuleDefinition> modules, int languageLevel, String encoding,
-                                  Set<String> changedPathsOrNull, List<TypeSolver> extraTypeSolvers) {
-        return scan(repoRoot, modules, languageLevel, encoding, changedPathsOrNull, extraTypeSolvers, FINDINGS_CAP);
-    }
-
-    /**
-     * @param findingsCap test-only hook to exercise SECURITY-POLICY.md #2's
-     *                     truncation without a 10,000-method fixture. The cap
-     *                     is checked before each FILE, not each finding - a
-     *                     file's findings are never split across the
-     *                     boundary, so the output stays explainable (a file's
-     *                     result is whole or absent, never partial) at the
-     *                     cost of the total findings count in a truncated run
-     *                     possibly exceeding the cap slightly. This is
-     *                     intentional, not a bug (M1c-1 D-29).
-     */
-    static OracleScanResult scan(Path repoRoot, List<ModuleDefinition> modules, int languageLevel, String encoding,
-                                  Set<String> changedPathsOrNull, List<TypeSolver> extraTypeSolvers, int findingsCap) {
+                                  Set<String> changedPathsOrNull, OracleScanOptions options) {
+        List<TypeSolver> extraTypeSolvers = options.extraTypeSolvers();
+        int findingsCap = options.findingsCap();
+        CustomOracles customOracles = CustomOracles.of(options.customOracles());
         List<TestSourceFile> files = TestSourceScanner.scan(repoRoot, modules, changedPathsOrNull);
         JavaSourceParser parser = new JavaSourceParser(repoRoot, modules, languageLevel, encoding, extraTypeSolvers);
 
@@ -100,7 +82,7 @@ public final class OracleRuleEngine {
                 truncated = true;
                 break;
             }
-            scanOneFile(file, parser, findings, incompleteReasons);
+            scanOneFile(file, parser, customOracles, findings, incompleteReasons);
         }
         if (truncated) {
             incompleteReasons.add(new AnalysisReason("FINDINGS_TRUNCATED",
@@ -112,7 +94,8 @@ public final class OracleRuleEngine {
         return new OracleScanResult(findings, incompleteReasons);
     }
 
-    private static void scanOneFile(TestSourceFile file, JavaSourceParser parser, List<Finding> findings, List<AnalysisReason> incompleteReasons) {
+    private static void scanOneFile(TestSourceFile file, JavaSourceParser parser, CustomOracles customOracles,
+                                     List<Finding> findings, List<AnalysisReason> incompleteReasons) {
         Optional<CompilationUnit> cu = parser.parse(file.absolutePath());
         if (cu.isEmpty()) {
             incompleteReasons.add(new AnalysisReason("UNPARSEABLE_TEST_SOURCE",
@@ -120,11 +103,11 @@ public final class OracleRuleEngine {
                     + "level; skipped, run continues.", file.repoRelativePath(), file.moduleId()));
             return;
         }
-        findings.addAll(scanFile(file, cu.get()));
+        findings.addAll(scanFile(file, cu.get(), customOracles));
     }
 
-    private static List<Finding> scanFile(TestSourceFile file, CompilationUnit cu) {
-        OracleRecognizer recognizer = new OracleRecognizer(cu);
+    private static List<Finding> scanFile(TestSourceFile file, CompilationUnit cu, CustomOracles customOracles) {
+        OracleRecognizer recognizer = new OracleRecognizer(cu, customOracles);
         List<Finding> fileFindings = new ArrayList<>();
         for (MethodDeclaration method : cu.findAll(MethodDeclaration.class)) {
             if (!TestMethods.isTestMethod(method)) {

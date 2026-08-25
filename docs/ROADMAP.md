@@ -135,9 +135,11 @@ fire on a genuinely oracle-less test.
   `CLASSPATH_ENTRY_UNUSABLE`) rather than failing the run - D-17's direction
   holds: a missing classpath degrades resolution, a present one never
   silently upgrades confidence.
-- Custom oracle providers (`customOracles`) and `suppressions` are still
-  open; both are config-file features and therefore blocked on the
-  `--config` surface (M0-CLI-INPUT.md), which is itself unimplemented.
+- `--config` is implemented (D-40): strict `coverdict.config.json`, schema
+  checked in, precedence command line > config > defaults.
+- `customOracles` is implemented (D-41), closing the "D-17 territory" gap all
+  four corpus phases marked out of scope. `suppressions` is still open (also a
+  config-file feature, now unblocked).
 - Rule/path suppression, baselines, and changed-findings-only CI gating are
   still open (M3 pre-CI work, as originally scoped).
 

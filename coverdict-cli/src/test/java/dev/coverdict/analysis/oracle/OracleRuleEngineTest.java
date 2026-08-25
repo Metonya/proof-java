@@ -62,7 +62,8 @@ class OracleRuleEngineTest {
         Files.writeString(testDir.resolve("ATest.java"), noOracleTestSource("ATest", "noAssertionHere"));
         Files.writeString(testDir.resolve("BTest.java"), noOracleTestSource("BTest", "noAssertionHere"));
 
-        OracleScanResult result = OracleRuleEngine.scan(repoRoot, List.of(module()), 17, "UTF-8", null, List.of(), 1);
+        OracleScanResult result = OracleRuleEngine.scan(repoRoot, List.of(module()), 17, "UTF-8", null,
+            OracleScanOptions.defaults().withFindingsCap(1));
 
         assertEquals(1, result.findings().size(), "the cap is checked per file, not per finding - ATest's one finding is whole");
         Finding onlyFinding = result.findings().get(0);

@@ -37,10 +37,24 @@ final class OracleRecognizer {
 
     private final CompilationUnit cu;
     private final ImportIndex imports;
+    private final CustomOracles customOracles;
+    private final Set<String> anchorableTypes;
 
     OracleRecognizer(CompilationUnit cu) {
+        this(cu, CustomOracles.none());
+    }
+
+    OracleRecognizer(CompilationUnit cu, CustomOracles customOracles) {
         this.cu = cu;
         this.imports = new ImportIndex(cu);
+        this.customOracles = customOracles;
+        if (customOracles.isEmpty()) {
+            this.anchorableTypes = OracleAllowlist.ALL_TYPES;
+        } else {
+            Set<String> union = new java.util.LinkedHashSet<>(OracleAllowlist.ALL_TYPES);
+            union.addAll(customOracles.types());
+            this.anchorableTypes = Set.copyOf(union);
+        }
     }
 
     TraversalResult traverse(MethodDeclaration testMethod) {
@@ -81,7 +95,7 @@ final class OracleRecognizer {
             }
             return;
         }
-        if (OracleAllowlist.isUnconditionalOracle(fqn, name)) {
+        if (OracleAllowlist.isUnconditionalOracle(fqn, name) || customOracles.matches(fqn, name)) {
             oracles.add(new OracleOccurrence(call, call, fqn, name));
             return;
         }
@@ -147,14 +161,14 @@ final class OracleRecognizer {
             if (owner != null) {
                 return Optional.of(owner);
             }
-            return imports.wildcardAnchoredOwner(name, OracleAllowlist.ALL_TYPES);
+            return imports.wildcardAnchoredOwner(name, anchorableTypes);
         }
         Expression scope = scopeOpt.get();
         if (scope instanceof MethodCallExpr) {
             return Optional.empty(); // fluent-chain continuation, resolved structurally elsewhere
         }
         String text = scope.toString();
-        if (OracleAllowlist.ALL_TYPES.contains(text)) {
+        if (anchorableTypes.contains(text)) {
             return Optional.of(text); // fully-qualified in source, e.g. org.junit.Assert.assertEquals(...)
         }
         if (scope instanceof NameExpr ne) {

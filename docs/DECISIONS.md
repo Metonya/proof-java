@@ -612,6 +612,39 @@ nobody authored, against D-05's single-authored-set model. An explicitly empty
 list in the config is preserved as "no exclusions" and stays distinct from
 "unset".
 
+**D-41 · `customOracles` implemented; configured entries are unconditional
+oracles, not chain anchors** (2026-08-25)
+The last M0-specified oracle feature that had no implementation
+(docs/rules/README.md's "Custom oracles"). Unblocked by D-40's config surface.
+`CustomOracles` parses `fully.qualified.Type#methodPattern` entries and is
+consulted next to `OracleAllowlist.isUnconditionalOracle`: **the configured
+call is itself the oracle**, with nothing required to be chained onto its
+result. A user needing the chain-anchor shape is describing a fluent assertion
+library, which is a built-in allowlist question (D-34), not a per-repo helper.
+
+Configured types also join the set import-anchoring searches. Without that, a
+custom oracle would only be recognized when the Symbol Solver happened to
+resolve it - which for a helper in another module with no `--classpath` is
+precisely the case that fails, i.e. the feature would have worked everywhere
+except where it is needed.
+
+The method glob is matched by a hand-written scanner rather than by
+translating `*` into a regex, so a pattern containing regex metacharacters
+(a `$` from a nested-class-style name) cannot silently change what matching
+means.
+
+This closes the gap all four corpus phases labelled "D-17 territory" and
+marked out of scope - gson's `MoreAsserts`, assertj's `AssertionsUtil`,
+junit-framework's `PreconditionAssertions` are all this shape. Those phases'
+precision numbers stand as measured: they recorded correct behaviour for an
+unconfigured run, and re-measuring with configuration is corpus work, not part
+of this change.
+
+`OracleRuleEngine.scan`'s positional signature had reached seven parameters,
+three of them optional hooks whose order only the compiler was checking, so
+custom oracles and suppressions arrive via a new `OracleScanOptions` parameter
+object instead of two more positions.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

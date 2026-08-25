@@ -33,6 +33,7 @@ import dev.coverdict.analysis.model.RepoPaths;
 import dev.coverdict.analysis.model.ResolvedSourceFile;
 import dev.coverdict.analysis.oracle.ClasspathLoader;
 import dev.coverdict.analysis.oracle.OracleRuleEngine;
+import dev.coverdict.analysis.oracle.OracleScanOptions;
 import dev.coverdict.analysis.oracle.OracleScanResult;
 import dev.coverdict.config.ConfigException;
 import dev.coverdict.config.ConfigLoader;
@@ -172,7 +173,7 @@ class AnalyzeCommand implements Callable<Integer> {
 
         VerdictDocument doc;
         try {
-            doc = analyze(repoRoot, exclusions, modules, reportPathsById, classpathFilesById, diffMode);
+            doc = analyze(repoRoot, exclusions, modules, reportPathsById, classpathFilesById, config, diffMode);
         } catch (AnalysisException e) {
             doc = incompleteDocument(exclusions, e, diffMode);
         }
@@ -301,7 +302,7 @@ class AnalyzeCommand implements Callable<Integer> {
     /** @throws AnalysisException when the overall-coverage evidence itself is bad (exit 3, structured incomplete document, nothing preserved). */
     private VerdictDocument analyze(Path repoRoot, List<String> exclusions, List<ModuleDefinition> modules,
                                      Map<String, List<String>> reportPathsById,
-                                     Map<String, String> classpathFilesById, String diffMode) {
+                                     Map<String, String> classpathFilesById, CoverdictConfig config, String diffMode) {
         // A declared module with no bound report has no coverage evidence in
         // --no-vcs mode (M0-CLI-INPUT.md: this is only a hard error when the
         // module has changed Java files, a diff-mode concept this build
@@ -340,6 +341,9 @@ class AnalyzeCommand implements Callable<Integer> {
         // not be opened is visible, never a silent partial resolution (D-17).
         ClasspathLoader.Result classpath = ClasspathLoader.load(repoRoot, classpathFilesById);
         extraWarnings.addAll(classpath.warnings());
+        OracleScanOptions scanOptions = OracleScanOptions.defaults()
+            .withConfig(config)
+            .withTypeSolvers(classpath.solvers());
 
         BindingResult binding = new ModuleBinder(repoRoot).bind(evidencedModules, parsedReportsById);
         List<ResolvedSourceFile> filtered = ExclusionFilter.apply(binding.resolvedFiles(), exclusions);
@@ -356,7 +360,7 @@ class AnalyzeCommand implements Callable<Integer> {
 
         if (DIFF_MODE_NO_VCS.equals(diffMode)) {
             // findings-scope=changed is rejected in --no-vcs mode by call() already, so "all" always holds here.
-            OracleScanResult scan = OracleRuleEngine.scan(repoRoot, evidencedModules, languageLevel, encoding, null, classpath.solvers());
+            OracleScanResult scan = OracleRuleEngine.scan(repoRoot, evidencedModules, languageLevel, encoding, null, scanOptions);
             List<AnalysisReason> allReasons = new ArrayList<>(scan.incompleteReasons());
             return new VerdictDocument(version.schemaVersion(), version.version(), allReasons.isEmpty(), allReasons,
                 languageLevel, encoding, exclusions, moduleInputs, diffMode, findingsScopeOption, null, overall,
@@ -379,7 +383,7 @@ class AnalyzeCommand implements Callable<Integer> {
 
             java.util.Set<String> findingsPaths = FINDINGS_SCOPE_CHANGED.equals(findingsScopeOption)
                 ? changedAndUntrackedPaths(diffResult) : null;
-            OracleScanResult scan = OracleRuleEngine.scan(repoRoot, evidencedModules, languageLevel, encoding, findingsPaths, classpath.solvers());
+            OracleScanResult scan = OracleRuleEngine.scan(repoRoot, evidencedModules, languageLevel, encoding, findingsPaths, scanOptions);
 
             List<AnalysisReason> allIncompleteReasons = new ArrayList<>(classification.incompleteReasons());
             allIncompleteReasons.addAll(scan.incompleteReasons());

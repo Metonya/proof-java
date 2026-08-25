@@ -595,6 +595,55 @@ class AnalyzeCommandTest {
         assertEquals("NO_RECOGNIZED_ORACLE", doc.at("/findings/0/rule").asText());
     }
 
+    /**
+     * customOracles reaching the engine through the real CLI: the same
+     * external-helper shape as {@code CustomOraclesTest}, but configured the
+     * way a user configures it - a {@code coverdict.config.json} at the repo
+     * root, picked up without being named.
+     */
+    @Test
+    void aCustomOracleConfiguredInTheRepoRootConfigFileSuppressesTheFinding() throws IOException {
+        Files.createDirectories(repoRoot.resolve("src/main/java/com/example"));
+        Files.writeString(repoRoot.resolve("src/main/java/com/example/Calc.java"), "class Calc {}\n");
+        Files.createDirectories(repoRoot.resolve("src/test/java/com/example"));
+        Files.writeString(repoRoot.resolve("src/test/java/com/example/MoreAsserts.java"), String.join("\n",
+            "package com.example;",
+            "public final class MoreAsserts {",
+            "    public static void assertOk(String actual) {",
+            "        if (actual == null) { throw new AssertionError(); }",
+            "    }",
+            "}",
+            ""));
+        Files.writeString(repoRoot.resolve("src/test/java/com/example/CalcTest.java"), String.join("\n",
+            "package com.example;",
+            "import static com.example.MoreAsserts.assertOk;",
+            "import org.junit.jupiter.api.Test;",
+            "class CalcTest {",
+            "    @Test",
+            "    void verifiesThroughAnExternalHelper() {",
+            "        assertOk(\"value\");",
+            "    }",
+            "}",
+            ""));
+
+        String[] args = {"analyze", "--no-vcs",
+            "--repo", repoRoot.toString(),
+            "--module", "app=.",
+            "--report", "app=" + FIXTURES.resolve("mixed-coverage.xml"),
+            "--out", outputDir.resolve("verdict.json").toString()};
+
+        assertEquals(ExitCode.COMPLETE.value(), run(args));
+        JsonNode before = new ObjectMapper().readTree(Files.readAllBytes(outputDir.resolve("verdict.json")));
+        assertEquals(1, before.at("/findings").size(), "unconfigured, the external helper is not recognized");
+
+        Files.writeString(repoRoot.resolve("coverdict.config.json"),
+            "{\"customOracles\": [\"com.example.MoreAsserts#assertOk\"]}");
+
+        assertEquals(ExitCode.COMPLETE.value(), run(args));
+        JsonNode after = new ObjectMapper().readTree(Files.readAllBytes(outputDir.resolve("verdict.json")));
+        assertEquals(0, after.at("/findings").size(), "configured, it is a recognized oracle: " + after.at("/findings"));
+    }
+
     private List<String> warningCodes(Path jsonFile) throws IOException {
         JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(jsonFile));
         List<String> codes = new ArrayList<>();

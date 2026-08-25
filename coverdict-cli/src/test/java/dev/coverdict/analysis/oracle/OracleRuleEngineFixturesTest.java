@@ -70,7 +70,8 @@ class OracleRuleEngineFixturesTest {
 
     private static Map<String, Finding> scanFixtureDirectory(String ruleId, Path dir) {
         ModuleDefinition module = new ModuleDefinition("fixtures", ".", List.of(), List.of("."));
-        OracleScanResult scan = OracleRuleEngine.scan(dir, List.of(module), 17, "UTF-8", null, fixtureHarnessSolvers());
+        OracleScanResult scan = OracleRuleEngine.scan(dir, List.of(module), 17, "UTF-8", null,
+            OracleScanOptions.defaults().withTypeSolvers(fixtureHarnessSolvers()));
 
         Map<String, Finding> byMethod = new LinkedHashMap<>();
         for (Finding f : scan.findings()) {
