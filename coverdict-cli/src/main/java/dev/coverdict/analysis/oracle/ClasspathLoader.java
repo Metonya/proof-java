@@ -71,11 +71,10 @@ public final class ClasspathLoader {
         for (Map.Entry<String, String> entry : classpathFilesById.entrySet()) {
             String moduleId = entry.getKey();
             String listFilePath = entry.getValue();
-            List<String> lines = readLines(repoRoot, moduleId, listFilePath, warnings);
-            if (lines == null) {
-                continue; // unreadable - one CLASSPATH_FILE_UNREADABLE warning already added
-            }
-            for (String rawLine : lines) {
+            // An unreadable file's warning is added inside readLines(); this
+            // loop then simply has zero lines to iterate, same as an empty
+            // file - the two cases need no separate handling here.
+            for (String rawLine : readLines(repoRoot, moduleId, listFilePath, warnings)) {
                 if (resolveLine(repoRoot, moduleId, listFilePath, rawLine, seenJars, solvers, warnings)
                         == LineOutcome.CAP_REACHED) {
                     break;
@@ -85,7 +84,7 @@ public final class ClasspathLoader {
         return new Result(List.copyOf(solvers), List.copyOf(warnings));
     }
 
-    /** @return the file's lines, or null (with a warning already recorded) if it could not be read. */
+    /** @return the file's lines, or an empty list (with a warning already recorded) if it could not be read. */
     private static List<String> readLines(Path repoRoot, String moduleId, String listFilePath,
                                            List<AnalysisReason> warnings) {
         try {
@@ -95,7 +94,7 @@ public final class ClasspathLoader {
                 "Classpath list '" + listFilePath + FOR_MODULE + moduleId
                     + "' could not be read (" + e.getClass().getSimpleName()
                     + "); oracle resolution continues without it.", null, moduleId));
-            return null;
+            return List.of();
         }
     }
 
