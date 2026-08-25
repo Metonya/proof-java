@@ -9,9 +9,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.schema.JsonSchema;
@@ -87,15 +92,6 @@ class ConfigLoaderTest {
     // --- strictness: each of these would otherwise be a silent misconfiguration ---
 
     @Test
-    void anUnknownTopLevelKeyIsRejectedRatherThanIgnored() throws IOException {
-        writeConfig("{\"supressions\": []}"); // one 'p' - the typo this rule exists for
-
-        ConfigException e = assertThrows(ConfigException.class, () -> ConfigLoader.load(repoRoot, null));
-
-        assertTrue(e.getMessage().contains("supressions"), e.getMessage());
-    }
-
-    @Test
     void anUnknownKeyInsideASuppressionIsRejected() throws IOException {
         writeConfig("{\"suppressions\": [{\"rule\": \"NULL_CHECK_ONLY\", \"pathGlob\": \"**\","
             + " \"reason\": \"r\", \"because\": \"typo\"}]}");
@@ -105,50 +101,44 @@ class ConfigLoaderTest {
         assertTrue(e.getMessage().contains("because"), e.getMessage());
     }
 
-    @Test
-    void aSuppressionWithoutAReasonIsRejected() throws IOException {
-        writeConfig("{\"suppressions\": [{\"rule\": \"NULL_CHECK_ONLY\", \"pathGlob\": \"**\"}]}");
+    /**
+     * Four independently-motivated rejections that share one shape (SonarQube
+     * java:S5976): each names a distinct kind of invalid document, and each
+     * assertion checks that the exception message actually names the specific
+     * problem - not merely that some exception was thrown.
+     */
+    static Stream<Arguments> rejectedDocumentsWithAMeaningfulMessage() {
+        return Stream.of(
+            Arguments.of("an unknown top-level key (typo'd 'supressions', one 'p' - the case this rule exists for)",
+                "{\"supressions\": []}", "supressions"),
+            Arguments.of("a suppression missing its mandatory reason",
+                "{\"suppressions\": [{\"rule\": \"NULL_CHECK_ONLY\", \"pathGlob\": \"**\"}]}", "reason"),
+            Arguments.of("a duplicate top-level key (rather than silently letting the last one win)",
+                "{\"languageLevel\": 11, \"languageLevel\": 17}", "Duplicate"),
+            Arguments.of("a customOracles entry with no '#' separating type and method",
+                "{\"customOracles\": [\"NoHashHere\"]}", "NoHashHere"));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("rejectedDocumentsWithAMeaningfulMessage")
+    void rejectsWithAMessageNamingTheProblem(String scenario, String json, String expectedInMessage)
+            throws IOException {
+        writeConfig(json);
 
         ConfigException e = assertThrows(ConfigException.class, () -> ConfigLoader.load(repoRoot, null));
 
-        assertTrue(e.getMessage().contains("reason"), e.getMessage());
+        assertTrue(e.getMessage().contains(expectedInMessage), e.getMessage());
     }
 
-    @Test
-    void aWrongValueTypeIsRejected() throws IOException {
-        writeConfig("{\"languageLevel\": \"17\"}");
-
-        assertThrows(ConfigException.class, () -> ConfigLoader.load(repoRoot, null));
-    }
-
-    @Test
-    void malformedJsonIsRejected() throws IOException {
-        writeConfig("{\"languageLevel\": 17,,}");
-
-        assertThrows(ConfigException.class, () -> ConfigLoader.load(repoRoot, null));
-    }
-
-    @Test
-    void aDuplicateKeyIsRejectedRatherThanLastOneWinning() throws IOException {
-        writeConfig("{\"languageLevel\": 11, \"languageLevel\": 17}");
-
-        ConfigException e = assertThrows(ConfigException.class, () -> ConfigLoader.load(repoRoot, null));
-
-        assertTrue(e.getMessage().contains("Duplicate"), e.getMessage());
-    }
-
-    @Test
-    void aCustomOracleEntryWithoutATypeAndMethodIsRejected() throws IOException {
-        writeConfig("{\"customOracles\": [\"NoHashHere\"]}");
-
-        ConfigException e = assertThrows(ConfigException.class, () -> ConfigLoader.load(repoRoot, null));
-
-        assertTrue(e.getMessage().contains("NoHashHere"), e.getMessage());
-    }
-
-    @Test
-    void anUnknownFindingsScopeValueIsRejected() throws IOException {
-        writeConfig("{\"findingsScope\": \"everything\"}");
+    /** Three more rejections (java:S5976) where only "it throws" matters, not the message's exact wording. */
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "{\"languageLevel\": \"17\"}",          // wrong value type
+        "{\"languageLevel\": 17,,}",            // malformed JSON
+        "{\"findingsScope\": \"everything\"}"   // unknown enum value
+    })
+    void rejectsAnInvalidDocument(String json) throws IOException {
+        writeConfig(json);
 
         assertThrows(ConfigException.class, () -> ConfigLoader.load(repoRoot, null));
     }

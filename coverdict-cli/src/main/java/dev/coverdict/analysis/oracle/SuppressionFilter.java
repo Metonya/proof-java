@@ -55,20 +55,22 @@ public final class SuppressionFilter {
 
     private static boolean isSuppressed(Finding finding, List<Compiled> compiled) {
         for (Compiled entry : compiled) {
-            if (!entry.rule().equals(finding.rule())) {
-                continue;
+            if (matches(finding, entry)) {
+                return true;
             }
-            if (!ExclusionFilter.matchesAny(finding.path(), entry.pathPatterns())) {
-                continue;
-            }
-            if (entry.methodPatterns() != null
-                && (finding.testMethod() == null
-                    || !ExclusionFilter.matchesAny(finding.testMethod(), entry.methodPatterns()))) {
-                continue;
-            }
-            return true;
         }
         return false;
+    }
+
+    private static boolean matches(Finding finding, Compiled entry) {
+        if (!entry.rule().equals(finding.rule())) {
+            return false;
+        }
+        if (!ExclusionFilter.matchesAny(finding.path(), entry.pathPatterns())) {
+            return false;
+        }
+        return entry.methodPatterns() == null
+            || (finding.testMethod() != null && ExclusionFilter.matchesAny(finding.testMethod(), entry.methodPatterns()));
     }
 
     /** @param suppressedCount how many findings were withheld; 0 means the warning is not emitted at all. */

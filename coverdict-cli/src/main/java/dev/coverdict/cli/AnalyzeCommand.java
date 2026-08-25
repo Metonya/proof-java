@@ -124,58 +124,76 @@ class AnalyzeCommand implements Callable<Integer> {
     @Option(names = "--out", defaultValue = "coverdict-verdict.json", description = "Verdict JSON output path.")
     private String outOption;
 
-    @Override
-    public Integer call() {
-        int modesSelected = (noVcs ? 1 : 0) + (uncommitted ? 1 : 0) + (baseRefOption != null ? 1 : 0);
-        if (modesSelected != 1) {
-            spec.commandLine().getErr().println(
-                "coverdict: exactly one diff mode is required: --no-vcs, --uncommitted, or --base <ref> "
-                + "(docs/M0-CLI-INPUT.md).");
-            return ExitCode.INVALID_INPUT.value();
-        }
-        String diffMode = selectedDiffMode();
+    /**
+     * Setup and validation, everything that can invalidate the invocation
+     * before any analysis runs. Extracted from {@link #call()} (SonarQube
+     * java:S3776 - the unextracted method's nesting from four independent
+     * validation steps plus config precedence pushed cognitive complexity to
+     * 16 against a limit of 15): every failure here is a {@link
+     * CliUsageException} or {@link ConfigException}, both handled identically
+     * by the one catch in {@link #call()}.
+     */
+    private record Invocation(Path repoRoot, String diffMode, CoverdictConfig config, List<String> exclusions,
+                               List<ModuleDefinition> modules, Map<String, List<String>> reportPathsById,
+                               Map<String, String> classpathFilesById) {
+    }
 
+    /** @throws CliUsageException or ConfigException on any invalid invocation - both exit 2, no JSON written. */
+    private Invocation validateAndParseInvocation() {
+        String diffMode = selectedDiffModeOrThrow();
         Path repoRoot = Path.of(repoOption != null ? repoOption : System.getProperty("user.dir"));
-        CoverdictConfig config;
-        try {
-            config = ConfigLoader.load(repoRoot, configOption);
-            applyConfigPrecedence(config);
-        } catch (ConfigException e) {
-            spec.commandLine().getErr().println("coverdict: " + e.getMessage());
-            return ExitCode.INVALID_INPUT.value(); // no JSON written - the configuration itself was invalid
-        }
-
-        if (!FINDINGS_SCOPE_ALL.equals(findingsScopeOption) && !FINDINGS_SCOPE_CHANGED.equals(findingsScopeOption)) {
-            spec.commandLine().getErr().println("coverdict: --findings-scope must be 'all' or 'changed', got: " + findingsScopeOption);
-            return ExitCode.INVALID_INPUT.value();
-        }
-        if (FINDINGS_SCOPE_CHANGED.equals(findingsScopeOption) && DIFF_MODE_NO_VCS.equals(diffMode)) {
-            spec.commandLine().getErr().println(
-                "coverdict: --findings-scope changed requires a diff mode (--uncommitted or --base <ref>), not --no-vcs.");
-            return ExitCode.INVALID_INPUT.value();
-        }
+        CoverdictConfig config = ConfigLoader.load(repoRoot, configOption);
+        applyConfigPrecedence(config);
+        validateFindingsScope(diffMode);
 
         List<String> exclusions = exclusionsArg == null || exclusionsArg.isBlank()
             ? List.of()
             : Arrays.stream(exclusionsArg.split(",")).map(String::trim).filter(s -> !s.isBlank()).toList();
 
-        List<ModuleDefinition> modules;
-        Map<String, List<String>> reportPathsById;
-        Map<String, String> classpathFilesById;
+        Map<String, List<String>> reportPathsById = parseReportArgs();
+        List<ModuleDefinition> modules = buildModuleDefinitions(reportPathsById.keySet());
+        Map<String, String> classpathFilesById = parseClasspathArgs(modules);
+
+        return new Invocation(repoRoot, diffMode, config, exclusions, modules, reportPathsById, classpathFilesById);
+    }
+
+    /** @throws CliUsageException unless exactly one of --no-vcs/--uncommitted/--base is set. */
+    private String selectedDiffModeOrThrow() {
+        int modesSelected = (noVcs ? 1 : 0) + (uncommitted ? 1 : 0) + (baseRefOption != null ? 1 : 0);
+        if (modesSelected != 1) {
+            throw new CliUsageException("exactly one diff mode is required: --no-vcs, --uncommitted, or --base <ref> "
+                + "(docs/M0-CLI-INPUT.md).");
+        }
+        return selectedDiffMode();
+    }
+
+    /** @throws CliUsageException on an unknown --findings-scope value, or 'changed' combined with --no-vcs. */
+    private void validateFindingsScope(String diffMode) {
+        if (!FINDINGS_SCOPE_ALL.equals(findingsScopeOption) && !FINDINGS_SCOPE_CHANGED.equals(findingsScopeOption)) {
+            throw new CliUsageException("--findings-scope must be 'all' or 'changed', got: " + findingsScopeOption);
+        }
+        if (FINDINGS_SCOPE_CHANGED.equals(findingsScopeOption) && DIFF_MODE_NO_VCS.equals(diffMode)) {
+            throw new CliUsageException(
+                "--findings-scope changed requires a diff mode (--uncommitted or --base <ref>), not --no-vcs.");
+        }
+    }
+
+    @Override
+    public Integer call() {
+        Invocation inv;
         try {
-            reportPathsById = parseReportArgs();
-            modules = buildModuleDefinitions(reportPathsById.keySet());
-            classpathFilesById = parseClasspathArgs(modules);
-        } catch (CliUsageException e) {
+            inv = validateAndParseInvocation();
+        } catch (CliUsageException | ConfigException e) {
             spec.commandLine().getErr().println("coverdict: " + e.getMessage());
-            return ExitCode.INVALID_INPUT.value(); // no JSON written - invocation itself was invalid
+            return ExitCode.INVALID_INPUT.value(); // no JSON written - the invocation itself was invalid
         }
 
         VerdictDocument doc;
         try {
-            doc = analyze(repoRoot, exclusions, modules, reportPathsById, classpathFilesById, config, diffMode);
+            doc = analyze(inv.repoRoot(), inv.exclusions(), inv.modules(), inv.reportPathsById(),
+                inv.classpathFilesById(), inv.config(), inv.diffMode());
         } catch (AnalysisException e) {
-            doc = incompleteDocument(exclusions, e, diffMode);
+            doc = incompleteDocument(inv.exclusions(), e, inv.diffMode());
         }
 
         try (OutputStream out = Files.newOutputStream(Path.of(outOption))) {

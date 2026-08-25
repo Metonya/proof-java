@@ -49,6 +49,9 @@ public final class ClasspathLoader {
      */
     private static final int MAX_JAR_ENTRIES = 10_000;
 
+    /** Shared across every warning message this class writes (SonarQube java:S1192). */
+    private static final String FOR_MODULE = "' for module '";
+
     private ClasspathLoader() {
     }
 
@@ -67,49 +70,74 @@ public final class ClasspathLoader {
 
         for (Map.Entry<String, String> entry : classpathFilesById.entrySet()) {
             String moduleId = entry.getKey();
-            Path listFile = repoRoot.resolve(entry.getValue());
-            List<String> lines;
-            try {
-                lines = Files.readAllLines(listFile, StandardCharsets.UTF_8);
-            } catch (IOException e) {
-                warnings.add(new AnalysisReason("CLASSPATH_FILE_UNREADABLE",
-                    "Classpath list '" + entry.getValue() + "' for module '" + moduleId
-                        + "' could not be read (" + e.getClass().getSimpleName()
-                        + "); oracle resolution continues without it.", null, moduleId));
-                continue;
+            String listFilePath = entry.getValue();
+            List<String> lines = readLines(repoRoot, moduleId, listFilePath, warnings);
+            if (lines == null) {
+                continue; // unreadable - one CLASSPATH_FILE_UNREADABLE warning already added
             }
-
             for (String rawLine : lines) {
-                String jarPath = rawLine.trim();
-                if (jarPath.isEmpty() || jarPath.startsWith("#")) {
-                    continue;
-                }
-                if (seenJars.size() >= MAX_JAR_ENTRIES) {
-                    warnings.add(new AnalysisReason("CLASSPATH_TOO_LARGE",
-                        "Classpath list '" + entry.getValue() + "' for module '" + moduleId + "' exceeds "
-                            + MAX_JAR_ENTRIES + " entries (SECURITY-POLICY.md #2); the remainder was ignored.",
-                        null, moduleId));
+                if (resolveLine(repoRoot, moduleId, listFilePath, rawLine, seenJars, solvers, warnings)
+                        == LineOutcome.CAP_REACHED) {
                     break;
-                }
-                // A jar lives outside the repo by nature (~/.m2/repository/...),
-                // so the repo-root escape check that guards report-derived paths
-                // (SECURITY-POLICY.md #4) deliberately does not apply here: this
-                // path comes from the invoking user, like --repo or --out, not
-                // from inside a parsed report.
-                Path jar = repoRoot.resolve(jarPath);
-                if (!seenJars.add(jar.toString())) {
-                    continue; // same jar named by two modules - solve it once
-                }
-                try {
-                    solvers.add(new JarTypeSolver(jar));
-                } catch (IOException | RuntimeException e) {
-                    warnings.add(new AnalysisReason("CLASSPATH_ENTRY_UNUSABLE",
-                        "Classpath entry '" + jarPath + "' for module '" + moduleId + "' could not be opened as a jar ("
-                            + e.getClass().getSimpleName() + "); oracle resolution continues without it.", null, moduleId));
                 }
             }
         }
         return new Result(List.copyOf(solvers), List.copyOf(warnings));
+    }
+
+    /** @return the file's lines, or null (with a warning already recorded) if it could not be read. */
+    private static List<String> readLines(Path repoRoot, String moduleId, String listFilePath,
+                                           List<AnalysisReason> warnings) {
+        try {
+            return Files.readAllLines(repoRoot.resolve(listFilePath), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            warnings.add(new AnalysisReason("CLASSPATH_FILE_UNREADABLE",
+                "Classpath list '" + listFilePath + FOR_MODULE + moduleId
+                    + "' could not be read (" + e.getClass().getSimpleName()
+                    + "); oracle resolution continues without it.", null, moduleId));
+            return null;
+        }
+    }
+
+    private enum LineOutcome { SKIPPED, CAP_REACHED, RESOLVED }
+
+    /**
+     * One line of a classpath list file. Kept to a single {@code break}/
+     * {@code continue}-free shape (SonarQube java:S135) by returning an
+     * outcome instead of controlling the caller's loop directly - the caller
+     * only ever needs to know whether the cap was hit.
+     */
+    private static LineOutcome resolveLine(Path repoRoot, String moduleId, String listFilePath, String rawLine,
+                                            Set<String> seenJars, List<TypeSolver> solvers,
+                                            List<AnalysisReason> warnings) {
+        String jarPath = rawLine.trim();
+        if (jarPath.isEmpty() || jarPath.startsWith("#")) {
+            return LineOutcome.SKIPPED;
+        }
+        if (seenJars.size() >= MAX_JAR_ENTRIES) {
+            warnings.add(new AnalysisReason("CLASSPATH_TOO_LARGE",
+                "Classpath list '" + listFilePath + FOR_MODULE + moduleId + "' exceeds "
+                    + MAX_JAR_ENTRIES + " entries (SECURITY-POLICY.md #2); the remainder was ignored.",
+                null, moduleId));
+            return LineOutcome.CAP_REACHED;
+        }
+        // A jar lives outside the repo by nature (~/.m2/repository/...), so
+        // the repo-root escape check that guards report-derived paths
+        // (SECURITY-POLICY.md #4) deliberately does not apply here: this path
+        // comes from the invoking user, like --repo or --out, not from inside
+        // a parsed report.
+        Path jar = repoRoot.resolve(jarPath);
+        if (!seenJars.add(jar.toString())) {
+            return LineOutcome.SKIPPED; // same jar named by two modules - solve it once
+        }
+        try {
+            solvers.add(new JarTypeSolver(jar));
+        } catch (IOException | RuntimeException e) {
+            warnings.add(new AnalysisReason("CLASSPATH_ENTRY_UNUSABLE",
+                "Classpath entry '" + jarPath + FOR_MODULE + moduleId + "' could not be opened as a jar ("
+                    + e.getClass().getSimpleName() + "); oracle resolution continues without it.", null, moduleId));
+        }
+        return LineOutcome.RESOLVED;
     }
 
     /** Solvers to hand {@link OracleRuleEngine#scan}, plus warnings the verdict must surface. */
