@@ -400,6 +400,20 @@ the M3 finding-based quality gate and never emitted by v0.1; `2` invalid
 invocation/input; `3` incomplete or unverified-required evidence; `4` internal
 failure.
 
+## Testing infrastructure (2026-08-25)
+
+`coverdict-playground` (private, separate repo, testing infra only - not a
+public demo) is a small Java project with one deliberately constructed test
+scenario per L0/L3 rule and a documented expected finding for each,
+verified by hand with a real `analyze --base <ref> --mutation-report` run.
+A checked-in copy of its source and JaCoCo report backs
+`PlaygroundFunctionalTest` (`coverdict-cli`), which pins the six real L0
+findings on every default `mvn verify` run. The L3 scenarios (mutation
+evidence) need a real PIT subprocess and are not yet wired into an
+automated test - next step, alongside `MutationRunnerIT`'s existing
+`-Pmutation-it` profile. See that repo's README for the full scenario map
+and the bug-repro workflow (shrink a real finding into a new scenario there).
+
 ## Later (sketches)
 
 - **M2 — L2 feasibility and attribution spike.** Faz 0 (kill-switch) is
