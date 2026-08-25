@@ -70,17 +70,18 @@ class PlaygroundFunctionalTest {
 
         // Ground truth verified by hand against coverdict-playground (private
         // repo): `analyze --base <first-commit> --report jacoco.xml
-        // --mutation-report` produces these same six L0 findings plus four L3
+        // --mutation-report` produces these same seven L0 findings plus four L3
         // findings this test doesn't exercise. CalculatorGoodTest and
         // CalculatorSubsumedTest contribute none, confirming no false positives.
         String pkg = "dev.coverdict.playground.";
-        assertEquals(6, findings.size(), "unexpected finding count: " + findings);
+        assertEquals(7, findings.size(), "unexpected finding count: " + findings);
         assertTrue(findings.contains("CATCH_ORACLE_WITHOUT_FAIL HIGH " + pkg + "CalculatorCatchWithoutFailTest#divideByZeroSwallowed()"));
         assertTrue(findings.contains("NO_RECOGNIZED_ORACLE HIGH " + pkg + "CalculatorNoOracleTest#subtractHasNoAssertion()"));
         assertTrue(findings.contains("NO_RECOGNIZED_ORACLE HIGH " + pkg + "CalculatorPseudoTestedTest#squareHasNoAssertion()"));
         assertTrue(findings.contains("NULL_CHECK_ONLY HIGH " + pkg + "CalculatorNullCheckOnlyTest#describeOnlyChecksNonNull()"));
         assertTrue(findings.contains("TAUTOLOGICAL_ORACLE HIGH " + pkg + "CalculatorTautologicalOracleTest#multiplyConstantVsConstant()"));
         assertTrue(findings.contains("TAUTOLOGICAL_ORACLE HIGH " + pkg + "CalculatorTautologicalOracleTest#multiplyLiteralBoolean()"));
+        assertTrue(findings.contains("NO_RECOGNIZED_ORACLE INCONCLUSIVE " + pkg + "CalculatorUnresolvedOracleTest#addCheckedViaLocalSoftAssertions()"));
     }
 
     private static List<String> findingSummaries(JsonNode doc) {
