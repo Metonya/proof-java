@@ -502,15 +502,18 @@ failure.
   worthless), diff scoping resolved by reusing L2's own mapping (O-05/D-12,
   closed by D-60 - no ArcMutate dependency needed). `setFullMutationMatrix
   (true)` carries the full kill-set M4's `SUBSUMED_TEST` needs. Not done:
-  IDE surfaces (still just JSON), and D-59's open process-resource-growth
-  question - `--mutation-report` ships with a deliberately conservative
-  5-minute default timeout as a result, not a verified-safe one. D-62's
-  watchdog spike (corrected mid-session after an initial false "safe"
-  reading from a monitoring-tool defect) reproduced D-59 again even on the
-  existing narrow-scoped `-Pmutation-it` IT test - 10 processes/1.19GB
-  within 3s of the mutation phase starting, non-deterministic across runs.
-  Root cause still not pinned down - still open, confirmed more real than
-  before, not less.
+  IDE surfaces (still just JSON). D-59's process-resource-growth question
+  is now **closed by D-63**: `MutationDriver` was declaring every one of
+  this repo's 716 test classes a covering-test candidate
+  (`setTargetTests(Glob.toGlobPredicates(List.of("*")))`), which under
+  `setFullMutationMatrix(true)` forced a full-suite coverage re-gather once
+  per target method being probed - traced live via a verbose PIT capture
+  (the same 19-test class's coverage regathered six times in one second)
+  and fixed by scoping `targetTests` to the target class's own package.
+  `MutationRunnerIT` went from reliably hitting its 90s budget every run to
+  completing in ~1.1s, twice, back to back. `--mutation-report`'s 5-minute
+  default timeout stays as a sensible ceiling, no longer a blind safety
+  margin around an unknown risk.
 - **Backlog:** standalone HTML · AI-assistant skill (agent reads verdict JSON,
   writes tests for gaps it names, reruns, interprets the result through
   coverdict again) · VS Code extension (inline per-line coverage gutter

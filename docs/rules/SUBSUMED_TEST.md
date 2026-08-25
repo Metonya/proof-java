@@ -118,13 +118,19 @@ that happens to exercise the same mutants under a narrow mutator set).
   means a test subsumed within one diff-scoped run may not be subsumed
   against the module's full test suite and full mutant population - this
   rule only sees what one run's target-classes glob actually mutated.
-- **D-59's open process-resource-growth question** applies identically to
-  this rule's only precondition (`--mutation-report`) - see that flag's own
-  known limits. `SUBSUMED_TEST` adds no additional exposure beyond what M5
-  already carries; D-62's (corrected) watchdog spike reproduced D-59's
-  growth pattern live, non-deterministically, even on the existing narrow
-  IT test scope - not a resolved risk, confirmed real rather than
-  theoretical.
+- **Same-package test discovery only (D-63).** `MutationDriver` scopes
+  covering-test candidates to the target class's own package (a Maven/
+  Gradle convention, not coverage-verified) - a test that covers the target
+  class from a different package is invisible to this run's kill-matrix
+  entirely, not merely deprioritized. This is deliberate (an unscoped `"*"`
+  candidate set was D-59's root cause - see below), not an oversight, but
+  it is a real recall gap on an unconventional source layout.
+- **D-59's process-resource-growth question is closed (D-63).** The
+  original finding traced to `MutationDriver` declaring every test class in
+  the module a covering-test candidate; under full-matrix mode that forced
+  a full-suite coverage re-gather per target method. Fixed by the
+  same-package scoping named above - `MutationRunnerIT` now completes in
+  ~1.1s instead of reliably hitting its 90s budget.
 - **Firing-rate unmeasured.** Suite-reduction literature finds 30-70%
   removable-by-some-definition routinely; this rule's strict-superset-only
   condition should suppress most of that, but the actual rate on a real

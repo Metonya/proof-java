@@ -2,7 +2,6 @@ package dev.coverdict.analysis.mutation;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -30,22 +29,32 @@ import org.junit.jupiter.api.Test;
  * here - the driver process either finds PIT and its own classes on the
  * classpath and starts cleanly, or it doesn't and this test fails loudly.
  *
- * <p>Does not assert the mutation phase completes within the budget: D-58
- * found this environment's actual completion time for even a small,
- * diff-scoped target to be longer than a few minutes and left it as an
- * open question (see docs/DECISIONS.md) rather than guess at a root cause
- * further live debugging could not pin down safely. A clean {@code
- * MUTATION_BUDGET_EXCEEDED} timeout is accepted as passing - the
- * regression this guards against is the driver never starting at all, not
- * the mutation phase's own duration.
+ * <p>Also the concrete regression check for D-6x's fix to D-59: before that
+ * fix, {@code MutationDriver} scoped {@code targetTests} to an unscoped
+ * {@code "*"}, telling PIT every one of this repo's 716 test classes was a
+ * covering-test candidate. Under {@code setFullMutationMatrix(true)} that
+ * forced PIT to re-gather full-suite coverage once per target method being
+ * probed (a live capture showed the same 19-test class re-executed six
+ * times in one second for this exact target) - this run reliably hit the
+ * 90s budget and never completed, root cause traced live via a verbose PIT
+ * capture and confirmed fixed by narrowing {@code targetTests} to the
+ * target class's own package. This test now asserts the run actually
+ * *completes* (well under a second in practice) rather than accepting a
+ * clean timeout as the best available signal - a regression back to
+ * unscoped tests would show up here as a real timeout again, not just as
+ * slower CI.
  */
 class MutationRunnerIT {
 
-    /** Short: this test only needs the driver to start and PIT to accept the run - not to finish. */
-    private static final Duration BUDGET = Duration.ofSeconds(90);
+    /**
+     * Generous relative to the ~1s this run now takes post-D-6x fix, but
+     * still bounded - a real hang or a regression back to D-59's unscoped-
+     * targetTests behavior should fail this test, not silently eat CI time.
+     */
+    private static final Duration BUDGET = Duration.ofSeconds(30);
 
     @Test
-    void theDriverStartsAndPitAcceptsTheRunWithoutTheClasspathCascade() {
+    void theDriverStartsAndPitCompletesARealMutationRun() {
         Path repoRoot = Path.of(System.getProperty("user.dir"));
         List<String> classPathElements = new ArrayList<>();
         List<String> codePaths = new ArrayList<>();
@@ -63,20 +72,9 @@ class MutationRunnerIT {
         // mutators can meaningfully act on.
         List<String> targetClasses = List.of("dev.coverdict.analysis.binding.ChangedClassTargets*");
 
-        try {
-            Optional<MutationModuleEvidence> result = MutationRunner.run("coverdict-cli-it", repoRoot,
-                classPathElements, codePaths, targetClasses, BUDGET);
-            // Completed within the budget - the strongest possible pass.
-            assertTrue(result.isPresent(), "expected PIT to find at least one mutable point in a real production class");
-            assertFalse(result.get().methods().isEmpty(), "expected at least one mutated method");
-        } catch (MutationCollectionException e) {
-            // A clean timeout is an accepted outcome (see class javadoc) -
-            // anything else (classpath/ClassNotFoundException/driver crash)
-            // is exactly the regression this test exists to catch.
-            String message = String.valueOf(e.getMessage());
-            if (!message.contains("exceeded its") || !message.contains("budget")) {
-                fail("Expected only a clean budget timeout, got: " + message, e);
-            }
-        }
+        Optional<MutationModuleEvidence> result = MutationRunner.run("coverdict-cli-it", repoRoot,
+            classPathElements, codePaths, targetClasses, BUDGET);
+        assertTrue(result.isPresent(), "expected PIT to find at least one mutable point in a real production class");
+        assertFalse(result.get().methods().isEmpty(), "expected at least one mutated method");
     }
 }

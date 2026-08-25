@@ -1124,7 +1124,7 @@ JVM accepts `/` in classpath entries on Windows exactly like `\`.
 **D-59 · A real `--mutation-report` run's process count grows fast and
 unpredictably in at least one dogfood environment - root cause not
 isolated, budget lowered as a safety margin instead of a fix**
-(2026-08-25)
+(2026-08-25, root-caused and fixed same-day by D-63)
 Running `MutationRunnerIT` against coverdict's own repo (a single diff-
 scoped target, `setFullMutationMatrix(true)`, `numberOfThreads=1`) after
 D-58's fixes: process count climbed past 60 `java.exe` processes within
@@ -1283,16 +1283,67 @@ incident. `SubprocessWorkspace.destroyProcessTree`'s own after-the-budget
 cleanup was never even reached this time; the external guard fired first,
 which is exactly the division of labor this script exists for.
 
-**Net effect on D-59 and M4:** D-59 is not closed - if anything this
-session hardened the evidence that it is a real, reproducible-but-
-nondeterministic risk on this machine, not a one-off. `SUBSUMED_TEST`
-(D-61) carries exactly the exposure M5 already shipped with (same
-`MutationRunner.DEFAULT_BUDGET`, same diff-scoped targeting, D-60) - no
-better, no worse - and this session's corrected spike is the reason to
-say that with more confidence than before, not less. Running
-`--mutation-report` locally without an external watchdog remains something
-this repo's own documentation should not casually recommend until D-59
-has an actual root cause.
+**Net effect on D-59 and M4 at the time:** D-59 was not closed - if
+anything this session hardened the evidence that it was a real,
+reproducible-but-nondeterministic risk on this machine, not a one-off.
+Superseded a few hours later in the same session by D-63, which finds and
+fixes the actual root cause.
+
+**D-63 · D-59 root cause found and fixed: `MutationDriver` was telling PIT
+every one of this repo's 716 test classes was a covering-test candidate**
+(2026-08-25)
+Investigated by cloning PIT's own source (`hcoles/pitest`, near 1.25.9 -
+coverdict pins 1.15.8, but the minion-spawn/coverage-gathering machinery in
+`MutationTestUnit`/`WorkerFactory`/`Java9Process` is the relevant code path
+and matches across versions closely enough to read) and, after two failed
+standalone reproduction attempts (missing `pitest`/`pitest-entry` on a
+hand-built classpath, then missing `target/test-classes` - both spike-
+tooling mistakes, not PIT bugs), by temporarily setting
+`MutationDriver`'s `Verbosity.QUIET` to `VERBOSE_NO_SPINNER` and
+`MutationRunner`'s `Redirect.DISCARD` to a real log file, then re-running
+the actual `-Pmutation-it` IT test under the (by-then-fixed, D-62) watchdog
+with a tight process ceiling to capture output before the tree got killed.
+
+The captured log showed the real mechanism directly: **one minion booted
+successfully** (only one "Project base directory is null" banner, so this
+was never the retry-driven `MutationTestUnit.runTestsInSeperateProcess`
+respawn cascade D-57's terminology first suggested) and immediately logged
+`Expecting 716 tests classes from parent` - then re-executed the exact
+same 19-test class's full coverage-gathering sequence **six times within
+one second**. `MutationDriver.main` had set `options.setTargetTests(Glob.
+toGlobPredicates(List.of("*")))` unconditionally since D-56/M5 shipped -
+every one of coverdict's own 716 test classes was declared a covering-test
+candidate for every mutation run, regardless of how narrow
+`--target-classes` was. Under `setFullMutationMatrix(true)`, PIT gathers
+coverage once per target method/mutant group being probed rather than
+once per run; with an unscoped candidate set that means (target method
+count) full re-executions of the entire 716-class suite - the repeated
+identical block is that mechanism caught mid-flight, not a crash loop.
+This scales with target-method count independent of how small
+`--target-classes` is, which is exactly the "climbs fast, non-
+deterministic across otherwise-identical runs" shape D-59/D-62 observed:
+a target with more methods needing separate coverage passes explodes
+faster and further than one with few.
+
+Fix: `MutationDriver.testGlobsFor` (new) derives one `<package>.*` test
+glob per unique package among the resolved target-class globs, replacing
+the unscoped `"*"`. Same "test lives beside the class it tests" Maven/
+Gradle convention `dev.coverdict.analysis.redundancy.TestLocator` (D-61)
+already relies on for path resolution - not coverage-verified (that would
+need L2's own JaCoCo data, which this driver does not have), but a correct
+massive narrowing for every shape coverdict's own corpus work has
+exercised (M1c's four real-repo phases all use the standard same-package
+test layout). `MutationRunnerIT` (regression check, tightened) went from
+reliably hitting its 90s budget and never once completing - across every
+run in this session, including three watchdog-wrapped ones that
+mistakenly looked "safe" only because the run never got far enough to
+matter - to completing in ~1.1s, twice, back to back. Root cause found,
+fix verified, `docs/rules/SUBSUMED_TEST.md` and `docs/ROADMAP.md`'s D-59
+references corrected accordingly. Cross-package test coverage of a target
+class remains an acknowledged gap (a test in a different package than the
+class it covers is not discovered) - a real limitation, not a silent one,
+and out of scope for this fix (would need L2's actual coverage data wired
+through, not just a naming convention).
 
 ## Rejected
 

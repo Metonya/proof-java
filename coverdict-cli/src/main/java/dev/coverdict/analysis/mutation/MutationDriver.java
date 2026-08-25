@@ -5,10 +5,13 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.pitest.mutationtest.config.PluginServices;
 import org.pitest.mutationtest.config.ReportOptions;
@@ -66,7 +69,7 @@ public final class MutationDriver {
         options.setCodePaths(codePaths);
         options.setSourceDirs(List.of()); // no source-locating report is ever read; avoids SmartSourceLocator's NPE on a null roots collection
         options.setTargetClasses(targetClasses);
-        options.setTargetTests(Glob.toGlobPredicates(List.of("*")));
+        options.setTargetTests(Glob.toGlobPredicates(testGlobsFor(targetClasses)));
         options.setGroupConfig(TestGroupConfig.emptyConfig()); // D-51: mandatory, else createMinionSettings() NPEs
         options.setSkipFailingTests(true);
         options.setNumberOfThreads(1); // D-52 determinism gate held at exactly this setting
@@ -87,5 +90,46 @@ public final class MutationDriver {
             System.err.println("MutationDriver: " + error.get().getMessage());
             System.exit(1);
         }
+    }
+
+    /**
+     * D-59 root cause: this used to be an unscoped {@code "*"}, telling PIT
+     * every test in the module (716 in coverdict's own repo) is a candidate
+     * covering test. Under {@code setFullMutationMatrix(true)}, PIT gathers
+     * coverage once per target method/mutant group being probed - a live
+     * capture of a real run showed the same 19-test class's coverage being
+     * re-gathered six times in one second for a single target class with a
+     * handful of methods, and the process/memory growth that produced
+     * scaled directly with (target methods) x (unscoped test-suite size).
+     *
+     * <p>Narrows the candidate set to same-package tests only: each target
+     * class glob's package becomes a {@code <package>.*} test glob. This is
+     * the same "test lives beside the class it tests" convention Maven/
+     * Gradle's default layout assumes and {@code
+     * dev.coverdict.analysis.redundancy.TestLocator} already relies on for
+     * path resolution - not a coverage-verified covering-test set (that
+     * would need L2's own JaCoCo data, unavailable to this driver), but a
+     * massive, cheap narrowing from "everything" to "plausibly relevant."
+     * Cross-package test coverage of a target class is a known gap this
+     * does not close - see docs/DECISIONS.md D-6x.
+     */
+    private static List<String> testGlobsFor(List<String> targetClasses) {
+        Set<String> packages = new LinkedHashSet<>();
+        for (String targetClassGlob : targetClasses) {
+            String fqcn = targetClassGlob.endsWith("*")
+                ? targetClassGlob.substring(0, targetClassGlob.length() - 1) : targetClassGlob;
+            int lastDot = fqcn.lastIndexOf('.');
+            if (lastDot > 0) {
+                packages.add(fqcn.substring(0, lastDot));
+            }
+        }
+        if (packages.isEmpty()) {
+            return List.of("*"); // no resolvable package (default/unnamed package target) - fall back rather than match nothing
+        }
+        List<String> globs = new ArrayList<>();
+        for (String pkg : packages) {
+            globs.add(pkg + ".*");
+        }
+        return globs;
     }
 }
