@@ -1,7 +1,9 @@
 package dev.coverdict.analysis.subprocess;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
@@ -24,13 +26,13 @@ import org.junit.jupiter.api.Test;
 class SubprocessWorkspaceTest {
 
     @Test
-    void createPrivateTempDirectoryCreatesAUniqueDirectoryPerModule() throws IOException {
+    void createPrivateTempDirectoryCreatesAUniqueDirectoryPerModule() {
         Path dirA = SubprocessWorkspace.createPrivateTempDirectory("coverdict-test-", "app");
         Path dirB = SubprocessWorkspace.createPrivateTempDirectory("coverdict-test-", "app");
         try {
             assertTrue(Files.isDirectory(dirA));
             assertTrue(Files.isDirectory(dirB));
-            assertFalse(dirA.equals(dirB), "two calls must not collide");
+            assertNotEquals(dirA, dirB, "two calls must not collide");
         } finally {
             SubprocessWorkspace.deleteQuietly(dirA);
             SubprocessWorkspace.deleteQuietly(dirB);
@@ -38,7 +40,7 @@ class SubprocessWorkspaceTest {
     }
 
     @Test
-    void createPrivateTempDirectorySanitizesPathSeparatorsInAnUnsafeModuleId() throws IOException {
+    void createPrivateTempDirectorySanitizesPathSeparatorsInAnUnsafeModuleId() {
         Path dir = SubprocessWorkspace.createPrivateTempDirectory("coverdict-test-", "app/../../evil");
         try {
             assertTrue(Files.isDirectory(dir));
@@ -109,6 +111,6 @@ class SubprocessWorkspaceTest {
     void deleteQuietlyOnAMissingDirectoryDoesNotThrow() {
         Path missing = Path.of(System.getProperty("java.io.tmpdir"), "coverdict-does-not-exist-" + System.nanoTime());
 
-        SubprocessWorkspace.deleteQuietly(missing);
+        assertDoesNotThrow(() -> SubprocessWorkspace.deleteQuietly(missing));
     }
 }
