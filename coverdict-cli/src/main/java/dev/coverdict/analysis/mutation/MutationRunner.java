@@ -129,7 +129,7 @@ public final class MutationRunner {
             process.destroyForcibly();
             joinQuietly(errThread);
             throw new MutationCollectionException("Module '" + moduleId + "' mutation run exceeded its "
-                + budget.toSeconds() + "s budget" + stderr.tailMessage());
+                + budget.toSeconds() + "s budget" + stderr.tailMessage(), MutationCollectionException.BUDGET_EXCEEDED);
         }
         joinQuietly(errThread);
 
