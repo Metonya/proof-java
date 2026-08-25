@@ -894,6 +894,39 @@ against a Gradle repo (junit-framework, M2 Faz 2b) - Maven's `dependency:
 build-classpath` supplied the runtime classpath here; Gradle's equivalent
 extraction is unverified.
 
+**D-52 · Multi-module L2 needs only a classpath/source-dir union; the
+first real non-determinism found is in a test's own reflection use, not
+PIT** (2026-08-25)
+M2 Faz 2b-2e ran on `dropwizard-util` + `dropwizard-validation` merged into
+one `ReportOptions` (D-51's `EntryPoint`, extended: two modules' `target/
+classes`, `target/test-classes`, source dirs, and dependency classpaths
+concatenated). Confirmed real: the coverage-phase output contained classes
+genuinely from both modules (18 from `util`, 43 from `validation`), and the
+target repo's `pom.xml` files were untouched (`git status` empty). PIT has
+no concept of a Maven module - a multi-module target is exactly "give it
+the union," no special handling needed on coverdict's or PIT's side beyond
+building that union from coverdict's existing `--module` bindings.
+
+2c (determinism) found its first real gap here: 2240/2241 records were
+byte-identical across two independent runs (mean Jaccard 0.9998), one
+mismatched. Root-caused, not hand-waved: `SelfValidatingValidatorTest.
+getMethod()` (dropwizard's own test code, not coverdict's or PIT's) iterates
+`ResolvedTypeWithMembers.getMemberMethods()`, backed by JDK reflection with
+no ordering guarantee; the shared `hasSignature()` helper's guard line is
+hit for whichever candidate methods get checked before a match, and that
+candidate order varies run to run. This is exactly the class of instability
+the original (dropped, D-51-adjacent) shuffled-test-order gate was meant to
+surface - caught instead by plain determinism, without needing PIT to
+support test-order control at all. Recorded as a real, bounded (0.045% of
+records in this corpus) source of instability that is not a coverdict or
+PIT defect: a real user's own reflection-based test fixtures can carry the
+same risk, worth a documented product limitation later (M4), not a blocker
+now.
+
+2d (cross-engine, JaCoCo) and 2e (ablation) both passed cleanly (0%
+mismatch on 416 comparable records; 3/3 sampled multiplicity=1 claims
+verified causally). Evidence: `validation/runs/pit-spike/dropwizard/`.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

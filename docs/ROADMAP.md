@@ -433,11 +433,23 @@ failure.
     production-code lines genuinely lost coverage when their sole covering
     test was excluded and the suite re-run. Gate passed, 100%.
 
+  **Also done: dropwizard (multi-module)**, `dropwizard-util` +
+  `dropwizard-validation` merged into one `ReportOptions` (D-52) - PIT has
+  no module concept, a multi-module target is just a classpath/source-dir
+  union, confirmed by output containing classes from both modules and zero
+  `pom.xml` changes in either. 2b (2-3s, 2241 records), 2d (0% cross-engine
+  mismatch), and 2e (3/3 ablation) all passed cleanly. **2c (determinism)
+  found real, bounded instability** (2240/2241, mean J=0.9998) traced to
+  the corpus repo's own test code - `SelfValidatingValidatorTest` iterates
+  JDK-reflection method lists with no ordering guarantee - not a coverdict
+  or PIT defect, but a real class of risk for reflection-heavy test
+  fixtures, worth a documented product limitation at M4.
+
   **Not yet done:** the same four gates on junit-framework (Gradle - D-51's
-  `EntryPoint` calling model is unverified against a Gradle-built classpath)
-  and dropwizard (multi-module). One repo passing does not clear L2 broadly;
-  ROADMAP's "a repo failing cuts L2 for that repo's shape" cuts the other
-  way too - one passing repo is one data point, not the full spike.
+  `EntryPoint` calling model is unverified against a Gradle-built
+  classpath, the one remaining open question from D-51). Two of three
+  corpus repos now pass; junit-framework is the last data point before
+  L2's feasibility spike can be called complete.
 - **M3 — First build integration + CI.** Ship Maven or Gradle first as decided
   from M0 dogfood, then the other only on demand. Add report provenance manifest,
   changed-findings baseline, quality-gate exit codes, and evaluate SARIF (O-02).
@@ -495,12 +507,15 @@ failure.
 - If complete source/report mapping cannot be guaranteed, v0.1 ships no coverage
   success verdict until a build integration supplies trustworthy provenance.
 - If any of M2 Faz 2's four gates (2c determinism, mean J = 1.0 same-order
-  repeat; 2e ablation, 100% of sampled multiplicity=1 claims verified
+  repeat - a shortfall is only acceptable when root-caused to the target
+  repo's own code rather than the L2 mechanism, as dropwizard's 0.9998
+  was, D-52; 2e ablation, 100% of sampled multiplicity=1 claims verified
   causally; 2d cross-engine diagnostic, disagreement understood and under
-  5%; 2a calling model, zero target-repo build-file changes) fails on a
-  dogfood repository, L2 is cut for that repo's shape; if it fails on all
-  of them, L2 is cut and the product remains L0+L1(+L3). Passed on assertj;
-  junit-framework and dropwizard still open.
+  5%; 2a calling model, zero target-repo build-file changes) fails
+  unexplained on a dogfood repository, L2 is cut for that repo's shape; if
+  it fails on all of them, L2 is cut and the product remains L0+L1(+L3).
+  Passed on coverdict and assertj; passed with one root-caused, bounded
+  exception on dropwizard; junit-framework still open.
 - If dogfood users do not repeat the workflow or findings are predominantly
   ignored/waived, stop integration work and revisit the product wedge.
 - If `sonar-compatible` parity fails against the pinned internal setup, remove

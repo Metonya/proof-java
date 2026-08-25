@@ -276,3 +276,73 @@ D-51'in "doğrulanmadı" notu hâlâ geçerli. Faz 2b–2e'nin dört kapısı te
 repoda (assertj) geçti; ROADMAP'in "her repo kendi şeklini kesebilir"
 maddesi gereği bu, L2'yi genel olarak onaylamaya yetmez — iki repo daha
 gerekiyor.
+
+## 9. Faz 2b–2e — dropwizard (çok modüllü): dört kapı, biri kısmi
+
+Hedef: `dropwizard-util` + `dropwizard-validation` — daha önceki çok-modüllü
+corpus çalışmasında bağlanan aynı iki modül (`validation/runs/dropwizard/
+run-log.md`). Çağırma modeli assertj'deki `Faz2aSpike`'ın çok-modüllü
+varyantı: `Faz2bMultiModuleSpike.java`, iki modülün `target/classes`,
+`target/test-classes`, kaynak dizinleri ve bağımlılık classpath'lerini **tek
+`ReportOptions`'ta birleştiriyor**. PIT'in Maven modülü kavramı yok — sadece
+classpath/kaynak-dizini listeleri görüyor, çok-modüllü hedef "birleşimi ver"
+den ibaret.
+
+**Kanıt:** çıktıda hem `io.dropwizard.util.*`'tan 18 sınıf hem
+`io.dropwizard.validation.*`'tan 43 sınıf gerçekten var (326 sınıf#metot,
+2241 satır kaydı) — birleşim sahte değil, gerçekten iki modülden geliyor.
+`git status` iki modülde de koşum öncesi/sonrası boş kaldı.
+
+### Faz 2b — ölçek: 2–3 saniye
+
+Küçük modül çiftinde beklenen sonuç; assertj'nin 20 saniyesiyle
+karşılaştırıldığında kapsam fazının maliyetinin hedef büyüklüğüyle
+doğrusal ölçeklendiğini destekliyor.
+
+### Faz 2c — determinizm: KISMİ (2240/2241, ortalama J = 0.9998)
+
+**Bu, üç repoda ilk kez tam geçmeyen kapı — gizlenmeyecek.** Tek
+uyuşmazlık: `SelfValidatingValidatorTest#hasSignature:95`, iki koşumda
+farklı 3'lü test kümesi (4 olası testten).
+
+Kök neden kaynakta bulundu
+(`SelfValidatingValidatorTest.java:80-95`): `getMethod()` yardımcı metodu
+`annotatedType.getMemberMethods()` üzerinde dolaşıyor — bu, JDK'nın
+reflection metot listesi üzerine kurulu, **sıralaması garantili olmayan**
+bir koleksiyon. `hasSignature`'ın 95. satırı her aday metot için (eşleşen
+metot bulununcaya kadar) çalışıyor; hangi adayların kontrol edildiği
+koşumdan koşuma JVM'in metot numaralandırma sırasına bağlı olarak
+değişiyor.
+
+**Bu PIT'in kusuru değil, SUT'un kendi test yardımcı kodunun reflection
+kullanımı.** Coverdict'in ürün açısından sonucu: gerçek kullanıcı
+repolarında bu sınıf bir kaynak — parmak izi tek bir satırda (0.045%)
+küçük ama gerçek bir belirsizlik taşıyabilir. D-52 (aşağıda) bunu kaydediyor.
+
+### Faz 2d — çapraz motor: %0 uyuşmazlık
+
+416 karşılaştırılabilir kayıttan (2241 - 1825 JaCoCo'da karşılığı olmayan,
+assertj'deki gibi test-sınıfı kapsaması nedeniyle) **0 uyuşmazlık**.
+assertj'nin %0.94'ünden bile temiz — küçük, basit modüllerde lambda/tek
+satır granülerlik farkı daha az fırsat buluyor.
+
+### Faz 2e — ablasyon: GEÇTİ (3/3, %100)
+
+Aynı desen: çokluk=1 kayıtlar, tek testi barındıran sınıfın tamamı hariç
+tutuldu (bu sefer testin ait olduğu sınıfta başka @Test'ler olsa bile
+geçerli — çünkü PIT verisi zaten o satıra sınıftaki başka hiçbir testin
+dokunmadığını söylüyor, aksi hâlde çokluk 1 olmazdı):
+
+| Üretim satırı | Modül | Ablasyon sonrası |
+|---|---|---|
+| `DataSize#getQuantity:240` | util | kapsamsız ✓ |
+| `Duration#getUnit:171` | util | kapsamsız ✓ |
+| `MinDurationValidator#isValid:28` | validation | kapsamsız ✓ |
+
+### Sonuç
+
+3/4 repo (coverdict, assertj, dropwizard) dört kapının en az üçünü tam
+geçti; dropwizard'ın determinizm kapısı **%99.96** ile neredeyse geçti,
+kök nedeni SUT'un reflection kullanımına ait olarak izole edildi — L2
+motorunun kendi hatası değil. junit-framework (Gradle) hâlâ denenmedi;
+D-51'in "doğrulanmadı" notu sadece o repo için geçerliliğini koruyor.
