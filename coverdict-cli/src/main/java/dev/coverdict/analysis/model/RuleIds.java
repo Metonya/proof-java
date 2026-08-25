@@ -15,9 +15,10 @@ public final class RuleIds {
     public static final String TAUTOLOGICAL_ORACLE = "TAUTOLOGICAL_ORACLE";
     public static final String CATCH_ORACLE_WITHOUT_FAIL = "CATCH_ORACLE_WITHOUT_FAIL";
     public static final String NULL_CHECK_ONLY = "NULL_CHECK_ONLY";
+    public static final String PSEUDO_TESTED_METHOD = "PSEUDO_TESTED_METHOD";
 
     public static final Set<String> ALL = Set.of(
-        NO_RECOGNIZED_ORACLE, TAUTOLOGICAL_ORACLE, CATCH_ORACLE_WITHOUT_FAIL, NULL_CHECK_ONLY);
+        NO_RECOGNIZED_ORACLE, TAUTOLOGICAL_ORACLE, CATCH_ORACLE_WITHOUT_FAIL, NULL_CHECK_ONLY, PSEUDO_TESTED_METHOD);
 
     private RuleIds() {
     }

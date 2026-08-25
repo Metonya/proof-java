@@ -57,7 +57,8 @@
               "NO_RECOGNIZED_ORACLE",
               "TAUTOLOGICAL_ORACLE",
               "CATCH_ORACLE_WITHOUT_FAIL",
-              "NULL_CHECK_ONLY"
+              "NULL_CHECK_ONLY",
+              "PSEUDO_TESTED_METHOD"
             ]
           },
           "pathGlob": {

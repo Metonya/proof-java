@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://coverdict.dev/schema/coverdict-verdict/0.1.0",
   "title": "coverdict verdict",
-  "description": "Output contract of the coverdict CLI (experimental during 0.x, D-01). Deterministic: no timestamps or machine-local absolute paths; two clean runs on the same inputs are byte-identical. Ordering rules (all lexicographic by UTF-8 code point unless stated): inputs.modules by id; changedFiles by (module, path); findings by (path, startLine, rule, fingerprint); warnings and analysis.incompleteReasons by (code, path, message); perTest.modules by id; perTest entries and ambient by (className, methodName); lines by line ascending; tests lexicographic. All paths are repo-relative with forward slashes. Percentages are rounded half-up to one decimal.",
+  "description": "Output contract of the coverdict CLI (experimental during 0.x, D-01). Deterministic: no timestamps or machine-local absolute paths; two clean runs on the same inputs are byte-identical. Ordering rules (all lexicographic by UTF-8 code point unless stated): inputs.modules by id; changedFiles by (module, path); findings by (path, startLine, rule, fingerprint); warnings and analysis.incompleteReasons by (code, path, message); perTest.modules by id; perTest entries and ambient by (className, methodName); lines by line ascending; tests lexicographic; mutation.modules by id; mutation methods by (className, methodName, methodDescription); mutants by (line, mutator, status); killingTests lexicographic. All paths are repo-relative with forward slashes. Percentages are rounded half-up to one decimal.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -221,6 +221,31 @@
         }
       },
       "description": "Opt-in L2 evidence (--per-test-report, D-46/D-55): present only when the flag was set, absent (never null) otherwise. Never a finding source on its own - COVERAGE_EQUIVALENT_CANDIDATE requires L0+L2+L3 together (D-46)."
+    },
+    "mutation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "engine",
+        "engineVersion",
+        "modules"
+      ],
+      "properties": {
+        "engine": {
+          "const": "pitest"
+        },
+        "engineVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "modules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/mutationModule"
+          }
+        }
+      },
+      "description": "Opt-in L3 evidence (--mutation-report, D-56/M5): present only when the flag was set, absent (never null) otherwise. Mutants come from PIT's own RETURNS+VOID_METHOD_CALLS gregor mutators, a gregor approximation of Descartes' extreme mutation (Descartes itself is never a dependency, hard rule 9). Never a finding source on its own - COVERAGE_EQUIVALENT_CANDIDATE requires L0+L2+L3 together (D-46)."
     }
   },
   "$defs": {
@@ -451,7 +476,8 @@
             "NO_RECOGNIZED_ORACLE",
             "TAUTOLOGICAL_ORACLE",
             "CATCH_ORACLE_WITHOUT_FAIL",
-            "NULL_CHECK_ONLY"
+            "NULL_CHECK_ONLY",
+            "PSEUDO_TESTED_METHOD"
           ]
         },
         "severity": {
@@ -488,6 +514,11 @@
           "type": "string",
           "minLength": 1,
           "description": "Fully qualified test method signature when the finding anchors to one"
+        },
+        "productionMethod": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Fully qualified production method signature when the finding anchors to one instead (M5's PSEUDO_TESTED_METHOD; mutually exclusive with testMethod in v0.1's rule set)"
         },
         "message": {
           "type": "string",
@@ -577,6 +608,110 @@
             "type": "string",
             "minLength": 1
           }
+        }
+      }
+    },
+    "mutationModule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "methods"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "methods": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/mutatedMethod"
+          }
+        }
+      }
+    },
+    "mutatedMethod": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "className",
+        "methodName",
+        "methodDescription",
+        "firstLine",
+        "lastLine",
+        "mutants"
+      ],
+      "properties": {
+        "className": {
+          "type": "string",
+          "minLength": 1
+        },
+        "methodName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "methodDescription": {
+          "type": "string",
+          "minLength": 1,
+          "description": "JVM method descriptor (e.g. '(II)I') - disambiguates overloads sharing a name"
+        },
+        "firstLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "lastLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "mutants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/mutant"
+          }
+        }
+      }
+    },
+    "mutant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mutator",
+        "line",
+        "status",
+        "killingTests"
+      ],
+      "properties": {
+        "mutator": {
+          "type": "string",
+          "minLength": 1,
+          "description": "PIT gregor mutator id (e.g. NULL_RETURNS, VOID_METHOD_CALLS)"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "status": {
+          "enum": [
+            "KILLED",
+            "SURVIVED",
+            "TIMED_OUT",
+            "NON_VIABLE",
+            "MEMORY_ERROR",
+            "NOT_STARTED",
+            "STARTED",
+            "RUN_ERROR",
+            "NO_COVERAGE"
+          ],
+          "description": "PIT's own DetectionStatus name, verified via javap against pitest 1.15.8"
+        },
+        "killingTests": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Every test that killed this mutant (setFullMutationMatrix(true)), not just the first - M4's redundancy gate needs the full kill set. Empty for a SURVIVED or NO_COVERAGE mutant."
         }
       }
     }
