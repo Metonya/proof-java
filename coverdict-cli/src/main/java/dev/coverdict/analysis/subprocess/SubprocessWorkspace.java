@@ -1,8 +1,8 @@
 package dev.coverdict.analysis.subprocess;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -10,13 +10,15 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Shared plumbing for coverdict's PIT-driving subprocesses (L2 per-test
  * coverage, L3 mutation): a private temp work directory, argument-file
- * writing (sidesteps classpath-string length and OS argv quirks), and
- * self-locating coverdict's own running jar for the child's {@code -cp}.
- * Each caller wraps the unchecked failures below into its own package's
+ * writing (sidesteps classpath-string length and OS argv quirks), and the
+ * current JVM's own runtime classpath for the child's {@code -cp}. Each
+ * caller wraps the unchecked failures below into its own package's
  * collection-failure exception - this class stays exception-vocabulary-free
  * so it can be shared across packages.
  */
@@ -74,25 +76,92 @@ public final class SubprocessWorkspace {
         }
     }
 
+    /**
+     * A Java {@code @argfile} containing a single {@code -cp "<classpath>"}
+     * token, for launching a child JVM whose classpath is too long to pass
+     * safely as a literal {@code -cp} argument (Windows' ~8191-char command
+     * line limit - the same reason {@link #writeLines} exists for PIT's own
+     * {@code ReportOptions} inputs).
+     *
+     * <p>Backslashes are normalized to {@code /} before quoting - found
+     * empirically running {@code MutationRunnerIT} on Windows: a quoted
+     * {@code @argfile} token containing a real {@code C:\Users\...} path
+     * silently mis-tokenizes (backslash is special inside a quoted token)
+     * and the child fails with {@code ClassNotFoundException} for its own
+     * main class, not even PIT's. A bare, unquoted token round-trips
+     * backslashes correctly, but quoting is unconditionally needed here
+     * since any single classpath entry can carry a space. The JVM accepts
+     * {@code /} in classpath entries on Windows exactly like {@code \}, so
+     * this sidesteps the tokenizer bug rather than working around it.
+     *
+     * @throws UncheckedIOException if the file cannot be written.
+     */
+    public static Path writeClasspathArgFile(Path dir, String name, List<String> classpathEntries) {
+        String joined = String.join(File.pathSeparator, classpathEntries).replace('\\', '/');
+        try {
+            return Files.writeString(dir.resolve(name), "-cp \"" + joined + "\"\n", StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     public static String javaExecutable() {
         return Path.of(System.getProperty("java.home"), "bin", "java").toString();
     }
 
     /**
-     * coverdict's own running jar (or classes directory in tests) - already
-     * contains PIT, shaded in (D-55). The minion PIT spawns needs this on
-     * ITS OWN {@code -cp} (verified empirically: {@code EntryPoint} builds
-     * the minion's classpath from {@code ReportOptions.getClassPathElements()},
-     * not from the driver JVM's own classpath).
-     *
-     * @throws IllegalStateException if coverdict's own code source location cannot be resolved.
+     * The current JVM's own runtime classpath, split into entries. In
+     * production ({@code java -jar coverdict.jar ...}) this is the single
+     * shaded jar, which already contains PIT (D-55). Under Maven/Surefire
+     * (tests, {@code -Pmutation-it}) it is instead the full multi-jar
+     * compile+test classpath - correctly including PIT's separate
+     * dependency jars there too, unlike the single-class self-location this
+     * replaced, which resolved only to a compiled-output directory with no
+     * PIT classes on it (found running {@code MutationRunnerIT}:
+     * {@code NoClassDefFoundError: org.pitest.mutationtest.config.ReportOptions}).
+     * The child driver process needs this for its own {@code -cp} (to load
+     * PIT's {@code EntryPoint} and coverdict's own driver/listener classes);
+     * PIT's mutation minion needs it appended to {@code ReportOptions}'
+     * classpath for the same reason, one entry at a time (never as one
+     * {@code File.pathSeparator}-joined blob - PIT reads each collection
+     * element as a single path).
      */
-    public static String ownClasspath(Class<?> anchor) {
-        try {
-            return Path.of(anchor.getProtectionDomain().getCodeSource().getLocation().toURI()).toString();
-        } catch (URISyntaxException e) {
-            throw new IllegalStateException("Could not resolve coverdict's own classpath for the subprocess", e);
+    public static List<String> ownRuntimeClasspathEntries() {
+        return List.of(System.getProperty("java.class.path").split(File.pathSeparator));
+    }
+
+    /**
+     * Kills {@code process} and, on Windows, its entire descendant tree via
+     * {@code taskkill /F /T}. {@code Process.destroyForcibly()} alone only
+     * reaches the immediate child - PIT spawns its own minion JVM as a
+     * grandchild, which Windows never ties to the parent's lifetime (no
+     * process group by default). Found running {@code MutationRunnerIT}: a
+     * handful of budget-exceeded runs left 80+ orphaned minion JVMs
+     * consuming multiple GB of memory, each spawned faster than repeated
+     * {@code destroyForcibly()} calls on the immediate child alone could
+     * ever catch up with. Best-effort: a {@code taskkill} failure still
+     * falls through to {@code destroyForcibly()} on the immediate child, so
+     * this is never worse than the previous behavior, only ever better.
+     */
+    public static void destroyProcessTree(Process process) {
+        if (isWindows()) {
+            try {
+                new ProcessBuilder("taskkill", "/F", "/T", "/PID", String.valueOf(process.pid()))
+                    .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                    .redirectError(ProcessBuilder.Redirect.DISCARD)
+                    .start()
+                    .waitFor(10, TimeUnit.SECONDS);
+            } catch (IOException ignored) {
+                // best-effort - falls through to destroyForcibly() below regardless
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
+        process.destroyForcibly();
+    }
+
+    private static boolean isWindows() {
+        return System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
     }
 
     public static void deleteQuietly(Path dir) {

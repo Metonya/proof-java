@@ -126,7 +126,7 @@ class AnalyzeCommand implements Callable<Integer> {
     @Option(names = "--mutation-classpath", description = "Repeatable <id>=<file>, same list-file shape as --per-test-classpath - a separate flag because L3 mutation evidence is a separate, independently opt-in evidence layer (D-56).")
     private List<String> mutationClasspathArgs = new ArrayList<>();
 
-    @Option(names = "--mutation-timeout", defaultValue = "900", description = "Wall-clock budget in seconds for one module's mutation run before it is force-killed (default 900s = 15 minutes, D-56).")
+    @Option(names = "--mutation-timeout", defaultValue = "300", description = "Wall-clock budget in seconds for one module's mutation run before it is force-killed (default 300s = 5 minutes - deliberately conservative, D-59: raise it only after confirming this environment doesn't spawn PIT minions faster than the default can safely bound).")
     private long mutationTimeoutSeconds;
 
     @Option(names = "--language-level", defaultValue = "17", description = "Java language level for JavaParser (oracle critic) and recorded as provenance.")

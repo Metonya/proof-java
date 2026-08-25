@@ -59,21 +59,23 @@ public final class PerTestRunner {
                                                                   List<String> targetClasses) {
         Path workDir = createWorkDir(moduleId);
         try {
-            String ownClasspath = ownClasspath();
+            List<String> ownClasspathEntries = SubprocessWorkspace.ownRuntimeClasspathEntries();
             // The minion PIT spawns needs org.pitest.coverage.execute.CoverageMinion and
             // CoverdictLineExporter on ITS OWN -cp (verified empirically: EntryPoint builds
             // the minion's classpath from ReportOptions.getClassPathElements(), not from the
-            // driver JVM's own classpath) - coverdict.jar already carries all of PIT, shaded
-            // in (D-55), so appending coverdict's own jar/classes location is sufficient.
+            // driver JVM's own classpath) - appending this JVM's own runtime classpath (the
+            // shaded jar in production, D-55; the full Maven classpath under test/dev) covers
+            // both coverdict's classes and PIT's.
             List<String> classPathWithSelf = new java.util.ArrayList<>(classPathElements);
-            classPathWithSelf.add(ownClasspath);
+            classPathWithSelf.addAll(ownClasspathEntries);
             Path classpathFile = writeLines(moduleId, workDir, "classpath.txt", classPathWithSelf);
             Path codePathsFile = writeLines(moduleId, workDir, "codepaths.txt", codePaths);
             Path targetClassesFile = writeLines(moduleId, workDir, "targetclasses.txt", targetClasses);
             Path outputFile = workDir.resolve(CoverdictLineExporter.OUTPUT_FILE_NAME);
+            Path classpathArgFile = writeClasspathArgFile(moduleId, workDir, ownClasspathEntries);
 
             ProcessBuilder pb = new ProcessBuilder(
-                SubprocessWorkspace.javaExecutable(), "-cp", ownClasspath,
+                SubprocessWorkspace.javaExecutable(), "@" + classpathArgFile,
                 PerTestDriver.class.getName(),
                 moduleId, workDir.toString(), classpathFile.toString(), codePathsFile.toString(),
                 targetClassesFile.toString());
@@ -91,7 +93,7 @@ public final class PerTestRunner {
             try {
                 waitForOutputOrTimeout(process, outputFile);
             } finally {
-                process.destroyForcibly();
+                SubprocessWorkspace.destroyProcessTree(process);
             }
 
             if (!Files.exists(outputFile)) {
@@ -141,11 +143,11 @@ public final class PerTestRunner {
         }
     }
 
-    private static String ownClasspath() {
+    private static Path writeClasspathArgFile(String moduleId, Path dir, List<String> classpathEntries) {
         try {
-            return SubprocessWorkspace.ownClasspath(PerTestRunner.class);
-        } catch (IllegalStateException e) {
-            throw new PerTestCollectionException("Could not resolve coverdict's own classpath for the per-test subprocess", e);
+            return SubprocessWorkspace.writeClasspathArgFile(dir, "driver-cp.args", classpathEntries);
+        } catch (UncheckedIOException e) {
+            throw new PerTestCollectionException("Could not write the driver classpath arg file for module '" + moduleId + "'", e);
         }
     }
 }

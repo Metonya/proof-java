@@ -217,5 +217,36 @@
         </plugins>
       </build>
     </profile>
+    <profile>
+      <!--
+        Runs MutationRunnerIT: a real PIT mutation run against coverdict's
+        own repo (minutes, not milliseconds - the default mvn verify must
+        stay fast). *IT.java doesn't match Surefire's default include
+        patterns, so this profile's own execution is the only way it runs.
+
+        Run with: mvn -Pmutation-it -pl coverdict-cli test
+      -->
+      <id>mutation-it</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>mutation-it</id>
+                <phase>test</phase>
+                <goals><goal>test</goal></goals>
+                <configuration>
+                  <includes>
+                    <include>**/*IT.java</include>
+                  </includes>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 </project>

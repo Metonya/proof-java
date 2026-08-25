@@ -36,12 +36,19 @@ import dev.coverdict.analysis.subprocess.SubprocessWorkspace;
 public final class MutationRunner {
 
     /**
-     * A mutation run's own test-suite execution is not diff-scoped (only
-     * the mutant targets are, D-56/O-05) - PIT still discovers and runs
-     * every test that might cover a target class, so this budget is
-     * generous relative to L2's 120s coverage-only window.
+     * D-59: kept deliberately short, not generous. `-Pmutation-it`
+     * dogfooding found this environment's process count climbing past 60
+     * within ~2 minutes for a single diff-scoped target under {@code
+     * setFullMutationMatrix(true)} - root cause not isolated (full-matrix
+     * mode's own cost, or PIT's per-unit minion spawn rate at {@code
+     * numberOfThreads=1}, are both plausible and undistinguished). Until
+     * that is understood, this budget errs toward failing fast and letting
+     * {@link SubprocessWorkspace#destroyProcessTree} clean up a bounded
+     * mess rather than an unbounded one - {@code --mutation-timeout} is
+     * there for a caller who has verified their own environment handles a
+     * longer run safely.
      */
-    public static final Duration DEFAULT_BUDGET = Duration.ofMinutes(15);
+    public static final Duration DEFAULT_BUDGET = Duration.ofMinutes(5);
 
     private static final String TEMP_DIR_PREFIX = "coverdict-mutation-";
     private static final int STDERR_TAIL_LINES = 20;
@@ -73,16 +80,17 @@ public final class MutationRunner {
                                                          Duration budget) {
         Path workDir = createWorkDir(moduleId);
         try {
-            String ownClasspath = ownClasspath();
+            List<String> ownClasspathEntries = SubprocessWorkspace.ownRuntimeClasspathEntries();
             List<String> classPathWithSelf = new ArrayList<>(classPathElements);
-            classPathWithSelf.add(ownClasspath);
+            classPathWithSelf.addAll(ownClasspathEntries);
             Path classpathFile = writeLines(moduleId, workDir, "classpath.txt", classPathWithSelf);
             Path codePathsFile = writeLines(moduleId, workDir, "codepaths.txt", codePaths);
             Path targetClassesFile = writeLines(moduleId, workDir, "targetclasses.txt", targetClasses);
             Path outputFile = workDir.resolve(CoverdictMutationListener.OUTPUT_FILE_NAME);
+            Path classpathArgFile = writeClasspathArgFile(moduleId, workDir, ownClasspathEntries);
 
             ProcessBuilder pb = new ProcessBuilder(
-                SubprocessWorkspace.javaExecutable(), "-cp", ownClasspath,
+                SubprocessWorkspace.javaExecutable(), "@" + classpathArgFile,
                 MutationDriver.class.getName(),
                 moduleId, workDir.toString(), classpathFile.toString(), codePathsFile.toString(),
                 targetClassesFile.toString());
@@ -121,12 +129,12 @@ public final class MutationRunner {
             finished = process.waitFor(budget.toMillis(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            process.destroyForcibly();
+            SubprocessWorkspace.destroyProcessTree(process);
             joinQuietly(errThread);
             throw new MutationCollectionException("Interrupted while waiting for module '" + moduleId + "'", e);
         }
         if (!finished) {
-            process.destroyForcibly();
+            SubprocessWorkspace.destroyProcessTree(process);
             joinQuietly(errThread);
             throw new MutationCollectionException("Module '" + moduleId + "' mutation run exceeded its "
                 + budget.toSeconds() + "s budget" + stderr.tailMessage(), MutationCollectionException.BUDGET_EXCEEDED);
@@ -172,11 +180,11 @@ public final class MutationRunner {
         }
     }
 
-    private static String ownClasspath() {
+    private static Path writeClasspathArgFile(String moduleId, Path dir, List<String> classpathEntries) {
         try {
-            return SubprocessWorkspace.ownClasspath(MutationRunner.class);
-        } catch (IllegalStateException e) {
-            throw new MutationCollectionException("Could not resolve coverdict's own classpath for the mutation subprocess", e);
+            return SubprocessWorkspace.writeClasspathArgFile(dir, "driver-cp.args", classpathEntries);
+        } catch (UncheckedIOException e) {
+            throw new MutationCollectionException("Could not write the driver classpath arg file for module '" + moduleId + "'", e);
         }
     }
 
