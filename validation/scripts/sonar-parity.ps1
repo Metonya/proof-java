@@ -33,6 +33,17 @@
   aggregated project here.
 .PARAMETER OutDir
   Directory to write <name>/sonar-parity.md into.
+.PARAMETER Scanner
+  "Maven" (default) invokes sonar-maven-plugin and needs a pom.xml.
+  "Cli" invokes the standalone `sonar-scanner`, which needs no build tool at
+  all - it takes sonar.sources/sonar.tests/the JaCoCo XML directly. That is
+  what makes a Gradle corpus repo measurable (D-45): D-36 deferred phase 3's
+  parity as "a Gradle equivalent needs its own design", but coverdict already
+  consumes source roots and a report path explicitly (D-01/D-02), so the
+  generic scanner matches its input model exactly and no Gradle-specific
+  design was needed after all.
+.PARAMETER SourcesRelative / TestsRelative
+  Cli scanner only: sonar.sources / sonar.tests, relative to RepoRoot.
 #>
 param(
     [Parameter(Mandatory)][string]$Name,
@@ -41,8 +52,15 @@ param(
     [Parameter(Mandatory)][string[]]$JacocoXmlRelativePaths,
     [Parameter(Mandatory)][double]$CoverdictOverallPercent,
     [Parameter(Mandatory)][string]$OutDir,
-    [string]$SonarHost = "http://localhost:9001"
+    [string]$SonarHost = "http://localhost:9001",
+    [ValidateSet("Maven", "Cli")][string]$Scanner = "Maven",
+    [string]$SourcesRelative,
+    [string]$TestsRelative
 )
+
+if ($Scanner -eq "Cli" -and (-not $SourcesRelative -or -not $TestsRelative)) {
+    throw "-SourcesRelative and -TestsRelative are required when -Scanner Cli"
+}
 
 if ($ModuleDirs.Count -ne $JacocoXmlRelativePaths.Count) {
     throw "-ModuleDirs ($($ModuleDirs.Count)) and -JacocoXmlRelativePaths ($($JacocoXmlRelativePaths.Count)) must have the same count"
@@ -53,7 +71,22 @@ $xmlPathsArg = $JacocoXmlRelativePaths -join ","
 
 Push-Location $RepoRoot
 try {
-    if ($ModuleDirs.Count -eq 1) {
+    if ($Scanner -eq "Cli") {
+        # Build-tool-agnostic path: the standalone scanner takes the same
+        # three facts coverdict itself takes (sources, tests, JaCoCo XML), so
+        # a Gradle repo needs no pom and no Gradle plugin wiring.
+        & sonar-scanner `
+            "-Dsonar.host.url=$SonarHost" `
+            "-Dsonar.token=$env:SONAR_TOKEN" `
+            "-Dsonar.projectKey=$projectKey" `
+            "-Dsonar.projectName=$projectKey" `
+            "-Dsonar.projectBaseDir=$RepoRoot" `
+            "-Dsonar.sources=$SourcesRelative" `
+            "-Dsonar.tests=$TestsRelative" `
+            "-Dsonar.java.binaries=." `
+            "-Dsonar.coverage.jacoco.xmlReportPaths=$xmlPathsArg"
+        if ($LASTEXITCODE -ne 0) { throw "sonar-scanner failed with exit $LASTEXITCODE" }
+    } elseif ($ModuleDirs.Count -eq 1) {
         Push-Location (Join-Path $RepoRoot $ModuleDirs[0])
         try {
             & mvn -q -B `

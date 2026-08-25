@@ -74,11 +74,13 @@ each corpus phase's commands above without new code per phase (D-30):
   Gradle`, D-36), via a temp `--init-script` (never a checkout edit), run
   coverdict in `--base <pin>~50` and `--no-vcs`.
 - `sonar-parity.ps1` — overall-scope `sonar-compatible` vs SonarQube UI
-  comparison (must be run from inside the target module's own directory,
-  not via reactor `-pl`; new-code parity needs a non-Community-Edition
-  instance, currently unavailable). Maven-only today (invokes
-  `sonar-maven-plugin` against a `pom.xml`) - a Gradle repo needs its own
-  design, not attempted for phase 3 (D-36).
+  comparison. Three modes: a single Maven module (run from inside the
+  module's own directory, not via reactor `-pl`), a Maven reactor subset
+  (`-pl a,b -am`, D-37), and `-Scanner Cli`, which drives the standalone
+  `sonar-scanner` and therefore needs no build tool at all - that is how the
+  Gradle phase is measured (D-45, superseding D-36's deferral). New-code
+  parity still needs a non-Community-Edition instance and is deferred as a
+  follow-up, not an open M1 item.
 - `benchmark-phase.ps1` — cold + 5-warm wall time and peak working-set
   memory around a coverdict invocation.
 - `scaffold_labels.py` — seeded 100-sample (per rule) CSV scaffold from a

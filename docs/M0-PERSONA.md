@@ -48,7 +48,7 @@ measure organic demand. That remains a hypothesis per VISION.
 |---|---|---|---|
 | `apache/commons-lang` | `master` @ `4d91b28fce7317132360aa9f3bbf31cc6e479f00` | Maven, single module | Mature JUnit 5 suite (~4,500 tests); the well-tested baseline an agent extends |
 | `google/gson` | `main` @ `dae37cf0fe12235b76fb09f01118a0a8c8823f42` | Maven, small multi-module | JUnit 4-heavy suite — exercises the JUnit 4 half of D-24; reflection-heavy code |
-| `dropwizard/dropwizard` | `release/4.0.x` @ `87940b9728fa6cce6598a0433da97ace373ee828` | Maven, multi-module | Mixed JUnit 4+5, forces report-to-module binding and multi-module paths |
+| `dropwizard/dropwizard` | `release/4.0.x` @ `87940b9728fa6cce6598a0433da97ace373ee828` | Maven, multi-module | Forces report-to-module binding and multi-module paths (the earlier "mixed JUnit 4+5" claim was verified false at this pin - D-38) |
 
 Buildability at the pinned commits is verified by the validation-manifest
 spot-check (M0 deliverable 5), not asserted here. Dropwizard also appears in

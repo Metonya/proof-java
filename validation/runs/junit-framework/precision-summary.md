@@ -65,6 +65,14 @@ module's testFixtures - D-17 territory (external helpers need explicit
 `customOracles` configuration), same category as gson's `MoreAsserts` and
 assertj's `AssertionsUtil`. Correctly out of scope, not a bug.
 
+## Criterion 2 update (2026-08-25, D-45)
+
+Sonar parity for this phase was deferred in D-36 as needing "its own design"
+for Gradle. It did not: the standalone `sonar-scanner` CLI needs no build tool,
+and the check passes exactly (54.8 vs 54.8; jacoco-line 58.8 vs 58.8) on the
+same JaCoCo XML, with no Gradle rebuild. See `sonar-parity.md` in this
+directory.
+
 ## Backlog (not fixed this phase - see docs/ROADMAP.md and D-36)
 
 - Chain-terminal oracle recognition for libraries that own only the

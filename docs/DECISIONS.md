@@ -742,6 +742,36 @@ under. These are elections on genuinely multi-licensed artifacts, never a way
 to silence the gate - a single-licensed LGPL dependency has no Apache option
 to elect and still fails the build (D-20).
 
+**D-45 · Gradle-phase sonar parity needed no Gradle design; D-36's deferral
+is superseded** (2026-08-25)
+D-36 left phase 3's criterion-2 parity undone, reasoning that `sonar-parity.
+ps1` is Maven-only and "a Gradle equivalent needs its own design -
+`org.sonarqube`'s Gradle plugin applies at the root and aggregates the whole
+project tree by default, and this repo's Isolated Projects mode makes scoping
+it down non-trivial". That framing assumed the scanner had to be driven
+through the build tool. It does not: the standalone `sonar-scanner` CLI takes
+`sonar.sources`, `sonar.tests` and `sonar.coverage.jacoco.xmlReportPaths`
+directly - the same three facts coverdict itself takes, which is precisely
+D-01/D-02's point that the host build tool is irrelevant to this analysis.
+
+`sonar-parity.ps1` gained a `-Scanner Cli` branch. Phase 3 parity: **exact
+match, 54.8 vs 54.8** (`jacoco-line`/`line_coverage` also exact, 58.8 vs
+58.8), on the existing JaCoCo XML with no Gradle rebuild. Criterion 2
+(overall) is now closed on all four phases, every one an exact match: gson
+91.0, assertj 74.4, junit-framework 54.8, dropwizard 81.1.
+
+Worth recording as a reasoning error, not just a result: the blocker was
+never Gradle, it was reaching for the build-tool-integrated scanner by habit
+when the tool-agnostic one matched the project's own stated input model. D-36
+was correct not to rush an `org.sonarqube` integration; it was wrong that no
+cheap path existed.
+
+**New-code parity remains deferred** (user decision, same date): it needs
+branch/PR analysis, which Community Edition does not support at any
+configuration. Not a coverdict defect and not closable by work in this repo -
+it is a follow-up for a Developer/Enterprise instance, and M1 does not wait
+on it.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

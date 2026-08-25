@@ -364,9 +364,36 @@ pom excludes `junit:junit`, all 321 `@Test` methods are JUnit 5) -
 `docs/M0-VALIDATION-MANIFEST.md` to "multi-module Maven, report-to-module
 binding"; JUnit 4 handling stays validated by gson (phase 1) instead.
 
-Criterion-2 new-code parity (pending a Developer Edition SonarQube
-instance, or acceptance that Community Edition caps this) remains open -
-the only open item left in M1c.
+**Criterion 2 (overall) closed on all four phases (2026-08-25):** phase 3's
+parity, deferred in D-36 as "a Gradle equivalent needs its own design", turned
+out to need no Gradle design at all - the standalone `sonar-scanner` CLI takes
+sources, tests and the JaCoCo XML directly, which is exactly coverdict's own
+input model (D-01/D-02), so `sonar-parity.ps1` gained a `-Scanner Cli` branch
+instead (D-45). Result: exact match, 54.8 vs 54.8 (jacoco-line/line_coverage
+also exact, 58.8 vs 58.8). All four phases now: gson 91.0, assertj 74.4,
+junit-framework 54.8, dropwizard 81.1 - every one an exact match.
+
+**Criterion-2 new-code parity is deferred, not open against M1** (2026-08-25,
+user decision): it needs branch/PR analysis, which Community Edition does not
+support at any configuration. It is not a coverdict defect and no amount of
+work here closes it - it needs a Developer/Enterprise instance. Recorded as a
+follow-up to run on such an instance when one is available; M1 does not wait
+on it. The metric-id and numerator/denominator half of criterion 2 (which
+applies to both overall and new-code output) has always held.
+
+**M1 closing sweep done (2026-08-25).** Eight M0-specified behaviours had no
+implementation; all are now real and documented (D-39 through D-45):
+`--classpath`, `--config`, `customOracles`, `suppressions`, JUnit 4
+`ExpectedException`, the `@Disabled`/`@Ignore` note, the generated
+release artifacts with a working hard-rule-9 LGPL gate, and phase 3's sonar
+parity. Three of them (`--config`, `ExpectedException`, the disabled note) had
+no recorded deferral anywhere - they were silent gaps, not known debt.
+
+**Regression check after the sweep:** all four corpus phases re-run through
+the real CLI against their existing JaCoCo reports produce byte-identical
+finding counts - gson 33, assertj 2148, junit-framework 51, dropwizard 0.
+Nothing in the new configuration surfaces changes a default-configuration run,
+which is the property that matters: every one of these features is opt-in.
 
 M1 exit codes: `0` complete analysis regardless of findings; `1` reserved for
 the M3 finding-based quality gate and never emitted by v0.1; `2` invalid
