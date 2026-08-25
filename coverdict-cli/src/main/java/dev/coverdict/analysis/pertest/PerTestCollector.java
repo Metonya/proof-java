@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import dev.coverdict.analysis.binding.ChangedClassTargets;
 import dev.coverdict.analysis.model.AnalysisReason;
 import dev.coverdict.analysis.model.ChangedFile;
-import dev.coverdict.analysis.model.Classification;
 import dev.coverdict.analysis.model.ModuleDefinition;
 
 /**
@@ -41,7 +41,7 @@ public final class PerTestCollector {
     private static void collectOneModule(Path repoRoot, ModuleDefinition module, List<ChangedFile> changedFiles,
                                           Map<String, String> perTestClasspathFilesById,
                                           List<PerTestModuleEvidence> evidence, List<AnalysisReason> warnings) {
-        List<String> targetClasses = targetClassGlobs(module, changedFiles);
+        List<String> targetClasses = ChangedClassTargets.globsFor(module, changedFiles);
         if (targetClasses.isEmpty()) {
             return; // nothing changed in this module's production code - no evidence to collect
         }
@@ -68,25 +68,6 @@ public final class PerTestCollector {
                 "Module '" + module.id() + "' per-test coverage collection failed (" + e.getMessage()
                     + "); per-test evidence skipped for this module.", null, module.id()));
         }
-    }
-
-    private static List<String> targetClassGlobs(ModuleDefinition module, List<ChangedFile> changedFiles) {
-        List<String> globs = new ArrayList<>();
-        for (ChangedFile cf : changedFiles) {
-            if (cf.classification() != Classification.MAPPED || !module.id().equals(cf.module())
-                    || !cf.path().endsWith(".java")) {
-                continue;
-            }
-            for (String sourceRoot : module.sourceRoots()) {
-                String prefix = sourceRoot.endsWith("/") ? sourceRoot : sourceRoot + "/";
-                if (cf.path().startsWith(prefix)) {
-                    String relative = cf.path().substring(prefix.length(), cf.path().length() - ".java".length());
-                    globs.add(relative.replace('/', '.') + "*"); // '*' covers nested/inner classes (Foo$Bar)
-                    break;
-                }
-            }
-        }
-        return globs;
     }
 
     public record Result(List<PerTestModuleEvidence> modules, List<AnalysisReason> warnings) {
