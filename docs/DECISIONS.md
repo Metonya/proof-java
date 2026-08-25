@@ -541,6 +541,41 @@ migration. Corrected to "multi-module Maven, report-to-module binding" in
 the manifest; JUnit 4 handling stays validated by gson (phase 1) and the
 allowlist's own D-24 coverage, not by this phase.
 
+**D-39 · `--classpath` implemented; per-module ids accepted but solvers are
+unioned** (2026-08-25)
+`M0-CLI-INPUT.md`'s `--classpath <id>=<file>` was specified in M0 and never
+built - D-28 shipped import-anchoring precisely because a real run had no
+classpath, and D-36's chain-terminal fix was later abandoned for the same
+reason. Now real: `ClasspathLoader` reads each list file (one jar path per
+line, `#` comments and blanks skipped), builds a `JarTypeSolver` per jar, and
+hands them to the `OracleRuleEngine.scan` overload that already existed as a
+test-only hook for the fixture harness. That overload is now public and its
+javadoc no longer claims it is "never populated in production".
+
+**Failure handling is warn-and-continue, never fail-closed**, because D-17's
+direction is one-way: an unreadable list (`CLASSPATH_FILE_UNREADABLE`) or an
+entry that will not open as a jar (`CLASSPATH_ENTRY_UNUSABLE`) leaves
+resolution exactly where D-28's two tiers already had it, so it is a warning,
+not an incomplete run. An `--classpath` id naming no declared `--module` is
+the opposite case - exit 2, because the user would otherwise believe a
+classpath was in effect when nothing bound it (hard rule 3a). A jar named by
+two modules is opened once.
+
+**Known narrowing, recorded rather than assumed:** the option's surface is
+per-module (`<id>=<file>`), but `JavaSourceParser` builds one
+`CombinedTypeSolver` for the whole run, so every declared module's jars are
+visible to every module's parse. Splitting that into a parser per module
+changes the scan loop and buys nothing for v0.1's allowlist (the recognized
+libraries are test-scope dependencies shared across a repo's modules). The id
+is still required and still validated, so the argument stays checkable.
+
+Not claimed: this does **not** by itself close D-36's chain-terminal gap. It
+removes the *mechanism* blocker (there is now a way to put `junit-platform-
+testkit` on the solver's path), but D-36's second finding stands - the
+affected junit-vintage-engine files never name `Events` in an import either,
+so whether a classpath actually resolves that chain is an open measurement,
+not a fixed bug. Re-measuring it is corpus work, not this change.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

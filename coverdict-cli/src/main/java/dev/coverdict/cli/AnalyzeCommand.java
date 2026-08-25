@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
@@ -30,6 +31,7 @@ import dev.coverdict.analysis.model.AnalysisReason;
 import dev.coverdict.analysis.model.ModuleDefinition;
 import dev.coverdict.analysis.model.RepoPaths;
 import dev.coverdict.analysis.model.ResolvedSourceFile;
+import dev.coverdict.analysis.oracle.ClasspathLoader;
 import dev.coverdict.analysis.oracle.OracleRuleEngine;
 import dev.coverdict.analysis.oracle.OracleScanResult;
 import dev.coverdict.analysis.report.ModuleInput;
@@ -96,6 +98,9 @@ class AnalyzeCommand implements Callable<Integer> {
     @Option(names = "--test-roots", description = "Repeatable <id>=<dir>[,<dir>...]. Default per module: <root>/src/test/java.")
     private List<String> testRootsArgs = new ArrayList<>();
 
+    @Option(names = "--classpath", description = "Repeatable <id>=<file>, where <file> lists one jar path per line for JavaParser symbol solving (D-17: never silently upgrades confidence).")
+    private List<String> classpathArgs = new ArrayList<>();
+
     @Option(names = "--language-level", defaultValue = "17", description = "Java language level for JavaParser (oracle critic) and recorded as provenance.")
     private int languageLevel;
 
@@ -140,9 +145,11 @@ class AnalyzeCommand implements Callable<Integer> {
 
         List<ModuleDefinition> modules;
         Map<String, List<String>> reportPathsById;
+        Map<String, String> classpathFilesById;
         try {
             reportPathsById = parseReportArgs();
             modules = buildModuleDefinitions(reportPathsById.keySet());
+            classpathFilesById = parseClasspathArgs(modules);
         } catch (CliUsageException e) {
             spec.commandLine().getErr().println("coverdict: " + e.getMessage());
             return ExitCode.INVALID_INPUT.value(); // no JSON written - invocation itself was invalid
@@ -150,7 +157,7 @@ class AnalyzeCommand implements Callable<Integer> {
 
         VerdictDocument doc;
         try {
-            doc = analyze(repoRoot, exclusions, modules, reportPathsById, diffMode);
+            doc = analyze(repoRoot, exclusions, modules, reportPathsById, classpathFilesById, diffMode);
         } catch (AnalysisException e) {
             doc = incompleteDocument(exclusions, e, diffMode);
         }
@@ -226,9 +233,32 @@ class AnalyzeCommand implements Callable<Integer> {
         return modules;
     }
 
+    /**
+     * @throws CliUsageException on malformed {@code --classpath} syntax, or an
+     *         id that names no declared module (hard rule 3a: an id that binds
+     *         to nothing is a mistake in the invocation, not something to
+     *         quietly ignore - the user would otherwise believe a classpath
+     *         was in effect when none was).
+     */
+    private Map<String, String> parseClasspathArgs(List<ModuleDefinition> modules) {
+        Map<String, String> byId = parseIdValue(classpathArgs);
+        if (byId.isEmpty()) {
+            return byId;
+        }
+        java.util.Set<String> declaredIds = modules.stream().map(ModuleDefinition::id).collect(Collectors.toSet());
+        for (String id : byId.keySet()) {
+            if (!declaredIds.contains(id)) {
+                throw new CliUsageException("--classpath id '" + id + "' does not match any declared --module id "
+                    + declaredIds + ".");
+            }
+        }
+        return byId;
+    }
+
     /** @throws AnalysisException when the overall-coverage evidence itself is bad (exit 3, structured incomplete document, nothing preserved). */
     private VerdictDocument analyze(Path repoRoot, List<String> exclusions, List<ModuleDefinition> modules,
-                                     Map<String, List<String>> reportPathsById, String diffMode) {
+                                     Map<String, List<String>> reportPathsById,
+                                     Map<String, String> classpathFilesById, String diffMode) {
         // A declared module with no bound report has no coverage evidence in
         // --no-vcs mode (M0-CLI-INPUT.md: this is only a hard error when the
         // module has changed Java files, a diff-mode concept this build
@@ -262,6 +292,12 @@ class AnalyzeCommand implements Callable<Integer> {
             }
         }
 
+        // Built once for both scan call sites below; its own warnings ride the
+        // same channel as MODULE_WITHOUT_REPORT - a classpath entry that could
+        // not be opened is visible, never a silent partial resolution (D-17).
+        ClasspathLoader.Result classpath = ClasspathLoader.load(repoRoot, classpathFilesById);
+        extraWarnings.addAll(classpath.warnings());
+
         BindingResult binding = new ModuleBinder(repoRoot).bind(evidencedModules, parsedReportsById);
         List<ResolvedSourceFile> filtered = ExclusionFilter.apply(binding.resolvedFiles(), exclusions);
         MetricSet overall = MetricsEngine.compute(filtered);
@@ -277,7 +313,7 @@ class AnalyzeCommand implements Callable<Integer> {
 
         if (DIFF_MODE_NO_VCS.equals(diffMode)) {
             // findings-scope=changed is rejected in --no-vcs mode by call() already, so "all" always holds here.
-            OracleScanResult scan = OracleRuleEngine.scan(repoRoot, evidencedModules, languageLevel, encoding, null);
+            OracleScanResult scan = OracleRuleEngine.scan(repoRoot, evidencedModules, languageLevel, encoding, null, classpath.solvers());
             List<AnalysisReason> allReasons = new ArrayList<>(scan.incompleteReasons());
             return new VerdictDocument(version.schemaVersion(), version.version(), allReasons.isEmpty(), allReasons,
                 languageLevel, encoding, exclusions, moduleInputs, diffMode, findingsScopeOption, null, overall,
@@ -300,7 +336,7 @@ class AnalyzeCommand implements Callable<Integer> {
 
             java.util.Set<String> findingsPaths = FINDINGS_SCOPE_CHANGED.equals(findingsScopeOption)
                 ? changedAndUntrackedPaths(diffResult) : null;
-            OracleScanResult scan = OracleRuleEngine.scan(repoRoot, evidencedModules, languageLevel, encoding, findingsPaths);
+            OracleScanResult scan = OracleRuleEngine.scan(repoRoot, evidencedModules, languageLevel, encoding, findingsPaths, classpath.solvers());
 
             List<AnalysisReason> allIncompleteReasons = new ArrayList<>(classification.incompleteReasons());
             allIncompleteReasons.addAll(scan.incompleteReasons());

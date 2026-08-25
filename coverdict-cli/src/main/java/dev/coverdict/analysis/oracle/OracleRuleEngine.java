@@ -58,8 +58,19 @@ public final class OracleRuleEngine {
         return scan(repoRoot, modules, languageLevel, encoding, changedPathsOrNull, List.of());
     }
 
-    /** @param extraTypeSolvers test-only hook (fixture harness jars, K4) - never populated in production. */
-    static OracleScanResult scan(Path repoRoot, List<ModuleDefinition> modules, int languageLevel, String encoding,
+    /**
+     * @param extraTypeSolvers jar solvers built from {@code --classpath}
+     *                          ({@link ClasspathLoader}), or the fixture
+     *                          harness's own jars in tests. Empty is the
+     *                          normal case and is not a degraded run: D-28's
+     *                          import-anchoring tier resolves the allowlist
+     *                          without any jar. Per D-17 a populated
+     *                          classpath never silently upgrades a finding's
+     *                          confidence - it only lets the symbol solver
+     *                          answer calls it would otherwise leave
+     *                          UNRESOLVED.
+     */
+    public static OracleScanResult scan(Path repoRoot, List<ModuleDefinition> modules, int languageLevel, String encoding,
                                   Set<String> changedPathsOrNull, List<TypeSolver> extraTypeSolvers) {
         return scan(repoRoot, modules, languageLevel, encoding, changedPathsOrNull, extraTypeSolvers, FINDINGS_CAP);
     }

@@ -498,6 +498,112 @@ class AnalyzeCommandTest {
         assertTrue(warned, doc.toString());
     }
 
+    // --- --classpath (M0-CLI-INPUT.md's classpath input, wired for real) ---
+
+    @Test
+    void classpathIdNotMatchingAnyDeclaredModuleIsInvalidInvocation() {
+        int exitCode = run("analyze", "--no-vcs",
+            "--repo", repoRoot.toString(),
+            "--module", "app=.",
+            "--report", "app=" + FIXTURES.resolve("mixed-coverage.xml"),
+            "--classpath", "typo=deps.txt",
+            "--out", outputDir.resolve("verdict.json").toString());
+
+        assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
+        assertTrue(err.toString().contains("--classpath id 'typo'"), err.toString());
+        assertFalse(Files.exists(outputDir.resolve("verdict.json")), "exit 2 must write no JSON");
+    }
+
+    @Test
+    void anUnreadableClasspathFileWarnsAndTheRunStillCompletes() throws IOException {
+        Files.createDirectories(repoRoot.resolve("src/main/java/com/example"));
+        Files.writeString(repoRoot.resolve("src/main/java/com/example/Calc.java"), "class Calc {}\n");
+        Path outFile = outputDir.resolve("verdict.json");
+
+        int exitCode = run("analyze", "--no-vcs",
+            "--repo", repoRoot.toString(),
+            "--module", "app=.",
+            "--report", "app=" + FIXTURES.resolve("mixed-coverage.xml"),
+            "--classpath", "app=does-not-exist.txt",
+            "--out", outFile.toString());
+
+        // D-17: an absent classpath degrades resolution, it never fails the run.
+        assertEquals(ExitCode.COMPLETE.value(), exitCode);
+        assertTrue(validate(outFile).isEmpty(), validate(outFile).toString());
+        assertTrue(warningCodes(outFile).contains("CLASSPATH_FILE_UNREADABLE"), warningCodes(outFile).toString());
+    }
+
+    @Test
+    void aClasspathEntryThatIsNotAJarWarnsAndTheRunStillCompletes() throws IOException {
+        Files.createDirectories(repoRoot.resolve("src/main/java/com/example"));
+        Files.writeString(repoRoot.resolve("src/main/java/com/example/Calc.java"), "class Calc {}\n");
+        Files.writeString(repoRoot.resolve("deps.txt"), "not-a-real.jar\n");
+        Path outFile = outputDir.resolve("verdict.json");
+
+        int exitCode = run("analyze", "--no-vcs",
+            "--repo", repoRoot.toString(),
+            "--module", "app=.",
+            "--report", "app=" + FIXTURES.resolve("mixed-coverage.xml"),
+            "--classpath", "app=deps.txt",
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.COMPLETE.value(), exitCode);
+        assertTrue(validate(outFile).isEmpty(), validate(outFile).toString());
+        assertTrue(warningCodes(outFile).contains("CLASSPATH_ENTRY_UNUSABLE"), warningCodes(outFile).toString());
+    }
+
+    /**
+     * The real end-to-end path with real jars: the same fixture-harness jars
+     * {@code OracleRuleEngineFixturesTest} loads directly, reached here the way
+     * a user reaches them - through a {@code --classpath} list file. Proves the
+     * option is wired into both the parser's solver set and the scan, with no
+     * warning and no change to the oracle verdict for an already-resolvable
+     * import-anchored call (D-28's tier stays sufficient; D-17's "never
+     * silently upgrades" holds).
+     */
+    @Test
+    void aRealJarListIsLoadedWithNoWarningAndLeavesTheOracleVerdictUnchanged() throws IOException {
+        Files.createDirectories(repoRoot.resolve("src/main/java/com/example"));
+        Files.writeString(repoRoot.resolve("src/main/java/com/example/Calc.java"), "class Calc {}\n");
+        Files.createDirectories(repoRoot.resolve("src/test/java/com/example"));
+        Files.writeString(repoRoot.resolve("src/test/java/com/example/CalcTest.java"),
+            noOracleTestSource("CalcTest", "noAssertionHere"));
+
+        Path harness = Path.of("target/fixture-harness").toAbsolutePath();
+        Files.writeString(repoRoot.resolve("deps.txt"), String.join("\n",
+            "# comment lines and blanks are skipped",
+            "",
+            harness.resolve("junit.jar").toString(),
+            harness.resolve("assertj-core.jar").toString()) + "\n");
+        Path outFile = outputDir.resolve("verdict.json");
+
+        int exitCode = run("analyze", "--no-vcs",
+            "--repo", repoRoot.toString(),
+            "--module", "app=.",
+            "--report", "app=" + FIXTURES.resolve("mixed-coverage.xml"),
+            "--classpath", "app=deps.txt",
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.COMPLETE.value(), exitCode);
+        assertTrue(validate(outFile).isEmpty(), validate(outFile).toString());
+        List<String> codes = warningCodes(outFile);
+        assertFalse(codes.contains("CLASSPATH_FILE_UNREADABLE"), codes.toString());
+        assertFalse(codes.contains("CLASSPATH_ENTRY_UNUSABLE"), codes.toString());
+
+        JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(outFile));
+        assertEquals(1, doc.at("/findings").size(), "the oracle-less test is still reported: " + doc.at("/findings"));
+        assertEquals("NO_RECOGNIZED_ORACLE", doc.at("/findings/0/rule").asText());
+    }
+
+    private List<String> warningCodes(Path jsonFile) throws IOException {
+        JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(jsonFile));
+        List<String> codes = new ArrayList<>();
+        for (JsonNode w : doc.at("/warnings")) {
+            codes.add(w.at("/code").asText());
+        }
+        return codes;
+    }
+
     /**
      * Lines 10-14 match fixtures/jacoco/mixed-coverage.xml's own {@code <line>}
      * entries exactly, so editing one of them produces a diff hunk that lands

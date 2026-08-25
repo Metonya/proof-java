@@ -129,9 +129,15 @@ coverdict's own 14 test files / 103 `@Test` methods found zero false
 positives while a dedicated negative-test fixture confirms the detector does
 fire on a genuinely oracle-less test.
 
-- Custom oracle providers (`customOracles` configuration) and `--classpath`
-  are still open - the allowlist and resolution layers are already shaped to
-  add them without a rework.
+- `--classpath` is implemented (D-39): `<id>=<file>`, one jar path per line,
+  built into JavaParser's solver set via `ClasspathLoader`. Unreadable lists
+  and unusable entries warn (`CLASSPATH_FILE_UNREADABLE`,
+  `CLASSPATH_ENTRY_UNUSABLE`) rather than failing the run - D-17's direction
+  holds: a missing classpath degrades resolution, a present one never
+  silently upgrades confidence.
+- Custom oracle providers (`customOracles`) and `suppressions` are still
+  open; both are config-file features and therefore blocked on the
+  `--config` surface (M0-CLI-INPUT.md), which is itself unimplemented.
 - Rule/path suppression, baselines, and changed-findings-only CI gating are
   still open (M3 pre-CI work, as originally scoped).
 
