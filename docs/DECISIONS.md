@@ -857,6 +857,43 @@ with `method='<clinit>'` (and PIT's own `StaticInitializerFilter` already
 identifies code reachable only from `<clinit>`), so the ambient bucket is a
 filter on existing data, not new instrumentation.
 
+**D-51 · L2's calling model is `EntryPoint`, not a build-tool plugin
+profile - never touches the target repo's build files** (2026-08-25)
+M2 Faz 0's spike drove PIT through a throwaway `pitest-maven` Maven profile
+patched into the target module's `pom.xml` and reverted afterward
+(`git checkout`) - workable for a spike, wrong for the product: it would
+mean asking every coverdict user to accept a temporary build-file edit, and
+it has no answer at all for a Gradle target (junit-framework, an M2 Faz 2
+corpus repo). M2 Faz 2a verified `org.pitest.mutationtest.tooling.
+EntryPoint.execute(File, ReportOptions, PluginServices, Map)` - confirmed
+present, public, and functional in `pitest-entry:1.15.8` - drives the
+identical coverage-collection phase with zero repo modification: `git
+status` on coverdict's own repo stayed empty across the run. Same finding
+as D-45 (the standalone `sonar-scanner` CLI beating the build-tool-integrated
+scanner): the engine never needed the host build tool, only its own
+inputs - classpath, source dirs, target class/test globs, report directory,
+all of which `ReportOptions`'s setters take directly and all of which
+coverdict already collects from `--classpath`/`--module`/`--source-roots`/
+`--test-roots`.
+
+Two non-obvious `ReportOptions` requirements found only by running it, not
+documented anywhere in PIT's own javadoc:
+- `setGroupConfig(TestGroupConfig.emptyConfig())` is mandatory - the Maven
+  plugin sets a default a caller must replicate, or `createMinionSettings()`
+  NPEs on a null field via `Objects.requireNonNull`.
+- Every path handed to `setClassPathElements`/`setCodePaths`/`setSourceDirs`
+  must be canonicalized (`File.getCanonicalPath()`). A path built by naive
+  string concatenation of a forward-slash argument and a backslash literal
+  (`moduleRoot + "\\target\\classes"`, mixing `/` and `\` in one string) is
+  accepted without error but makes the mutation pre-scan silently find zero
+  units - PIT's classpath-matching does not normalize separators, and no
+  error is raised.
+
+Evidence: `validation/runs/pit-spike/entrypoint-poc/`. Not yet exercised
+against a Gradle repo (junit-framework, M2 Faz 2b) - Maven's `dependency:
+build-classpath` supplied the runtime classpath here; Gradle's equivalent
+extraction is unverified.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

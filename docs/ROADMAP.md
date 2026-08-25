@@ -406,22 +406,38 @@ failure.
   **done**: D-47 confirms PIT's `CoverageExporterFactory` SPI is the L2
   engine, superseding D-13's sequential-JaCoCo-reset design; D-49/D-50 record
   the real `linecoverage.xml` schema and the `<clinit>` ambient-bucket
-  mechanism. Evidence: `validation/runs/pit-spike/FINDINGS.md`. Remaining
-  work, not yet started:
-  - **Faz 2 — stability gates**, on assertj/junit-framework/dropwizard (gson
-    done as canary): three Jaccard-similarity experiments per repo -
-    (1) repeated same-order runs, gate mean J = 1.0; (2) shuffled test order,
-    gate mean J ≥ 0.98 excluding `<clinit>`; (3) sequential vs. PIT's own
-    parallelism, gate mean J ≥ 0.95. A repo failing all three gates cuts L2
-    for that repo's shape, not necessarily the whole feature. Side product:
-    any test with J below the shuffled-order gate is order-dependent -
-    log it as a candidate `ORDER_DEPENDENT_TEST` finding for the backlog,
-    not something M2 ships.
-  - Full-suite coverage-phase timing on the three larger corpus repos (Faz 0
-    only measured coverdict's own ~40-class scope and one gson utility
-    class - both under a second; D-18's "25 minutes" modeled the wrong
-    architecture and needs a real replacement number before M3 planning
-    treats L2's cost as known).
+  mechanism. D-51 replaces the calling model itself: `EntryPoint.execute()`
+  drives PIT programmatically with zero target-repo build-file changes,
+  superseding Faz 0's throwaway-`pom.xml`-profile spike and answering
+  Gradle repos too (no build-tool plugin needed at all). Evidence:
+  `validation/runs/pit-spike/FINDINGS.md`.
+
+  **Faz 2a-2e are done on assertj-core** (`org.assertj.core.api.*` scope,
+  215 production + 164 test classes - not the full repo, a representative
+  slice), replacing the original three-Jaccard-gate design (the shuffled-
+  test-order gate turned out uncosable: `ReportOptions` exposes no seed/
+  order control, and PIT owns test discovery order itself):
+  - **2b scale:** coverage phase 20-29s for 17,039 class#method entries /
+    39,923 line records - the real number replacing D-18's stale "25
+    minutes" (whole-suite, wrong architecture) model.
+  - **2c determinism:** two independent runs, byte-identical
+    (mean Jaccard = 1.0 across all 39,923 records). Gate passed.
+  - **2d cross-engine diagnostic** (not a gate - see FINDINGS.md §8 for why):
+    compared against a full-suite JaCoCo report. 0.94% of directly
+    comparable records disagreed, under the 5% escalation threshold, and
+    the disagreement's shape is understood (PIT's `LineMapper` and JaCoCo's
+    line table pick different "primary" lines for single-expression method
+    bodies delegating straight into a lambda).
+  - **2e ablation** (replaces the dropped shuffle gate - tests causation
+    directly instead of self-consistency): 3/3 sampled multiplicity=1
+    production-code lines genuinely lost coverage when their sole covering
+    test was excluded and the suite re-run. Gate passed, 100%.
+
+  **Not yet done:** the same four gates on junit-framework (Gradle - D-51's
+  `EntryPoint` calling model is unverified against a Gradle-built classpath)
+  and dropwizard (multi-module). One repo passing does not clear L2 broadly;
+  ROADMAP's "a repo failing cuts L2 for that repo's shape" cuts the other
+  way too - one passing repo is one data point, not the full spike.
 - **M3 — First build integration + CI.** Ship Maven or Gradle first as decided
   from M0 dogfood, then the other only on demand. Add report provenance manifest,
   changed-findings baseline, quality-gate exit codes, and evaluate SARIF (O-02).
@@ -478,11 +494,13 @@ failure.
   rounds, remove or downgrade that rule; aggregate precision cannot hide it.
 - If complete source/report mapping cannot be guaranteed, v0.1 ships no coverage
   success verdict until a build integration supplies trustworthy provenance.
-- If any of M2 Faz 2's three Jaccard stability gates (mean J = 1.0 same-order
-  repeat; J ≥ 0.98 shuffled order excluding `<clinit>`; J ≥ 0.95 sequential
-  vs. parallel) fails on a dogfood repository, L2 is cut for that repo's
-  shape; if it fails on all of them, L2 is cut and the product remains
-  L0+L1(+L3).
+- If any of M2 Faz 2's four gates (2c determinism, mean J = 1.0 same-order
+  repeat; 2e ablation, 100% of sampled multiplicity=1 claims verified
+  causally; 2d cross-engine diagnostic, disagreement understood and under
+  5%; 2a calling model, zero target-repo build-file changes) fails on a
+  dogfood repository, L2 is cut for that repo's shape; if it fails on all
+  of them, L2 is cut and the product remains L0+L1(+L3). Passed on assertj;
+  junit-framework and dropwizard still open.
 - If dogfood users do not repeat the workflow or findings are predominantly
   ignored/waived, stop integration work and revisit the product wedge.
 - If `sonar-compatible` parity fails against the pinned internal setup, remove

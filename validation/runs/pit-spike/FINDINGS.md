@@ -151,3 +151,128 @@ invaziv — bu fark D-47'de açıkça not edilmeli.
 
 assertj, junit-framework, dropwizard'da tekrarı ve üç kararlılık deneyi
 (Faz 2) yapılmadı; sonraki oturumun işi.
+
+## 7. Faz 2a — çağırma modeli: `EntryPoint`, pom.xml'e hiç dokunmadan
+
+Faz 0'ın açık bıraktığı soru: "hedef repoya bağımlılık eklemek gerekiyor
+mu?" Cevap **hayır** — ama Faz 0'ın kendi spike'ı bunu görünmez kılmıştı,
+çünkü geçici bir `pom.xml` profiliyle çalışıyordu.
+
+`org.pitest.mutationtest.tooling.EntryPoint.execute(File, ReportOptions,
+PluginServices, Map)` — `pitest-entry:1.15.8`'de gerçek, public, çalışan bir
+API. `ReportOptions`'ın setter'ları (`setClassPathElements`, `setCodePaths`,
+`setSourceDirs`, `setTargetClasses`, `setTargetTests`, `setReportDir`)
+coverdict'in zaten topladığı `--classpath`/`--module`/`--source-roots`/
+`--test-roots` bilgisinden doğrudan besleniyor.
+
+**Kanıt (`entrypoint-poc/Faz2aSpike.java`):** coverdict'in kendi reposunda,
+`coverdict-cli/pom.xml`'e **hiç dokunmadan**, kapsam fazı iki kez başarıyla
+koştu (1402/1402 blok satıra çözüldü her ikisinde de). `git status` koşum
+öncesi/sonrası tamamen boş kaldı.
+
+### Yol boyunca bulunan iki tuzak (PIT'in kendi dokümantasyonunda yok)
+
+1. **`setGroupConfig()` zorunlu.** Ayarlanmazsa `createMinionSettings()`
+   `NullPointerException` fırlatıyor (`Objects.requireNonNull`). Maven
+   plugin bunu sessizce varsayılan olarak ayarlıyor, programatik çağıran
+   kendisi ayarlamak zorunda: `TestGroupConfig.emptyConfig()`.
+2. **Path ayırıcıları karışık olamaz.** `moduleRoot + "\\target\\classes"`
+   gibi `/` ve `\` karışık bir string, hatasız kabul ediliyor ama mutasyon
+   ön-taraması sessizce **0 birim** buluyor — hiçbir hata mesajı yok. PIT'in
+   classpath eşleştirmesi ayırıcıları normalize etmiyor.
+   `File.getCanonicalPath()` ile düzeltildi. Bu, kendi başına yarım saatlik
+   bir teşhis sürecine mal oldu — gelecekte aynı hataya düşmemek için
+   kaydediliyor.
+
+### Kapsam dışı kalan
+
+Mutasyon fazı (kapsam fazından sonraki adım) `MINION_DIED` ile çöktü —
+`useClasspathJar`/geçici jar yolu ile ilgili görünüyor. **L2'nin sorusuyla
+ilgisi yok** (kapsam fazı zaten tamamlanmış ve doğru çıktıyı üretmişti);
+araştırılmadı, mutasyon entegrasyonu (L3/M5) zamanı gelince ele alınacak.
+
+**Doğrulanmadı:** Gradle hedefinde (junit-framework) aynı çağırma modeli.
+Maven'ın `dependency:build-classpath`'i burada kullanıldı; Gradle'ın
+eşdeğeri (`gradle dependencies` / `--write-locks` çıktısından classpath
+çıkarma) test edilmedi — Faz 2b'nin ilk engeli bu olacak.
+
+D-51 bu bulguları karar olarak kaydediyor.
+
+## 8. Faz 2b–2e — assertj-core üzerinde dört kanıt kapısı
+
+Hedef kapsam: `org.assertj.core.api.*` (215 üretim sınıfı, 164 test sınıfı —
+tam repo değil, ROADMAP'in "ölçek" amacına yeten gerçek bir dilim).
+Çağırma modeli Faz 2a'nınkiyle aynı (`EntryPoint`, hedef repo'nun pom'una
+dokunulmadı — assertj-core'un kendi `jacoco.skip=false` yaması önceki bir
+oturumdan zaten mevcuttu, bu spike'a özgü değil).
+
+### Faz 2b — ölçek (D-18'in yerine geçen gerçek sayı)
+
+**Kapsam fazı: 20–29 saniye** (üç ayrı koşum, `pit-run.log` dosyalarında),
+17.039 sınıf#metot, 39.923 satır kaydı. D-18'in "5000 test → 25 dakika"
+modeli **suite-genelinde** JaCoCo sıralı-reset'i varsayıyordu — bu sayı
+onun yerini alıyor: diff-kapsamlı bir dilimde (tüm assertj-core'un ~%20'si)
+PIT'in kapsam fazı saniyeler içinde bitiyor.
+
+⚠️ Mutasyon fazı (kapsam fazından sonraki adım, L2'nin sorusuyla ilgisiz)
+187 birim üretti ve 5+ dakika içinde bitmedi — `useClasspathJar` veya geçici
+jar yoluyla ilgili bir `MINION_DIED` riski taşıyor. Araştırılmadı, L3/M5
+zamanı gelince ele alınacak. Faz 2b–2e'nin tamamı sadece kapsam fazının
+çıktısını (`coverdict-line-tests.json`, mutasyon başlamadan önce yazılıyor)
+kullandı.
+
+### Faz 2c — determinizm: GEÇTİ
+
+İki bağımsız koşum, aynı komut. **39.923 kaydın hepsi birebir aynı**
+(küme karşılaştırması: ortak anahtar 39.923, sadece-run1 0, sadece-run2 0,
+ortalama Jaccard **1.0**, uyuşmazlık 0). ROADMAP'in kapısı (J=1.0) tam
+olarak karşılandı.
+
+### Faz 2d — çapraz motor uyumu: tanı (eşik aşıldı, açıklandı)
+
+Önceki oturumdan kalan tam-suite JaCoCo raporuyla (`target/site/jacoco/
+jacoco.xml`, phase-3 sonar-parity çalışmasından) karşılaştırıldı.
+
+**İlk deneme hatalıydı** — JaCoCo'yu `(paket, satır)` ile anahtarlamıştım;
+bir pakette onlarca `.java` dosyası olduğu için satır numaraları çakıştı,
+%6.6 sahte uyuşmazlık üretti. `(dış sınıf, satır)` ile düzeltilince:
+
+- 39.923 PIT kaydından **31.417'sinin JaCoCo'da hiç karşılığı yok** —
+  beklenen: PIT hedef kapsamı hem üretim hem **test** sınıflarını
+  kapsıyordu (`targetClasses = targetTests = org.assertj.core.api.*`),
+  JaCoCo raporu ise standart `maven-jacoco-plugin` davranışıyla sadece
+  `src/main/java`'yı raporluyor. Motor farkı değil, kapsam farkı.
+- Kalan **8.506 karşılaştırılabilir kayıttan 80'i (%0.94) uyuşmuyor**
+  (PIT "kapsandı" diyor, tam-suite JaCoCo "kapsanmadı" diyor) — eşiğin
+  (%5) altında, tırmandırma gerekmedi.
+- Yapısı incelendi: örneğin `AbstractClassAssert#isFinal` satır 427
+  (`public SELF isFinal() {`) PIT'te kapsanmış görünüyor ama gerçek çalışma
+  428–430'daki lambda içinde. Tek-ifadeli metot gövdelerinde PIT'in
+  `LineMapper`'ı ile JaCoCo'nun bytecode-satır tablosu farklı satırı
+  "asıl" kabul ediyor — iki aracın da ASM tabanlı ama bağımsız
+  line-number-table okuma sezgisi var. Kusur değil, granülerlik farkı.
+
+### Faz 2e — ablasyon: GEÇTİ (3/3, %100)
+
+PIT'in çokluk=1 dediği, üretim koduna düşen 3 kayıt seçildi (test sınıfının
+kendi satırları değil — o zaten tautolojik). Her biri tam olarak tek
+`@Test` içeren bir test sınıfına aitti (`grep -c "@Test" ... == 1`), yani
+sınıf-düzeyi `excludedTestClasses` ile o testi tam olarak dışlamak mümkündü:
+
+| Üretim satırı | Tek test | Ablasyon sonrası |
+|---|---|---|
+| `ComparatorBasedComparisonStrategy#iterableContains:99` | `ObjectArrayAssert_usingComparatorForType_Test` | kapsamsız ✓ |
+| `AbstractIntArrayAssert#isEmpty:58` | `IntArrayAssert_isEmpty_Test` | kapsamsız ✓ |
+| `AbstractCharArrayAssert#isEmpty:59` | `CharArrayAssert_isEmpty_Test` | kapsamsız ✓ |
+
+Üçü de testi çıkarınca satır **tamamen kayboldu** (JSON'da anahtar yok) —
+"bu satırı sadece bu test çalıştırıyor" iddiası nedensel olarak doğrulandı,
+sadece öz-tutarlı değil.
+
+### Kapsam dışı kalan
+
+junit-framework (Gradle) ve dropwizard (çok modüllü) hiç denenmedi —
+D-51'in "doğrulanmadı" notu hâlâ geçerli. Faz 2b–2e'nin dört kapısı tek
+repoda (assertj) geçti; ROADMAP'in "her repo kendi şeklini kesebilir"
+maddesi gereği bu, L2'yi genel olarak onaylamaya yetmez — iki repo daha
+gerekiyor.
