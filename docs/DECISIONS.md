@@ -674,6 +674,34 @@ from a genuinely clean run (hard rule 3a).
 `validation/SHA256SUMS` is updated for the schema edit in the same commit -
 the c4377d2 precedent is that forgetting this is easy and only surfaces later.
 
+**D-43 · JUnit 4 `ExpectedException` and the `@Disabled`/`@Ignore` note
+implemented; field-type anchoring added** (2026-08-25)
+Two behaviours docs/rules/README.md specified in M0 that had **no
+implementation and no recorded deferral** - the only two gaps found in this
+sweep that were not documented anywhere. Both survived four corpus phases for
+the same reason: gson was the only JUnit 4 repo and used neither shape, and
+dropwizard's pin has no JUnit 4 at all (D-38). A validation corpus only proves
+what it happens to contain.
+
+`org.junit.rules.ExpectedException` joins the allowlist with an `expect*`
+prefix (`expect`/`expectMessage`/`expectCause` each state a verification the
+test must satisfy, the same reading that makes `@Test(expected=...)` an
+oracle). Recognizing it needed a genuinely new resolution path: the call is
+`thrown.expect(...)`, whose scope names a **variable**, not a type - so
+`typeSingleImportOwner` misses, and with no `--classpath` the Symbol Solver
+cannot resolve the library call either. `OracleRecognizer.fieldTypeOwner` now
+looks the name up as a field of the same compilation unit and anchors its
+*declared type* through the imports. Kept narrow on purpose (this
+compilation unit's own fields, declared type must resolve through a real
+import): an inherited field or an unimported type stays unresolved rather
+than guessed at, per D-17. A `StringBuilder thrown` decoy is covered by test.
+
+The `disabled test` note is applied centrally in `addIfPresent`, so it holds
+for all four rules rather than one. Class-level `@Disabled`/`@Ignore` counts
+too - it disables every method just as effectively. The spec's "still
+analyzed" is the load-bearing half: skipping disabled tests would quietly
+shrink the denominator (hard rule 3a).
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

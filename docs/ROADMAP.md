@@ -142,6 +142,10 @@ fire on a genuinely oracle-less test.
 - `suppressions` is implemented (D-42) with a `SUPPRESSED_FINDINGS` warning
   carrying a machine-readable `count`. Baselines and changed-findings-only CI
   gating remain M3 (pre-CI) work, as originally scoped.
+- JUnit 4 `org.junit.rules.ExpectedException` and the `@Disabled`/`@Ignore`
+  message note are implemented (D-43) - both were specified in M0 with no
+  implementation and no recorded deferral, and no corpus phase happened to
+  contain either shape.
 - Baselines and changed-findings-only CI gating are still open (M3 pre-CI
   work, as originally scoped); rule/path suppression itself shipped in D-42.
 

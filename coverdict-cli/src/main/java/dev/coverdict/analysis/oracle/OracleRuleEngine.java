@@ -152,13 +152,17 @@ public final class OracleRuleEngine {
             return;
         }
         RuleFinding rf = ruleFinding.get();
+        // docs/rules/README.md: disabled tests are analyzed like any other,
+        // but their findings say so - a reader triaging a list needs to know
+        // that this one is not currently running.
+        String message = TestMethods.isDisabled(method) ? rf.message() + " (disabled test)" : rf.message();
         String signature = signature(method);
         String fingerprint = Fingerprint.compute(ruleId, file.moduleId(), file.repoRelativePath(), signature);
         Range range = method.getRange().orElse(null);
         int startLine = range != null ? range.begin.line : 1;
         int endLine = range != null ? range.end.line : startLine;
         out.add(new Finding(ruleId, severity, rf.confidence(), file.moduleId(), file.repoRelativePath(),
-            startLine, endLine, signature, rf.message(), suggestedAction, fingerprint));
+            startLine, endLine, signature, message, suggestedAction, fingerprint));
     }
 
     /** docs/rules/README.md: {@code <Outer>[.<Inner>...]#<name>(<parameter types as written>)}. */

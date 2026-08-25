@@ -8,7 +8,9 @@ import java.util.Optional;
 import java.util.Set;
 
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.LambdaExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
@@ -175,6 +177,46 @@ final class OracleRecognizer {
             String owner = imports.typeSingleImportOwner(ne.getNameAsString());
             if (owner != null) {
                 return Optional.of(owner);
+            }
+            return fieldTypeOwner(ne);
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * The scope names a <em>variable</em>, not a type - the shape JUnit 4's
+     * {@code ExpectedException} rule always takes:
+     *
+     * <pre>{@code @Rule public ExpectedException thrown = ExpectedException.none();
+     * ...
+     * thrown.expect(IllegalArgumentException.class);}</pre>
+     *
+     * <p>Every other anchoring path fails here: {@code thrown} is not a type
+     * name, so {@link ImportIndex#typeSingleImportOwner} misses, and with no
+     * {@code --classpath} the Symbol Solver cannot resolve the library call
+     * either. So look the name up as a field of this compilation unit and
+     * anchor <em>its declared type</em> through the imports instead.
+     *
+     * <p>Deliberately narrow: fields of this compilation unit only, and only
+     * when the declared type's simple name resolves through a real import to a
+     * recognized type. An inherited field, or a type that is not imported by
+     * name, stays unresolved rather than being guessed at (D-17).
+     */
+    private Optional<String> fieldTypeOwner(NameExpr scope) {
+        String variableName = scope.getNameAsString();
+        for (FieldDeclaration field : cu.findAll(FieldDeclaration.class)) {
+            for (VariableDeclarator variable : field.getVariables()) {
+                if (!variable.getNameAsString().equals(variableName)) {
+                    continue;
+                }
+                String declaredType = variable.getType().asString();
+                if (anchorableTypes.contains(declaredType)) {
+                    return Optional.of(declaredType); // declared fully qualified in source
+                }
+                String owner = imports.typeSingleImportOwner(declaredType);
+                if (owner != null) {
+                    return Optional.of(owner);
+                }
             }
         }
         return Optional.empty();

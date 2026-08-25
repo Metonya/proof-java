@@ -19,11 +19,31 @@ final class TestMethods {
     private static final Set<String> TEST_ANNOTATIONS =
         Set.of("Test", "ParameterizedTest", "RepeatedTest", "TestFactory", "TestTemplate");
 
+    /** JUnit 5's {@code @Disabled} and JUnit 4's {@code @Ignore}, matched by simple name like the rest. */
+    private static final Set<String> DISABLED_ANNOTATIONS = Set.of("Disabled", "Ignore");
+
     private TestMethods() {
     }
 
     static boolean isTestMethod(MethodDeclaration method) {
         return method.getAnnotations().stream().anyMatch(a -> TEST_ANNOTATIONS.contains(simpleName(a)));
+    }
+
+    /**
+     * docs/rules/README.md: a disabled test is "still analyzed but findings
+     * carry a {@code disabled test} note in the message". Analyzing it is the
+     * deliberate part - a disabled test with no oracle is still a finding a
+     * reader should see, and silently skipping it would quietly shrink the
+     * denominator (hard rule 3a). The class-level annotation counts too: it
+     * disables every method in the class just as effectively.
+     */
+    static boolean isDisabled(MethodDeclaration method) {
+        if (method.getAnnotations().stream().anyMatch(a -> DISABLED_ANNOTATIONS.contains(simpleName(a)))) {
+            return true;
+        }
+        return method.findAncestor(com.github.javaparser.ast.body.ClassOrInterfaceDeclaration.class)
+            .map(c -> c.getAnnotations().stream().anyMatch(a -> DISABLED_ANNOTATIONS.contains(simpleName(a))))
+            .orElse(false);
     }
 
     static boolean isTestFactory(MethodDeclaration method) {

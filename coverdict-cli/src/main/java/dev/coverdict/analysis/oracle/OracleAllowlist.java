@@ -21,10 +21,13 @@ final class OracleAllowlist {
     static final String MOCKITO_IN_ORDER = "org.mockito.InOrder";
     static final String MOCKITO_BDD = "org.mockito.BDDMockito";
     static final String TRUTH = "com.google.common.truth.Truth";
+    /** JUnit 4's @Rule-based expected-exception form (docs/rules/README.md); see OracleRecognizer#fieldTypeOwner. */
+    static final String JUNIT4_EXPECTED_EXCEPTION = "org.junit.rules.ExpectedException";
 
     static final Set<String> ALL_TYPES = Set.of(
         JUNIT5_ASSERTIONS, JUNIT4_ASSERT, ASSERTJ_ASSERTIONS, ASSERTJ_BDD_ASSERTIONS,
-        HAMCREST_MATCHER_ASSERT, MOCKITO, MOCKITO_IN_ORDER, MOCKITO_BDD, TRUTH);
+        HAMCREST_MATCHER_ASSERT, MOCKITO, MOCKITO_IN_ORDER, MOCKITO_BDD, TRUTH,
+        JUNIT4_EXPECTED_EXCEPTION);
 
     private static final String VERIFY = "verify";
     private static final String ASSERT_THAT = "assertThat";
@@ -51,6 +54,13 @@ final class OracleAllowlist {
         }
         if (MOCKITO_IN_ORDER.equals(declaringTypeFqn)) {
             return VERIFY.equals(methodName);
+        }
+        if (JUNIT4_EXPECTED_EXCEPTION.equals(declaringTypeFqn)) {
+            // expect / expectMessage / expectCause: each one states a
+            // verification the test must satisfy, so any of them alone is a
+            // complete oracle - the same reading that makes JUnit 4's
+            // @Test(expected=...) one (TestMethods#hasExpectedExceptionAnnotation).
+            return methodName.startsWith("expect");
         }
         return false;
     }
