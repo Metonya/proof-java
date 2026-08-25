@@ -1,4 +1,4 @@
-package dev.coverdict.analysis.oracle;
+package dev.coverdict.analysis.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

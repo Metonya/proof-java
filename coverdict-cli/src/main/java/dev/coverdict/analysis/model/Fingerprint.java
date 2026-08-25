@@ -1,19 +1,26 @@
-package dev.coverdict.analysis.oracle;
+package dev.coverdict.analysis.model;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-/** docs/rules/README.md's fingerprint definition: sha256(ruleId + " " + moduleId + " " + repoRelativePath + " " + testMethodSignature), first 16 hex chars, lowercase. */
-final class Fingerprint {
+/**
+ * docs/rules/README.md's fingerprint definition: sha256(ruleId + " " +
+ * moduleId + " " + repoRelativePath + " " + anchorSignature), first 16 hex
+ * chars, lowercase. Shared by every rule family - the L0 oracle rules anchor
+ * on a test method signature; L3's PSEUDO_TESTED_METHOD (M5) anchors on a
+ * production method signature instead. Line numbers are deliberately
+ * excluded so unrelated edits and moves don't change identity.
+ */
+public final class Fingerprint {
 
     private Fingerprint() {
     }
 
-    static String compute(String ruleId, String moduleId, String repoRelativePath, String testMethodSignature) {
+    public static String compute(String ruleId, String moduleId, String repoRelativePath, String anchorSignature) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            String input = ruleId + " " + moduleId + " " + repoRelativePath + " " + testMethodSignature;
+            String input = ruleId + " " + moduleId + " " + repoRelativePath + " " + anchorSignature;
             byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
             StringBuilder hex = new StringBuilder(hash.length * 2);
             for (byte b : hash) {

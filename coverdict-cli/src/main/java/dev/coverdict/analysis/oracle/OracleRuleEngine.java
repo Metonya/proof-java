@@ -17,6 +17,7 @@ import com.github.javaparser.resolution.TypeSolver;
 
 import dev.coverdict.analysis.model.AnalysisReason;
 import dev.coverdict.analysis.model.Finding;
+import dev.coverdict.analysis.model.Fingerprint;
 import dev.coverdict.analysis.model.ModuleDefinition;
 
 /**
