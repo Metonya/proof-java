@@ -34,12 +34,32 @@ Resolved constraint: the JaCoCo agent's state is global; parallel test execution
 races `reset()` across threads. D-13 selects a sequential spike, while D-18
 records why exact attribution remains unproven.
 
+**Superseded by D-47 (M2 Faz 0, 2026-08-25):** this whole mechanism -
+JUnit listener + JaCoCo `reset()`/`getExecutionData()` - is not the L2
+engine. PIT's own coverage-collection phase (`CoverageExporterFactory` +
+`LineMapper` SPI) already produces a per-test line map without any reset
+choreography of coverdict's own. See `validation/runs/pit-spike/FINDINGS.md`
+and §13 below. D-13's sequential-reset design survives only as M2's
+documented fallback if a corpus repo cannot get PIT's coverage phase green.
+
 ## 3. Scaling measurement
 
 Measured: per-test analysis via one `jacococli` process per exec file, 16 tests
 → 4 959 ms ≈ 309 ms/test, dominated by process startup. Modeled: 5 000 tests
 ≈ 25 min. The earlier ~60× in-process claim is an unverified upper-bound model,
 not a benchmark; D-18 requires measurement before architecture.
+
+**Correction (M2 Faz 0, 2026-08-25):** the 309 ms/test figure is an artifact
+of this specific prototype's process-per-test design (`jacococli` shelled
+out once per `.exec` file), not a property of per-test coverage generally.
+PIT's coverage-collection phase, measured against coverdict's own
+`analysis.oracle.*` scope (41 test classes), completed in ~1 second total -
+no per-test process spawn, no per-test disk write. The 25-minute,
+whole-suite model is also the wrong scope for L2 as redefined by D-47/D-49:
+L2 only needs to resolve tests for lines L1 already flagged as changed, not
+the whole suite. A real replacement number for larger corpus repos
+(assertj/junit-framework/dropwizard) is still open - M2 Faz 2, not measured
+yet.
 
 ## 4. Redundancy semantics (learned by failing)
 
@@ -124,6 +144,16 @@ exact attribution: lifecycle, static state, retries, child JVMs, and lingering
 async work remain. Earlier 18–22/18–25 minute figures are models. Full evidence:
 `docs/research-raw/03-parallel-coverage.md`; decision boundary: D-13/D-18.
 
+**Superseded by D-47 (M2 Faz 0, 2026-08-25):** this entire problem statement
+assumed coverdict has to solve JaCoCo probe isolation itself. It does not -
+PIT already isolates coverage collection per test inside its own minion
+process and exposes a per-test line map through a public SPI. Lifecycle,
+static state, and child-JVM risks are still real questions, but they are now
+M2 Faz 2's *validation* questions (do PIT's own isolation guarantees hold on
+real repos - measured via Jaccard stability, not assumed), not open design
+questions coverdict has to solve by writing its own reset choreography. See
+§13.
+
 ## 10. Known detection limits
 
 - DTO getter/setter test inflation is invisible to coverage + assertion
@@ -151,3 +181,37 @@ multi-axis tool anywhere — native diff-scoped mutation — but still has no
 static oracle-quality check, and its per-test coverage data skips irrelevant
 mutants rather than flagging redundant tests. Full evidence:
 `docs/research-raw/06-non-java-landscape.md`.
+
+## 13. Per-test attribution engines (M2 Faz 0, 2026-08-25)
+
+A deep-research report (`docs/research-raw/07-jvm-per-test-coverage-research.md`)
+surveyed alternative L2 architectures - group testing, ablation, hybrid
+static/dynamic call graphs, a custom ASM forked-worker agent - against
+existing engines (PIT, JCov, IntelliJ, Azure DevOps TIA, Datadog, Google/Meta
+internal systems). Its own evidence undercut its top recommendation (a custom
+agent, scored on modeled numbers, beat PIT's measured ones); accepted and
+rejected findings are annotated in the archived file itself and summarized in
+D-46 through D-50.
+
+The decisive finding came from running the report's own B1 candidate rather
+than trusting its description of it: PIT 1.15.8's `exportLineCoverage` output
+(`linecoverage.xml`) does **not** match the schema the report described (no
+`<line number>`, only PIT's internal block index - see D-49). The real
+block-to-source-line resolution path is PIT's own `LineMapper` +
+`CoverageExporterFactory` SPI, which is undocumented in the report but
+verified working: a ~150-line proof-of-concept
+(`validation/runs/pit-spike/exporter-poc/CoverdictLineExporter.java`)
+resolved 1996/1996 coverage blocks to correct source lines on coverdict's own
+`analysis.oracle.*` package, cross-validated on gson's
+`internal.LazilyParsedNumber` (JUnit4 test-name format, same correctness).
+Full run logs and the block/line spot-check against real source:
+`validation/runs/pit-spike/FINDINGS.md`.
+
+This makes PIT's coverage-collection phase - not a JaCoCo sequential-reset
+profile (D-13, now superseded) and not a custom bytecode agent (the report's
+recommendation, rejected: it duplicates PIT and breaks D-02) - the L2 engine.
+Method-level test-identity resolution and real line attribution are both
+solved by consuming PIT's own public extension points. What remains open
+(M2 Faz 2, not yet run): whether PIT's own per-test isolation holds stable
+under test-order shuffling and parallel execution on larger corpus repos, and
+what the coverage-collection phase actually costs at their scale.

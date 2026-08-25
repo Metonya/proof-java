@@ -772,6 +772,91 @@ configuration. Not a coverdict defect and not closable by work in this repo -
 it is a follow-up for a Developer/Enterprise instance, and M1 does not wait
 on it.
 
+**D-46 · L2 is an evidence layer, never a standalone finding source**
+(2026-08-25)
+`JVM Per-Test Coverage Research.md` §D3 confirms coverage-overlap is
+necessary but not sufficient for a redundancy claim: assertion diversity and
+equivalence-partitioned parameterization both produce identical execution
+fingerprints for genuinely distinct tests. `COVERAGE_EQUIVALENT_CANDIDATE`
+(D-21's naming) is therefore never emitted from L2 evidence alone. It
+requires all three: coverage overlap (L2), matching assertion structure
+(L0's oracle recognizer), and matching mutant-kill sets (L3). M4
+("L2 redundancy productization") is redefined around this three-stage gate,
+superseding its ROADMAP text's "90% precision on HIGH findings" framing,
+which was silent on what evidence composes a finding.
+
+**D-47 · L2's engine is PIT's coverage-collection phase, not a sequential
+JaCoCo reset profile** (2026-08-25)
+Supersedes D-13's "opt-in sequential analysis profile with reset() per
+test." M2 Faz 0 (`validation/runs/pit-spike/FINDINGS.md`) ran PIT 1.15.8's
+mutation-coverage goal against coverdict's own `analysis.oracle.*` package
+and against gson's `internal.LazilyParsedNumber`: PIT's coverage-collection
+phase already builds a per-test line map internally (`LineMapper` +
+`CoverageExporterFactory`, both real, documented PIT APIs), takes ~1 second
+on coverdict's ~40-test-class scope, and needs no probe-reset choreography
+of our own - PIT's own minion process handles isolation.
+
+This is *not* "parse `linecoverage.xml`" as first hypothesized (D-12's
+mention, and the research report's B1 claim) - that file exposes PIT's
+internal block index, not source line numbers (see D-49's schema note).
+The real integration point is `org.pitest.coverage.CoverageExporterFactory`,
+a `ToolClasspathPlugin` SPI coverdict must implement and ship as a small jar
+on PIT's tool classpath, using `LineMapper` to resolve each block to real
+source lines before writing coverdict's own JSON. This is more invasive
+than pure report-file parsing, but still consumes PIT's own public
+extension point rather than reimplementing bytecode instrumentation -
+consistent with D-02's "verdict layer over engines, never own engines," but
+close enough to the line that the distinction is recorded here rather than
+assumed. A working proof-of-concept (`validation/runs/pit-spike/
+exporter-poc/CoverdictLineExporter.java`) exists and resolved 1996/1996
+blocks to correct source lines on the first real target.
+
+If a corpus repo cannot get PIT's coverage phase green within the M2 Faz 2
+budget (a real risk - `mutationCoverage` refuses any red test, and D-45's
+corpus repos carry their own build quirks, per `FINDINGS.md` §5's gson
+`argLine` case), the fallback is D-13's original sequential-JaCoCo-reset
+design, scoped to L1's changed-line set rather than the whole suite (never
+the whole-suite design D-18 costed).
+
+**D-48 · Delta-of-cumulative coverage snapshots are rejected outright**
+(2026-08-25)
+`JVM Per-Test Coverage Research.md` §C4 gives a short proof: taking
+cumulative JaCoCo snapshots between tests without `reset()` and diffing
+consecutive snapshots yields *first-toucher* coverage, not per-test
+coverage - a probe already hit by an earlier test never appears in a later
+test's diff even if that later test also executes it. This destroys both
+Q1 (multiplicity - a probe hit by 50 tests appears to have multiplicity 1)
+and Q2 (redundancy - two tests with identical coverage appear to share
+nothing). No implementation of this shape is considered for L2.
+
+**D-49 · Real `linecoverage.xml` schema corrects D-13's and the research
+report's assumed shape** (2026-08-25)
+The file's root element is a flat list of `<block classname='...'
+method='...' number='N'><tests>...` - `number` is PIT's internal
+control-flow-block index, not a source line, and there is no `<class>`/
+`<line>` nesting. Test names are the full JUnit5 `UniqueId` string
+(`[engine:...]/[class:...]/[method:...()]`) or, for JUnit4 targets, `Class.
+method(Class)` - both are unambiguously method-level, which resolves A3's
+granularity-collapse concern on the test-identity axis (it does not, by
+itself, resolve line attribution - that is D-47/D-49's `LineMapper` point).
+Static initializers surface as ordinary blocks with `method='<clinit>'`,
+which is the natural key for D-50's ambient-bucket separation - no special
+detection code needed.
+
+**D-50 · Load-time coverage goes to an ambient bucket keyed by `<clinit>`,
+never forced via reflective pre-loading** (2026-08-25)
+The research report's recommended mechanism - reflectively `Class.forName()`
+every project class before the suite runs, to move static-initializer
+coverage into a baseline bucket - is rejected: forcing class initialization
+can start threads, open connections, or throw `ExceptionInInitializerError`,
+and a class that fails to initialize this way is unusable for the rest of
+that JVM's life. The *policy* (static initializers should not count toward
+per-test attribution) is accepted; the mechanism is not needed. D-49
+confirms PIT's own block metadata already tags static-initializer coverage
+with `method='<clinit>'` (and PIT's own `StaticInitializerFilter` already
+identifies code reachable only from `<clinit>`), so the ambient bucket is a
+filter on existing data, not new instrumentation.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

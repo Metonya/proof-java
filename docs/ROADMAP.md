@@ -402,17 +402,35 @@ failure.
 
 ## Later (sketches)
 
-- **M2 — L2 feasibility and attribution spike.** Before investing in broad
-  integration, test D-13/D-18 on real repositories: constructors and field
-  initializers, lifecycle methods, parameterized/dynamic invocations, retries,
-  async work, static state, child JVMs, and multi-module forks. Use JaCoCo probe
-  vectors as observed execution fingerprints; do not claim behavioral identity.
+- **M2 — L2 feasibility and attribution spike.** Faz 0 (kill-switch) is
+  **done**: D-47 confirms PIT's `CoverageExporterFactory` SPI is the L2
+  engine, superseding D-13's sequential-JaCoCo-reset design; D-49/D-50 record
+  the real `linecoverage.xml` schema and the `<clinit>` ambient-bucket
+  mechanism. Evidence: `validation/runs/pit-spike/FINDINGS.md`. Remaining
+  work, not yet started:
+  - **Faz 2 — stability gates**, on assertj/junit-framework/dropwizard (gson
+    done as canary): three Jaccard-similarity experiments per repo -
+    (1) repeated same-order runs, gate mean J = 1.0; (2) shuffled test order,
+    gate mean J ≥ 0.98 excluding `<clinit>`; (3) sequential vs. PIT's own
+    parallelism, gate mean J ≥ 0.95. A repo failing all three gates cuts L2
+    for that repo's shape, not necessarily the whole feature. Side product:
+    any test with J below the shuffled-order gate is order-dependent -
+    log it as a candidate `ORDER_DEPENDENT_TEST` finding for the backlog,
+    not something M2 ships.
+  - Full-suite coverage-phase timing on the three larger corpus repos (Faz 0
+    only measured coverdict's own ~40-class scope and one gson utility
+    class - both under a second; D-18's "25 minutes" modeled the wrong
+    architecture and needs a real replacement number before M3 planning
+    treats L2's cost as known).
 - **M3 — First build integration + CI.** Ship Maven or Gradle first as decided
   from M0 dogfood, then the other only on demand. Add report provenance manifest,
   changed-findings baseline, quality-gate exit codes, and evaluate SARIF (O-02).
-- **M4 — L2 redundancy productization.** Only after the M2 spike and at least
-  90% precision on HIGH findings. Use `COVERAGE_EQUIVALENT_CANDIDATE` language;
-  no deletion suggestion follows from coverage identity alone.
+- **M4 — L2 redundancy productization.** Redefined by D-46: a
+  `COVERAGE_EQUIVALENT_CANDIDATE` finding requires L2 coverage overlap **and**
+  L0 assertion-structure match **and** L3 matching mutant-kill sets - L2
+  alone never emits a finding. Gate on M2 Faz 2 passing and ≥ 90% precision
+  on the combined three-stage HIGH-confidence findings, not on L2 in
+  isolation. No deletion suggestion follows from coverage identity alone.
 - **M5 — Mutation integration.** Start method-centric with
   `PSEUDO_TESTED_METHOD`; covering tests are context, not proof that one test is
   worthless. Resolve diff scoping first (O-05/D-12). IDE surfaces render JSON.
@@ -460,8 +478,11 @@ failure.
   rounds, remove or downgrade that rule; aggregate precision cannot hide it.
 - If complete source/report mapping cannot be guaranteed, v0.1 ships no coverage
   success verdict until a build integration supplies trustworthy provenance.
-- If M2 cannot produce stable, contamination-detectable fingerprints on the
-  dogfood repositories, L2 is cut and the product remains L0+L1(+L3).
+- If any of M2 Faz 2's three Jaccard stability gates (mean J = 1.0 same-order
+  repeat; J ≥ 0.98 shuffled order excluding `<clinit>`; J ≥ 0.95 sequential
+  vs. parallel) fails on a dogfood repository, L2 is cut for that repo's
+  shape; if it fails on all of them, L2 is cut and the product remains
+  L0+L1(+L3).
 - If dogfood users do not repeat the workflow or findings are predominantly
   ignored/waived, stop integration work and revisit the product wedge.
 - If `sonar-compatible` parity fails against the pinned internal setup, remove

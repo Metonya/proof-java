@@ -1,0 +1,36 @@
+11:11:07 PIT >> INFO : Verbose logging is disabled. If you encounter a problem, please enable it before reporting an issue.
+11:11:07 PIT >> INFO : Created 2 mutation test units in pre scan
+11:11:08 PIT >> INFO : Sending 1 test classes to minion
+11:11:08 PIT >> INFO : Sent tests to minion
+/-\|11:11:08 PIT >> INFO : Calculated coverage in 0 seconds.
+[coverdictspike] totalBlocks=14 matchedBlocks=14 classesWithEmptyLineMap=0 classesSeen=1
+11:11:08 PIT >> INFO : Created 2 mutation test units
+/-11:11:08 PIT >> INFO : Completed in 0 seconds
+================================================================================
+- Mutators
+================================================================================
+> org.pitest.mutationtest.engine.gregor.mutators.returns.NullReturnValsMutator
+>> Generated 7 Killed 2 (29%)
+> KILLED 2 SURVIVED 0 TIMED_OUT 0 NON_VIABLE 0 
+> MEMORY_ERROR 0 NOT_STARTED 0 STARTED 0 RUN_ERROR 0 
+> NO_COVERAGE 5 
+--------------------------------------------------------------------------------
+================================================================================
+- Timings
+================================================================================
+> pre-scan for mutations : < 1 second
+> scan classpath : < 1 second
+> coverage and dependency analysis : < 1 second
+> build mutation tests : < 1 second
+> run mutation analysis : < 1 second
+--------------------------------------------------------------------------------
+> Total  : < 1 second
+--------------------------------------------------------------------------------
+================================================================================
+- Statistics
+================================================================================
+>> Line Coverage (for mutated classes only): 11/234 (5%)
+>> Generated 7 mutations Killed 2 (29%)
+>> Mutations with no coverage 5. Test strength 100%
+>> Ran 2 tests (0.29 tests per mutation)
+Enhanced functionality available at https://www.arcmutate.com/

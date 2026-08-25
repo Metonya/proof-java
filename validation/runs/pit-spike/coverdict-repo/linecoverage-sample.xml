@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coverage>
+<block classname='dev.coverdict.analysis.oracle.NullCheckOnlyRule' method='evaluate(Lcom/github/javaparser/ast/body/MethodDeclaration;Ldev/coverdict/analysis/oracle/TraversalResult;)Ljava/util/Optional;' number='2'><tests>
+<test name='dev.coverdict.analysis.oracle.CustomOraclesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.CustomOraclesTest]/[method:aGlobInTheMethodPartMatches()]'/>
+<test name='dev.coverdict.analysis.oracle.CustomOraclesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.CustomOraclesTest]/[method:aMethodNameOutsideTheGlobDoesNotMatch()]'/>
+<test name='dev.coverdict.analysis.oracle.CustomOraclesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.CustomOraclesTest]/[method:anEntryForADifferentTypeDoesNotMatch()]'/>
+<test name='dev.coverdict.analysis.oracle.CustomOraclesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.CustomOraclesTest]/[method:namingTheHelperInCustomOraclesRecognizesItAndTheFindingDisappears()]'/>
+<test name='dev.coverdict.analysis.oracle.CustomOraclesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.CustomOraclesTest]/[method:withoutConfigurationAnExternalHelperOracleIsStillReportedAsMissing()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:aClassLevelDisabledAnnotationCountsForItsMethods()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:aDisabledTestIsStillAnalyzedAndItsFindingSaysSo()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:aFullyQualifiedExpectedExceptionFieldWithNoImportIsStillRecognized()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:aSameNamedFieldOfAnUnrelatedTypeIsNotTreatedAsTheRule()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:anEnabledTestGetsNoSuchNote()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:expectMessageAloneAlsoCounts()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:testExpectedAnnotationIsRecognizedAsAnOracle()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:theDefaultTestNoneValueDoesNotCountAsExpectingAnException()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:theExpectedExceptionRuleIsRecognizedAsAnOracle()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:theJunit4IgnoreAnnotationCarriesTheSameNote()]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest]/[test-template:fixtureExpectationsMatchTheEngine(java.lang.String)]/[test-template-invocation:#1]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest]/[test-template:fixtureExpectationsMatchTheEngine(java.lang.String)]/[test-template-invocation:#2]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest]/[test-template:fixtureExpectationsMatchTheEngine(java.lang.String)]/[test-template-invocation:#3]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest]/[test-template:fixtureExpectationsMatchTheEngine(java.lang.String)]/[test-template-invocation:#4]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineTest]/[method:anUnparseableTestSourceIsSkippedWithAStructuredReasonAndTheRunContinues()]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineTest]/[method:crlfTestSourceProducesTheSameFindingAtTheSameLineAsLf()]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineTest]/[method:findingsCapStopsAtAFileBoundaryAndRecordsTruncation()]'/>
+<test name='dev.coverdict.analysis.oracle.SuppressionFilterTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.SuppressionFilterTest]/[method:aPathGlobSuppressesOnlyMatchingFindingsAndTheCountIsReported()]'/>
+<test name='dev.coverdict.analysis.oracle.SuppressionFilterTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.SuppressionFilterTest]/[method:aSuppressionForADifferentRuleDoesNotApply()]'/>
+<test name='dev.coverdict.analysis.oracle.SuppressionFilterTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.SuppressionFilterTest]/[method:aTestMethodPatternNarrowsAPathWideSuppression()]'/>
+<test name='dev.coverdict.analysis.oracle.SuppressionFilterTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.SuppressionFilterTest]/[method:suppressingEverythingStillReportsHowMuchWasHidden()]'/>
+<test name='dev.coverdict.analysis.oracle.SuppressionFilterTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.SuppressionFilterTest]/[method:unsuppressedBaselineReportsBothFindingsAndNoWarning()]'/>
+</tests>
+</block>
+<block classname='dev.coverdict.analysis.oracle.TestMethods' method='lambda$isTestFactory$4(Lcom/github/javaparser/ast/expr/AnnotationExpr;)Z' number='0'><tests>
+<test name='dev.coverdict.analysis.oracle.CustomOraclesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.CustomOraclesTest]/[method:aGlobInTheMethodPartMatches()]'/>
+<test name='dev.coverdict.analysis.oracle.CustomOraclesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.CustomOraclesTest]/[method:aMethodNameOutsideTheGlobDoesNotMatch()]'/>
+<test name='dev.coverdict.analysis.oracle.CustomOraclesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.CustomOraclesTest]/[method:anEntryForADifferentTypeDoesNotMatch()]'/>
+<test name='dev.coverdict.analysis.oracle.CustomOraclesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.CustomOraclesTest]/[method:namingTheHelperInCustomOraclesRecognizesItAndTheFindingDisappears()]'/>
+<test name='dev.coverdict.analysis.oracle.CustomOraclesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.CustomOraclesTest]/[method:withoutConfigurationAnExternalHelperOracleIsStillReportedAsMissing()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:aClassLevelDisabledAnnotationCountsForItsMethods()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:aDisabledTestIsStillAnalyzedAndItsFindingSaysSo()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:aFullyQualifiedExpectedExceptionFieldWithNoImportIsStillRecognized()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:aSameNamedFieldOfAnUnrelatedTypeIsNotTreatedAsTheRule()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:anEnabledTestGetsNoSuchNote()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:expectMessageAloneAlsoCounts()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:testExpectedAnnotationIsRecognizedAsAnOracle()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:theDefaultTestNoneValueDoesNotCountAsExpectingAnException()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:theExpectedExceptionRuleIsRecognizedAsAnOracle()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:theJunit4IgnoreAnnotationCarriesTheSameNote()]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest]/[test-template:fixtureExpectationsMatchTheEngine(java.lang.String)]/[test-template-invocation:#1]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest]/[test-template:fixtureExpectationsMatchTheEngine(java.lang.String)]/[test-template-invocation:#2]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest]/[test-template:fixtureExpectationsMatchTheEngine(java.lang.String)]/[test-template-invocation:#3]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest]/[test-template:fixtureExpectationsMatchTheEngine(java.lang.String)]/[test-template-invocation:#4]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineTest]/[method:anUnparseableTestSourceIsSkippedWithAStructuredReasonAndTheRunContinues()]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineTest]/[method:crlfTestSourceProducesTheSameFindingAtTheSameLineAsLf()]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineTest]/[method:findingsCapStopsAtAFileBoundaryAndRecordsTruncation()]'/>
+<test name='dev.coverdict.analysis.oracle.SuppressionFilterTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.SuppressionFilterTest]/[method:aPathGlobSuppressesOnlyMatchingFindingsAndTheCountIsReported()]'/>
+<test name='dev.coverdict.analysis.oracle.SuppressionFilterTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.SuppressionFilterTest]/[method:aSuppressionForADifferentRuleDoesNotApply()]'/>
+<test name='dev.coverdict.analysis.oracle.SuppressionFilterTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.SuppressionFilterTest]/[method:aTestMethodPatternNarrowsAPathWideSuppression()]'/>
+<test name='dev.coverdict.analysis.oracle.SuppressionFilterTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.SuppressionFilterTest]/[method:suppressingEverythingStillReportsHowMuchWasHidden()]'/>
+<test name='dev.coverdict.analysis.oracle.SuppressionFilterTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.SuppressionFilterTest]/[method:unsuppressedBaselineReportsBothFindingsAndNoWarning()]'/>
+</tests>
+</block>
+<block classname='dev.coverdict.analysis.oracle.NullCheckOnlyRule' method='evaluate(Lcom/github/javaparser/ast/body/MethodDeclaration;Ldev/coverdict/analysis/oracle/TraversalResult;)Ljava/util/Optional;' number='3'><tests>
+<test name='dev.coverdict.analysis.oracle.CustomOraclesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.CustomOraclesTest]/[method:aMethodNameOutsideTheGlobDoesNotMatch()]'/>
+<test name='dev.coverdict.analysis.oracle.CustomOraclesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.CustomOraclesTest]/[method:anEntryForADifferentTypeDoesNotMatch()]'/>
+<test name='dev.coverdict.analysis.oracle.CustomOraclesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.CustomOraclesTest]/[method:withoutConfigurationAnExternalHelperOracleIsStillReportedAsMissing()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:aClassLevelDisabledAnnotationCountsForItsMethods()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:aDisabledTestIsStillAnalyzedAndItsFindingSaysSo()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:aSameNamedFieldOfAnUnrelatedTypeIsNotTreatedAsTheRule()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:anEnabledTestGetsNoSuchNote()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:testExpectedAnnotationIsRecognizedAsAnOracle()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:theDefaultTestNoneValueDoesNotCountAsExpectingAnException()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:theJunit4IgnoreAnnotationCarriesTheSameNote()]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest]/[test-template:fixtureExpectationsMatchTheEngine(java.lang.String)]/[test-template-invocation:#1]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineTest]/[method:anUnparseableTestSourceIsSkippedWithAStructuredReasonAndTheRunContinues()]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineTest]/[method:crlfTestSourceProducesTheSameFindingAtTheSameLineAsLf()]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineTest]/[method:findingsCapStopsAtAFileBoundaryAndRecordsTruncation()]'/>
+<test name='dev.coverdict.analysis.oracle.SuppressionFilterTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.SuppressionFilterTest]/[method:aPathGlobSuppressesOnlyMatchingFindingsAndTheCountIsReported()]'/>
+<test name='dev.coverdict.analysis.oracle.SuppressionFilterTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.SuppressionFilterTest]/[method:aSuppressionForADifferentRuleDoesNotApply()]'/>
+<test name='dev.coverdict.analysis.oracle.SuppressionFilterTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.SuppressionFilterTest]/[method:aTestMethodPatternNarrowsAPathWideSuppression()]'/>
+<test name='dev.coverdict.analysis.oracle.SuppressionFilterTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.SuppressionFilterTest]/[method:suppressingEverythingStillReportsHowMuchWasHidden()]'/>
+<test name='dev.coverdict.analysis.oracle.SuppressionFilterTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.SuppressionFilterTest]/[method:unsuppressedBaselineReportsBothFindingsAndNoWarning()]'/>
+</tests>
+</block>
+<block classname='dev.coverdict.analysis.oracle.TestMethods' method='lambda$isTestFactory$4(Lcom/github/javaparser/ast/expr/AnnotationExpr;)Z' number='1'><tests>
+<test name='dev.coverdict.analysis.oracle.CustomOraclesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.CustomOraclesTest]/[method:aGlobInTheMethodPartMatches()]'/>
+<test name='dev.coverdict.analysis.oracle.CustomOraclesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.CustomOraclesTest]/[method:aMethodNameOutsideTheGlobDoesNotMatch()]'/>
+<test name='dev.coverdict.analysis.oracle.CustomOraclesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.CustomOraclesTest]/[method:anEntryForADifferentTypeDoesNotMatch()]'/>
+<test name='dev.coverdict.analysis.oracle.CustomOraclesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.CustomOraclesTest]/[method:namingTheHelperInCustomOraclesRecognizesItAndTheFindingDisappears()]'/>
+<test name='dev.coverdict.analysis.oracle.CustomOraclesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.CustomOraclesTest]/[method:withoutConfigurationAnExternalHelperOracleIsStillReportedAsMissing()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:aClassLevelDisabledAnnotationCountsForItsMethods()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:aDisabledTestIsStillAnalyzedAndItsFindingSaysSo()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:aFullyQualifiedExpectedExceptionFieldWithNoImportIsStillRecognized()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:aSameNamedFieldOfAnUnrelatedTypeIsNotTreatedAsTheRule()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:anEnabledTestGetsNoSuchNote()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:expectMessageAloneAlsoCounts()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:testExpectedAnnotationIsRecognizedAsAnOracle()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:theDefaultTestNoneValueDoesNotCountAsExpectingAnException()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:theExpectedExceptionRuleIsRecognizedAsAnOracle()]'/>
+<test name='dev.coverdict.analysis.oracle.Junit4OracleGapsTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.Junit4OracleGapsTest]/[method:theJunit4IgnoreAnnotationCarriesTheSameNote()]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest]/[test-template:fixtureExpectationsMatchTheEngine(java.lang.String)]/[test-template-invocation:#1]'/>
+<test name='dev.coverdict.analysis.oracle.OracleRuleEngineFixturesTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.oracle.OracleRuleEngineFixtur

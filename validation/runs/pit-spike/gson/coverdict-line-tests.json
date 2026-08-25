@@ -1,0 +1,68 @@
+{
+  "com.google.gson.internal.LazilyParsedNumber#<init>": {
+    "35": [
+      "com.google.gson.internal.LazilyParsedNumberTest.testCompareTo(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testEquals(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testHashCode(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testJavaSerialization(com.google.gson.internal.LazilyParsedNumberTest)"
+    ],
+    "36": [
+      "com.google.gson.internal.LazilyParsedNumberTest.testCompareTo(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testEquals(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testHashCode(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testJavaSerialization(com.google.gson.internal.LazilyParsedNumberTest)"
+    ],
+    "37": [
+      "com.google.gson.internal.LazilyParsedNumberTest.testCompareTo(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testEquals(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testHashCode(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testJavaSerialization(com.google.gson.internal.LazilyParsedNumberTest)"
+    ]
+  },
+  "com.google.gson.internal.LazilyParsedNumber#asBigDecimal": {
+    "40": [
+      "com.google.gson.internal.LazilyParsedNumberTest.testJavaSerialization(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testJavaSerialization(com.google.gson.internal.LazilyParsedNumberTest)"
+    ]
+  },
+  "com.google.gson.internal.LazilyParsedNumber#compareTo": {
+    "102": [
+      "com.google.gson.internal.LazilyParsedNumberTest.testCompareTo(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testCompareTo(com.google.gson.internal.LazilyParsedNumberTest)"
+    ]
+  },
+  "com.google.gson.internal.LazilyParsedNumber#equals": {
+    "112": [
+      "com.google.gson.internal.LazilyParsedNumberTest.testCompareTo(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testEquals(com.google.gson.internal.LazilyParsedNumberTest)"
+    ],
+    "115": [
+      "com.google.gson.internal.LazilyParsedNumberTest.testCompareTo(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testEquals(com.google.gson.internal.LazilyParsedNumberTest)"
+    ],
+    "116": [
+      "com.google.gson.internal.LazilyParsedNumberTest.testCompareTo(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testEquals(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testCompareTo(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testEquals(com.google.gson.internal.LazilyParsedNumberTest)"
+    ],
+    "117": [
+      "com.google.gson.internal.LazilyParsedNumberTest.testCompareTo(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testEquals(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testCompareTo(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testEquals(com.google.gson.internal.LazilyParsedNumberTest)"
+    ]
+  },
+  "com.google.gson.internal.LazilyParsedNumber#hashCode": {
+    "107": [
+      "com.google.gson.internal.LazilyParsedNumberTest.testHashCode(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testHashCode(com.google.gson.internal.LazilyParsedNumberTest)"
+    ]
+  },
+  "com.google.gson.internal.LazilyParsedNumber#writeReplace": {
+    "85": [
+      "com.google.gson.internal.LazilyParsedNumberTest.testJavaSerialization(com.google.gson.internal.LazilyParsedNumberTest)",
+      "com.google.gson.internal.LazilyParsedNumberTest.testJavaSerialization(com.google.gson.internal.LazilyParsedNumberTest)"
+    ]
+  }
+}
