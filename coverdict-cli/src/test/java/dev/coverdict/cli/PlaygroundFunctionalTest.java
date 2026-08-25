@@ -12,7 +12,6 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -87,7 +86,7 @@ class PlaygroundFunctionalTest {
     private static List<String> findingSummaries(JsonNode doc) {
         return java.util.stream.StreamSupport.stream(doc.get("findings").spliterator(), false)
             .map(f -> f.get("rule").asText() + " " + f.get("confidence").asText() + " " + f.get("testMethod").asText())
-            .collect(Collectors.toList());
+            .toList();
     }
 
     private int run(String... args) {

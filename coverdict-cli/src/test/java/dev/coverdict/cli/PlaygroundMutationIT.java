@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -110,7 +109,7 @@ class PlaygroundMutationIT {
                     : f.get("testMethod").asText();
                 return rule + " " + confidence + " " + anchor;
             })
-            .collect(Collectors.toList());
+            .toList();
     }
 
     private int run(String... args) {
