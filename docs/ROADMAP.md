@@ -572,8 +572,14 @@ and the bug-repro workflow (shrink a real finding into a new scenario there).
   allowlist edit) · `sameFileNameMatch`'s same-file-overload ambiguity
   bailout should consider call-site arity before giving up (D-36; today it
   bails on any name collision even when only one candidate has the right
-  parameter count for that specific call). Each remaining item gets its own
-  design pass at its milestone, not now.
+  parameter count for that specific call) · D-61's described `SUBSUMED_TEST`
+  L2 message enrichment (dominator's assertions noted as textually identical
+  vs. structurally different when `--per-test-report` is present) is not
+  implemented - `SubsumedTestRule` never reads `perTest` evidence today;
+  confirmed by a real coverdict-playground run where enabling
+  `--per-test-report` added an (empty, for that scenario) `perTest` block to
+  the JSON but left the `SUBSUMED_TEST` finding's message byte-identical.
+  Each remaining item gets its own design pass at its milestone, not now.
 
 ## Kill and pivot criteria
 
