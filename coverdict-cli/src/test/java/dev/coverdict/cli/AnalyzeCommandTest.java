@@ -552,6 +552,48 @@ class AnalyzeCommandTest {
         assertFalse(Files.exists(outputDir.resolve("verdict.json")), "exit 2 must write no JSON");
     }
 
+    // --- --per-test-report / --per-test-classpath (D-55) ---
+
+    @Test
+    void perTestReportWithNoVcsIsInvalidInvocationAndWritesNoJson() {
+        Path outFile = repoRoot.resolve("verdict.json");
+        int exitCode = run("analyze", "--no-vcs", "--per-test-report",
+            "--repo", repoRoot.toString(),
+            "--report", FIXTURES.resolve("mixed-coverage.xml").toString(),
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
+        assertTrue(err.toString().contains("--per-test-report"), err.toString());
+        assertFalse(Files.exists(outFile));
+    }
+
+    @Test
+    void perTestClasspathIdNotMatchingAnyDeclaredModuleIsInvalidInvocation() {
+        int exitCode = run("analyze", "--no-vcs",
+            "--repo", repoRoot.toString(),
+            "--module", "app=.",
+            "--report", "app=" + FIXTURES.resolve("mixed-coverage.xml"),
+            "--per-test-classpath", "typo=deps.txt",
+            "--out", outputDir.resolve("verdict.json").toString());
+
+        assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
+        assertTrue(err.toString().contains("--per-test-classpath id 'typo'"), err.toString());
+        assertFalse(Files.exists(outputDir.resolve("verdict.json")), "exit 2 must write no JSON");
+    }
+
+    @Test
+    void withoutPerTestReportTheOutputHasNoPerTestFieldAtAll() throws IOException {
+        Path outFile = repoRoot.resolve("verdict.json");
+        int exitCode = run("analyze", "--no-vcs",
+            "--repo", repoRoot.toString(),
+            "--report", FIXTURES.resolve("mixed-coverage.xml").toString(),
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.COMPLETE.value(), exitCode);
+        JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(outFile));
+        assertTrue(doc.at("/perTest").isMissingNode(), "perTest must be entirely absent, not null, when the flag is off");
+    }
+
     @Test
     void anUnreadableClasspathFileWarnsAndTheRunStillCompletes() throws IOException {
         Files.createDirectories(repoRoot.resolve("src/main/java/com/example"));

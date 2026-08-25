@@ -35,6 +35,7 @@ import dev.coverdict.analysis.oracle.ClasspathLoader;
 import dev.coverdict.analysis.oracle.OracleRuleEngine;
 import dev.coverdict.analysis.oracle.OracleScanOptions;
 import dev.coverdict.analysis.oracle.OracleScanResult;
+import dev.coverdict.analysis.pertest.PerTestCollector;
 import dev.coverdict.config.ConfigException;
 import dev.coverdict.config.ConfigLoader;
 import dev.coverdict.config.CoverdictConfig;
@@ -108,6 +109,12 @@ class AnalyzeCommand implements Callable<Integer> {
     @Option(names = "--classpath", description = "Repeatable <id>=<file>, where <file> lists one jar path per line for JavaParser symbol solving (D-17: never silently upgrades confidence).")
     private List<String> classpathArgs = new ArrayList<>();
 
+    @Option(names = "--per-test-report", description = "Collect L2 per-test line coverage evidence for changed production classes via PIT (D-46: evidence only, never a finding). Requires a diff mode; rejected under --no-vcs.")
+    private boolean perTestReport;
+
+    @Option(names = "--per-test-classpath", description = "Repeatable <id>=<file>, where <file> lists PIT's exact test runtime classpath for that module, one entry per line (module output directories and dependency jars) - distinct from --classpath, which is an optional JavaParser aid.")
+    private List<String> perTestClasspathArgs = new ArrayList<>();
+
     @Option(names = "--language-level", defaultValue = "17", description = "Java language level for JavaParser (oracle critic) and recorded as provenance.")
     private int languageLevel;
 
@@ -135,7 +142,7 @@ class AnalyzeCommand implements Callable<Integer> {
      */
     private record Invocation(Path repoRoot, String diffMode, CoverdictConfig config, List<String> exclusions,
                                List<ModuleDefinition> modules, Map<String, List<String>> reportPathsById,
-                               Map<String, String> classpathFilesById) {
+                               Map<String, String> classpathFilesById, Map<String, String> perTestClasspathFilesById) {
     }
 
     /** @throws CliUsageException or ConfigException on any invalid invocation - both exit 2, no JSON written. */
@@ -145,6 +152,7 @@ class AnalyzeCommand implements Callable<Integer> {
         CoverdictConfig config = ConfigLoader.load(repoRoot, configOption);
         applyConfigPrecedence(config);
         validateFindingsScope(diffMode);
+        validatePerTestReport(diffMode);
 
         List<String> exclusions = exclusionsArg == null || exclusionsArg.isBlank()
             ? List.of()
@@ -153,8 +161,10 @@ class AnalyzeCommand implements Callable<Integer> {
         Map<String, List<String>> reportPathsById = parseReportArgs();
         List<ModuleDefinition> modules = buildModuleDefinitions(reportPathsById.keySet());
         Map<String, String> classpathFilesById = parseClasspathArgs(modules);
+        Map<String, String> perTestClasspathFilesById = parsePerTestClasspathArgs(modules);
 
-        return new Invocation(repoRoot, diffMode, config, exclusions, modules, reportPathsById, classpathFilesById);
+        return new Invocation(repoRoot, diffMode, config, exclusions, modules, reportPathsById, classpathFilesById,
+            perTestClasspathFilesById);
     }
 
     /** @throws CliUsageException unless exactly one of --no-vcs/--uncommitted/--base is set. */
@@ -178,6 +188,13 @@ class AnalyzeCommand implements Callable<Integer> {
         }
     }
 
+    /** @throws CliUsageException when --per-test-report is combined with --no-vcs (undefined without a diff, same pattern as --findings-scope changed). */
+    private void validatePerTestReport(String diffMode) {
+        if (perTestReport && DIFF_MODE_NO_VCS.equals(diffMode)) {
+            throw new CliUsageException("--per-test-report requires a diff mode (--uncommitted or --base <ref>), not --no-vcs.");
+        }
+    }
+
     @Override
     public Integer call() {
         Invocation inv;
@@ -190,8 +207,7 @@ class AnalyzeCommand implements Callable<Integer> {
 
         VerdictDocument doc;
         try {
-            doc = analyze(inv.repoRoot(), inv.exclusions(), inv.modules(), inv.reportPathsById(),
-                inv.classpathFilesById(), inv.config(), inv.diffMode());
+            doc = analyze(inv);
         } catch (AnalysisException e) {
             doc = incompleteDocument(inv.exclusions(), e, inv.diffMode());
         }
@@ -317,10 +333,32 @@ class AnalyzeCommand implements Callable<Integer> {
         return byId;
     }
 
+    /** @throws CliUsageException on malformed {@code --per-test-classpath} syntax, or an id that names no declared module (same pattern as {@link #parseClasspathArgs}). */
+    private Map<String, String> parsePerTestClasspathArgs(List<ModuleDefinition> modules) {
+        Map<String, String> byId = parseIdValue(perTestClasspathArgs);
+        if (byId.isEmpty()) {
+            return byId;
+        }
+        java.util.Set<String> declaredIds = modules.stream().map(ModuleDefinition::id).collect(Collectors.toSet());
+        for (String id : byId.keySet()) {
+            if (!declaredIds.contains(id)) {
+                throw new CliUsageException("--per-test-classpath id '" + id + "' does not match any declared --module id "
+                    + declaredIds + ".");
+            }
+        }
+        return byId;
+    }
+
     /** @throws AnalysisException when the overall-coverage evidence itself is bad (exit 3, structured incomplete document, nothing preserved). */
-    private VerdictDocument analyze(Path repoRoot, List<String> exclusions, List<ModuleDefinition> modules,
-                                     Map<String, List<String>> reportPathsById,
-                                     Map<String, String> classpathFilesById, CoverdictConfig config, String diffMode) {
+    private VerdictDocument analyze(Invocation inv) {
+        Path repoRoot = inv.repoRoot();
+        List<String> exclusions = inv.exclusions();
+        List<ModuleDefinition> modules = inv.modules();
+        Map<String, List<String>> reportPathsById = inv.reportPathsById();
+        Map<String, String> classpathFilesById = inv.classpathFilesById();
+        CoverdictConfig config = inv.config();
+        String diffMode = inv.diffMode();
+
         // A declared module with no bound report has no coverage evidence in
         // --no-vcs mode (M0-CLI-INPUT.md: this is only a hard error when the
         // module has changed Java files, a diff-mode concept this build
@@ -411,11 +449,19 @@ class AnalyzeCommand implements Callable<Integer> {
             allWarnings.addAll(classification.warnings());
             allWarnings.addAll(scan.warnings());
 
+            List<dev.coverdict.analysis.pertest.PerTestModuleEvidence> perTest = null;
+            if (perTestReport) {
+                PerTestCollector.Result perTestResult = PerTestCollector.collect(repoRoot, evidencedModules,
+                    classification.changedFiles(), inv.perTestClasspathFilesById());
+                perTest = perTestResult.modules();
+                allWarnings.addAll(perTestResult.warnings());
+            }
+
             boolean complete = allIncompleteReasons.isEmpty();
             return new VerdictDocument(version.schemaVersion(), version.version(), complete,
                 allIncompleteReasons, languageLevel, encoding, exclusions, moduleInputs,
                 diffMode, findingsScopeOption, diffResult.identity(), overall, NewCodeCoverage.available(newCode),
-                classification.changedFiles(), scan.findings(), allWarnings);
+                classification.changedFiles(), scan.findings(), allWarnings, perTest);
         } catch (AnalysisException e) {
             // findings-scope=all does not need the diff that just failed - real
             // oracle evidence is still worth reporting alongside the failure.

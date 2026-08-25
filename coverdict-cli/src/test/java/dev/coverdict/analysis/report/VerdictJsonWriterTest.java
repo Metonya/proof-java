@@ -119,6 +119,36 @@ class VerdictJsonWriterTest {
             List.of(), List.of(), List.of());
     }
 
+    private VerdictDocument documentWithPerTest() {
+        VerdictDocument base = workingTreeDocument();
+        dev.coverdict.analysis.pertest.PerTestLine line = new dev.coverdict.analysis.pertest.PerTestLine(41,
+            List.of("com.demo.core.IbanValidatorTest#acceptsAValidGermanIban()"));
+        dev.coverdict.analysis.pertest.PerTestEntry entry = new dev.coverdict.analysis.pertest.PerTestEntry(
+            "com.demo.core.IbanValidator", "validate", List.of(line));
+        dev.coverdict.analysis.pertest.PerTestEntry ambient = new dev.coverdict.analysis.pertest.PerTestEntry(
+            "com.demo.core.IbanValidator", "<clinit>", List.of(new dev.coverdict.analysis.pertest.PerTestLine(12,
+                List.of("com.demo.core.IbanValidatorTest#acceptsAValidGermanIban()"))));
+        dev.coverdict.analysis.pertest.PerTestModuleEvidence moduleEvidence =
+            new dev.coverdict.analysis.pertest.PerTestModuleEvidence("root", List.of(entry), List.of(ambient));
+        return new VerdictDocument(base.schemaVersion(), base.toolVersion(), base.complete(), base.incompleteReasons(),
+            base.languageLevel(), base.encoding(), base.exclusions(), base.modules(), base.diffMode(),
+            base.findingsScope(), base.identity(), base.overallMetrics(), base.newCode(), base.changedFiles(),
+            base.findings(), base.warnings(), List.of(moduleEvidence));
+    }
+
+    @Test
+    void perTestDocumentValidatesAgainstTheSchema() throws IOException {
+        assertValid(documentWithPerTest());
+    }
+
+    @Test
+    void perTestFieldIsEntirelyAbsentWhenNull() throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        VerdictJsonWriter.write(out, workingTreeDocument());
+        JsonNode doc = toNode(out.toByteArray());
+        assertTrue(doc.at("/perTest").isMissingNode(), "perTest must be omitted, not written as null");
+    }
+
     @Test
     void noVcsCompleteDocumentValidatesAgainstTheSchema() throws IOException {
         assertValid(noVcsCompleteDocument());

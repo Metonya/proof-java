@@ -20,7 +20,7 @@ public final class ToolVersion {
     private ToolVersion() {
     }
 
-    public record Info(String version, String schemaVersion) {
+    public record Info(String version, String schemaVersion, String pitestVersion) {
     }
 
     public static Info read() {
@@ -33,6 +33,7 @@ public final class ToolVersion {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-        return new Info(properties.getProperty("version"), properties.getProperty("schemaVersion"));
+        return new Info(properties.getProperty("version"), properties.getProperty("schemaVersion"),
+            properties.getProperty("pitestVersion"));
     }
 }
