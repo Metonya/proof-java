@@ -1602,6 +1602,34 @@ pre-existing drift found while touching it (`golden-per-test.json`/
 `golden-mutation.json` were never added after D-55/D-56, per the c4377d2
 precedent D-42 already named).
 
+**D-71 · `--mutation-target` bypasses the diff entirely; explicit targets are
+all-or-nothing across the whole run** (2026-08-27)
+Plan.md M6 Faz 2: `--mutation-target <id>=<FQCN>` (repeatable) resolves each
+class straight against `module.sourceRoots()` via the new `SourceRootClassIndex`
+(same repo-escape guard as `ModuleBinder.resolvePath`, unresolved -> excluded
+rather than joined with a source root), never through `ChangedClassTargets`/a
+diff - which is what lets it work under bare `--no-vcs` (`validateMutationReport`
+now only rejects `--mutation-report` + `--no-vcs` when no target was given).
+Given at least one target, every module's diff-derived targets are ignored
+entirely (D-66's config-modules precedent), including modules with no target
+of their own - `MutationTargetResolver` warns each such module
+(`MUTATION_TARGET_NOT_BOUND`) or each unresolved class
+(`MUTATION_TARGET_UNRESOLVED`, hard rule 3a) with a single, specific reason -
+`MutationCollector.collectForTargets`'s own empty-target skip adds nothing
+further, to avoid a second, less precise warning for the same fact.
+`MutationRuleEngine`/`MutationCollector` both gained an injectable overload
+(target-mode `classNameToPathByModuleId`/`targetGlobsById`) alongside their
+existing changed-files-based one, which callers (including existing unit
+tests) keep using unchanged. Verified end to end with a real PIT subprocess
+against coverdict-playground (`PlaygroundMutationIT`, `-Pmutation-it`): a
+class named by `--mutation-target` under `--no-vcs`, with no git repository
+at all, produces a real, path-resolved `PSEUDO_TESTED_METHOD` finding -
+Plan.md Faz 2's own completion criterion. Checked, not assumed, per the
+plan's own open item: `RedundancyRuleEngine`/`TestLocator` carry no
+changed-files dependency at all (`SubsumedTestRule`'s test-path resolution
+already reads a module's declared test roots straight off disk) - nothing
+to fix there.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

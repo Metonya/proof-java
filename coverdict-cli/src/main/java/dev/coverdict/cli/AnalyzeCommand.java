@@ -29,6 +29,7 @@ import dev.coverdict.analysis.metrics.ExclusionFilter;
 import dev.coverdict.analysis.metrics.MetricSet;
 import dev.coverdict.analysis.metrics.MetricsEngine;
 import dev.coverdict.analysis.model.AnalysisReason;
+import dev.coverdict.analysis.model.ChangedFile;
 import dev.coverdict.analysis.model.Finding;
 import dev.coverdict.analysis.model.ModuleDefinition;
 import dev.coverdict.analysis.model.RepoPaths;
@@ -36,6 +37,7 @@ import dev.coverdict.analysis.model.ResolvedSourceFile;
 import dev.coverdict.analysis.mutation.MutationCollector;
 import dev.coverdict.analysis.mutation.MutationModuleEvidence;
 import dev.coverdict.analysis.mutation.MutationRuleEngine;
+import dev.coverdict.analysis.mutation.MutationTargetResolver;
 import dev.coverdict.analysis.oracle.ClasspathLoader;
 import dev.coverdict.analysis.oracle.OracleRuleEngine;
 import dev.coverdict.analysis.oracle.OracleScanOptions;
@@ -124,8 +126,11 @@ class AnalyzeCommand implements Callable<Integer> {
     @Option(names = "--per-test-classpath", description = "Repeatable <id>=<file>, where <file> lists PIT's exact test runtime classpath for that module, one entry per line (module output directories and dependency jars) - distinct from --classpath, which is an optional JavaParser aid.")
     private List<String> perTestClasspathArgs = new ArrayList<>();
 
-    @Option(names = "--mutation-report", description = "Collect L3 mutation evidence for changed production classes via PIT (D-56: RETURNS+VOID_METHOD_CALLS gregor mutators). Feeds PSEUDO_TESTED_METHOD and SUBSUMED_TEST (D-61's kill-set subsumption). Requires a diff mode; rejected under --no-vcs.")
+    @Option(names = "--mutation-report", description = "Collect L3 mutation evidence via PIT (D-56: RETURNS+VOID_METHOD_CALLS gregor mutators). Feeds PSEUDO_TESTED_METHOD and SUBSUMED_TEST (D-61's kill-set subsumption). Requires a diff mode unless --mutation-target is also given; rejected under bare --no-vcs.")
     private boolean mutationReport;
+
+    @Option(names = "--mutation-target", description = "Repeatable <id>=<FQCN>, one or more explicit classes to mutate - independent of the diff (Plan.md Faz 2). All-or-nothing: when at least one is given, every module's diff-derived targets are ignored entirely, including modules with none of their own. Requires --mutation-report; lifts the --no-vcs restriction on it.")
+    private List<String> mutationTargetArgs = new ArrayList<>();
 
     @Option(names = "--mutation-classpath", description = "Repeatable <id>=<file>, same list-file shape as --per-test-classpath - a separate flag because L3 mutation evidence is a separate, independently opt-in evidence layer (D-56).")
     private List<String> mutationClasspathArgs = new ArrayList<>();
@@ -167,7 +172,8 @@ class AnalyzeCommand implements Callable<Integer> {
     private record Invocation(Path repoRoot, String diffMode, CoverdictConfig config, List<String> exclusions,
                                List<ModuleDefinition> modules, Map<String, List<String>> reportPathsById,
                                Map<String, String> classpathFilesById, Map<String, String> perTestClasspathFilesById,
-                               Map<String, String> mutationClasspathFilesById) {
+                               Map<String, String> mutationClasspathFilesById,
+                               Map<String, List<String>> mutationTargetFqcnsById) {
     }
 
     /** @throws CliUsageException or ConfigException on any invalid invocation - both exit 2, no JSON written. */
@@ -178,7 +184,6 @@ class AnalyzeCommand implements Callable<Integer> {
         applyConfigPrecedence(config);
         validateFindingsScope(diffMode);
         validatePerTestReport(diffMode);
-        validateMutationReport(diffMode);
 
         List<String> exclusions = exclusionsArg == null || exclusionsArg.isBlank()
             ? List.of()
@@ -194,9 +199,11 @@ class AnalyzeCommand implements Callable<Integer> {
             moduleSource.perTestClasspathFilesById(), parsePerTestClasspathArgs(modules));
         Map<String, String> mutationClasspathFilesById = mergeConfigThenCli(
             moduleSource.mutationClasspathFilesById(), parseMutationClasspathArgs(modules));
+        Map<String, List<String>> mutationTargetFqcnsById = parseMutationTargetArgs(modules);
+        validateMutationReport(diffMode, mutationTargetFqcnsById);
 
         return new Invocation(repoRoot, diffMode, config, exclusions, modules, reportPathsById, classpathFilesById,
-            perTestClasspathFilesById, mutationClasspathFilesById);
+            perTestClasspathFilesById, mutationClasspathFilesById, mutationTargetFqcnsById);
     }
 
     /** @throws CliUsageException unless exactly one of --no-vcs/--uncommitted/--base is set. */
@@ -227,10 +234,22 @@ class AnalyzeCommand implements Callable<Integer> {
         }
     }
 
-    /** @throws CliUsageException when --mutation-report is combined with --no-vcs (same reason as --per-test-report: no diff, no targets). */
-    private void validateMutationReport(String diffMode) {
-        if (mutationReport && DIFF_MODE_NO_VCS.equals(diffMode)) {
-            throw new CliUsageException("--mutation-report requires a diff mode (--uncommitted or --base <ref>), not --no-vcs.");
+    /**
+     * @throws CliUsageException when --mutation-target is given without
+     *         --mutation-report (nothing would ever consume it), or when
+     *         --mutation-report is combined with --no-vcs and no
+     *         --mutation-target was given (same reason as --per-test-report:
+     *         no diff, no targets) - --mutation-target lifts that
+     *         restriction (Plan.md Faz 2: it names its own targets, no diff
+     *         needed).
+     */
+    private void validateMutationReport(String diffMode, Map<String, List<String>> mutationTargetFqcnsById) {
+        if (!mutationTargetFqcnsById.isEmpty() && !mutationReport) {
+            throw new CliUsageException("--mutation-target requires --mutation-report.");
+        }
+        if (mutationReport && DIFF_MODE_NO_VCS.equals(diffMode) && mutationTargetFqcnsById.isEmpty()) {
+            throw new CliUsageException("--mutation-report requires a diff mode (--uncommitted or --base <ref>) "
+                + "unless --mutation-target is also given, not --no-vcs.");
         }
     }
 
@@ -461,6 +480,35 @@ class AnalyzeCommand implements Callable<Integer> {
         return byId;
     }
 
+    /**
+     * @throws CliUsageException on malformed {@code --mutation-target} syntax
+     *         (must be {@code <id>=<FQCN>}, no bare form), or an id that names
+     *         no declared module (same pattern as {@link #parseClasspathArgs}).
+     *         Unlike those id-keyed options, an id may repeat here - naming
+     *         several classes in one module is the normal case, not a mistake.
+     */
+    private Map<String, List<String>> parseMutationTargetArgs(List<ModuleDefinition> modules) {
+        Map<String, List<String>> byId = new LinkedHashMap<>();
+        for (String arg : mutationTargetArgs) {
+            int eq = arg.indexOf('=');
+            if (eq < 0) {
+                throw new CliUsageException("Expected --mutation-target <id>=<FQCN>, got: " + arg);
+            }
+            byId.computeIfAbsent(arg.substring(0, eq), k -> new ArrayList<>()).add(arg.substring(eq + 1));
+        }
+        if (byId.isEmpty()) {
+            return byId;
+        }
+        java.util.Set<String> declaredIds = modules.stream().map(ModuleDefinition::id).collect(Collectors.toSet());
+        for (String id : byId.keySet()) {
+            if (!declaredIds.contains(id)) {
+                throw new CliUsageException("--mutation-target id '" + id + "' does not match any declared --module id "
+                    + declaredIds + ".");
+            }
+        }
+        return byId;
+    }
+
     /** @throws AnalysisException when the overall-coverage evidence itself is bad (exit 3, structured incomplete document, nothing preserved). */
     private VerdictDocument analyze(Invocation inv) {
         Path repoRoot = inv.repoRoot();
@@ -534,10 +582,24 @@ class AnalyzeCommand implements Callable<Integer> {
             List<AnalysisReason> allReasons = new ArrayList<>(scan.incompleteReasons());
             List<AnalysisReason> noVcsWarnings = new ArrayList<>(warnings);
             noVcsWarnings.addAll(scan.warnings());
+            List<Finding> noVcsFindings = new ArrayList<>(scan.findings());
+
+            // --mutation-target is the only way --mutation-report reaches this
+            // branch (validateMutationReport rejects bare --no-vcs + --mutation-report) - it names its own
+            // targets, so no diff is needed (Plan.md Faz 2).
+            List<MutationModuleEvidence> mutation = null;
+            if (mutationReport) {
+                MutationOutcome outcome = collectMutationEvidence(repoRoot, evidencedModules, List.of(),
+                    inv.mutationClasspathFilesById(), inv.mutationTargetFqcnsById(), buildDiagnostics());
+                mutation = outcome.mutation();
+                noVcsFindings.addAll(outcome.findings());
+                noVcsWarnings.addAll(outcome.warnings());
+            }
+
             return new VerdictDocument(version.schemaVersion(), version.version(), allReasons.isEmpty(), allReasons,
                 languageLevel, encoding, exclusions, moduleInputs, diffMode, findingsScopeOption, null, overall,
-                NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), scan.findings(), noVcsWarnings,
-                null, null, fileCoverageBlock);
+                NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), noVcsFindings, noVcsWarnings,
+                null, mutation, fileCoverageBlock);
         }
 
         // Diff-mode phase: a failure here does NOT discard the overall data
@@ -577,20 +639,12 @@ class AnalyzeCommand implements Callable<Integer> {
             List<Finding> allFindings = new ArrayList<>(scan.findings());
             List<MutationModuleEvidence> mutation = null;
             if (mutationReport) {
-                MutationCollector.Result mutationResult = MutationCollector.collect(repoRoot, evidencedModules,
-                    classification.changedFiles(), inv.mutationClasspathFilesById(),
-                    Duration.ofSeconds(mutationTimeoutSeconds), diagnostics);
-                mutation = mutationResult.modules();
-                allWarnings.addAll(mutationResult.warnings());
-
-                MutationRuleEngine.Result ruleResult = MutationRuleEngine.evaluate(evidencedModules,
-                    classification.changedFiles(), mutation);
-                allFindings.addAll(ruleResult.findings());
-                allWarnings.addAll(ruleResult.warnings());
-
-                RedundancyRuleEngine.Result redundancyResult = RedundancyRuleEngine.evaluate(repoRoot,
-                    evidencedModules, mutation);
-                allFindings.addAll(redundancyResult.findings());
+                MutationOutcome outcome = collectMutationEvidence(repoRoot, evidencedModules,
+                    classification.changedFiles(), inv.mutationClasspathFilesById(), inv.mutationTargetFqcnsById(),
+                    diagnostics);
+                mutation = outcome.mutation();
+                allFindings.addAll(outcome.findings());
+                allWarnings.addAll(outcome.warnings());
             }
 
             boolean complete = allIncompleteReasons.isEmpty();
@@ -612,6 +666,60 @@ class AnalyzeCommand implements Callable<Integer> {
                 moduleInputs, diffMode, findingsScopeOption, null, overall, NewCodeCoverage.unavailable("unavailable_incomplete"),
                 List.of(), scan.findings(), warnings, null, null, fileCoverageBlock);
         }
+    }
+
+    private record MutationOutcome(List<MutationModuleEvidence> mutation, List<Finding> findings, List<AnalysisReason> warnings) {
+    }
+
+    /**
+     * Shared by both {@code analyze} branches that can run {@code
+     * --mutation-report}: {@code --mutation-target} (Plan.md Faz 2, works
+     * under {@code --no-vcs} too - {@code changedFiles} is then {@code
+     * List.of()} and never consulted) takes priority over diff-derived
+     * targets, all-or-nothing across every module in this run (D-66's
+     * config-modules precedent - see {@link MutationTargetResolver}).
+     * {@link RedundancyRuleEngine} runs in both branches regardless of which
+     * targeting mode produced {@code mutation} - it has no changed-files
+     * dependency of its own (verified while wiring this in: {@code
+     * SubsumedTestRule}/{@code TestLocator} resolve a test's path straight
+     * off the module's declared test roots, never through a changed-files
+     * index).
+     */
+    private MutationOutcome collectMutationEvidence(Path repoRoot, List<ModuleDefinition> evidencedModules,
+                                                      List<ChangedFile> changedFiles,
+                                                      Map<String, String> mutationClasspathFilesById,
+                                                      Map<String, List<String>> mutationTargetFqcnsById,
+                                                      EvidenceDiagnostics diagnostics) {
+        List<AnalysisReason> warnings = new ArrayList<>();
+        List<Finding> findings = new ArrayList<>();
+        List<MutationModuleEvidence> mutation;
+        Duration budget = Duration.ofSeconds(mutationTimeoutSeconds);
+
+        if (!mutationTargetFqcnsById.isEmpty()) {
+            MutationTargetResolver.Result targets = MutationTargetResolver.resolve(repoRoot, evidencedModules, mutationTargetFqcnsById);
+            warnings.addAll(targets.warnings());
+            MutationCollector.Result mutationResult = MutationCollector.collectForTargets(repoRoot, evidencedModules,
+                targets.targetGlobsById(), mutationClasspathFilesById, budget, diagnostics);
+            mutation = mutationResult.modules();
+            warnings.addAll(mutationResult.warnings());
+            MutationRuleEngine.Result ruleResult = MutationRuleEngine.evaluate(evidencedModules,
+                targets.classNameToPathByModuleId(), mutation);
+            findings.addAll(ruleResult.findings());
+            warnings.addAll(ruleResult.warnings());
+        } else {
+            MutationCollector.Result mutationResult = MutationCollector.collect(repoRoot, evidencedModules,
+                changedFiles, mutationClasspathFilesById, budget, diagnostics);
+            mutation = mutationResult.modules();
+            warnings.addAll(mutationResult.warnings());
+            MutationRuleEngine.Result ruleResult = MutationRuleEngine.evaluate(evidencedModules, changedFiles, mutation);
+            findings.addAll(ruleResult.findings());
+            warnings.addAll(ruleResult.warnings());
+        }
+
+        RedundancyRuleEngine.Result redundancyResult = RedundancyRuleEngine.evaluate(repoRoot, evidencedModules, mutation);
+        findings.addAll(redundancyResult.findings());
+
+        return new MutationOutcome(mutation, List.copyOf(findings), List.copyOf(warnings));
     }
 
     /**

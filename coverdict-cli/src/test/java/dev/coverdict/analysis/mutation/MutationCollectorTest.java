@@ -75,4 +75,28 @@ class MutationCollectorTest {
         assertEquals(1, result.warnings().size());
         assertEquals("MUTATION_CLASSPATH_MISSING", result.warnings().get(0).code());
     }
+
+    // --- collectForTargets (Plan.md Faz 2, --mutation-target) ---
+
+    @Test
+    void aModuleAbsentFromTargetGlobsIsSkippedWithNoWarningOfItsOwn() {
+        // MutationTargetResolver already explains an empty target list
+        // (MUTATION_TARGET_NOT_BOUND / MUTATION_TARGET_UNRESOLVED) - collectForTargets must not add a second, less specific one.
+        MutationCollector.Result result = MutationCollector.collectForTargets(repoRoot, List.of(MODULE),
+            Map.of(), Map.of(), Duration.ofMinutes(1), dev.coverdict.analysis.subprocess.EvidenceDiagnostics.none());
+
+        assertTrue(result.modules().isEmpty());
+        assertTrue(result.warnings().isEmpty());
+    }
+
+    @Test
+    void aTargetedModuleWithNoBoundClasspathWarnsTheSameWayAChangedModuleWould() {
+        MutationCollector.Result result = MutationCollector.collectForTargets(repoRoot, List.of(MODULE),
+            Map.of("app", List.of("com.example.Calc*")), Map.of(), Duration.ofMinutes(1),
+            dev.coverdict.analysis.subprocess.EvidenceDiagnostics.none());
+
+        assertTrue(result.modules().isEmpty());
+        assertEquals(1, result.warnings().size());
+        assertEquals("MUTATION_CLASSPATH_MISSING", result.warnings().get(0).code());
+    }
 }

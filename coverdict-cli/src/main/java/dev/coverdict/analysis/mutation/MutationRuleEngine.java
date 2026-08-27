@@ -24,6 +24,25 @@ public final class MutationRuleEngine {
 
     public static Result evaluate(List<ModuleDefinition> modules, List<ChangedFile> changedFiles,
                                    List<MutationModuleEvidence> moduleEvidence) {
+        Map<String, Map<String, String>> classNameToPathByModuleId = new java.util.HashMap<>();
+        for (ModuleDefinition module : modules) {
+            classNameToPathByModuleId.put(module.id(), ChangedClassTargets.classNameToPath(module, changedFiles));
+        }
+        return evaluate(modules, classNameToPathByModuleId, moduleEvidence);
+    }
+
+    /**
+     * {@code --mutation-target} (Plan.md Faz 2): {@code classNameToPathByModuleId}
+     * comes from {@link MutationTargetResolver} instead of {@link
+     * ChangedClassTargets} - no diff is consulted. A module id present in
+     * {@code moduleEvidence} but absent from this map (defensive - {@link
+     * MutationCollector#collectForTargets} only ever produces evidence for a
+     * module it also resolved targets for) is treated the same as an empty
+     * index: every finding for that module's methods is skipped rather than
+     * guessed at (hard rule 3a), same as an unresolvable class name today.
+     */
+    public static Result evaluate(List<ModuleDefinition> modules, Map<String, Map<String, String>> classNameToPathByModuleId,
+                                   List<MutationModuleEvidence> moduleEvidence) {
         Map<String, ModuleDefinition> modulesById = new java.util.HashMap<>();
         for (ModuleDefinition module : modules) {
             modulesById.put(module.id(), module);
@@ -36,7 +55,7 @@ public final class MutationRuleEngine {
             if (module == null) {
                 continue; // evidence for a module id not in the declared set - defensive, should not occur
             }
-            Map<String, String> classNameToPath = ChangedClassTargets.classNameToPath(module, changedFiles);
+            Map<String, String> classNameToPath = classNameToPathByModuleId.getOrDefault(evidence.moduleId(), Map.of());
             PseudoTestedMethodRule.Result result = PseudoTestedMethodRule.evaluate(evidence.moduleId(), classNameToPath, evidence);
             findings.addAll(result.findings());
             warnings.addAll(result.warnings());

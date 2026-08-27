@@ -39,26 +39,55 @@ public final class MutationCollector {
         List<AnalysisReason> warnings = new ArrayList<>();
 
         for (ModuleDefinition module : modules) {
-            collectOneModule(repoRoot, module, changedFiles, mutationClasspathFilesById, budget, evidence, warnings,
-                diagnostics);
+            List<String> targetClasses = ChangedClassTargets.globsFor(module, changedFiles);
+            AnalysisReason noTargetsReason = new AnalysisReason("MUTATION_NO_CHANGED_TARGETS",
+                "Module '" + module.id() + "' has no mapped changed production class, so no mutation evidence "
+                    + "was requested from the engine.", null, module.id(), 0);
+            collectOneModule(repoRoot, module, targetClasses, noTargetsReason, mutationClasspathFilesById, budget,
+                evidence, warnings, diagnostics);
         }
 
         return new Result(List.copyOf(evidence), List.copyOf(warnings));
     }
 
-    /** One module's collection attempt (SonarQube java:S135 - {@link #collect} stays continue-free). */
-    private static void collectOneModule(Path repoRoot, ModuleDefinition module, List<ChangedFile> changedFiles,
-                                          Map<String, String> mutationClasspathFilesById, Duration budget,
-                                          List<MutationModuleEvidence> evidence, List<AnalysisReason> warnings,
-                                          EvidenceDiagnostics diagnostics) {
-        List<String> targetClasses = ChangedClassTargets.globsFor(module, changedFiles);
+    /**
+     * {@code --mutation-target} (Plan.md Faz 2): target classes come from
+     * {@link MutationTargetResolver}, never {@link ChangedClassTargets} - no
+     * diff is consulted at all, which is what lets {@code --mutation-target}
+     * work under {@code --no-vcs}. A module absent from {@code
+     * targetGlobsById} is never re-warned here - {@link MutationTargetResolver}
+     * already explained exactly why (not bound at all, vs. bound but every
+     * class unresolved), so a second, less specific warning would only
+     * duplicate it.
+     */
+    public static Result collectForTargets(Path repoRoot, List<ModuleDefinition> modules,
+                                            Map<String, List<String>> targetGlobsById,
+                                            Map<String, String> mutationClasspathFilesById, Duration budget,
+                                            EvidenceDiagnostics diagnostics) {
+        List<MutationModuleEvidence> evidence = new ArrayList<>();
+        List<AnalysisReason> warnings = new ArrayList<>();
+
+        for (ModuleDefinition module : modules) {
+            List<String> targetClasses = targetGlobsById.getOrDefault(module.id(), List.of());
+            collectOneModule(repoRoot, module, targetClasses, null, mutationClasspathFilesById, budget,
+                evidence, warnings, diagnostics);
+        }
+
+        return new Result(List.copyOf(evidence), List.copyOf(warnings));
+    }
+
+    /** One module's collection attempt (SonarQube java:S135 - {@link #collect} stays continue-free). {@code noTargetsReason} may be {@code null} when the caller already explained an empty target list itself. */
+    private static void collectOneModule(Path repoRoot, ModuleDefinition module, List<String> targetClasses,
+                                          AnalysisReason noTargetsReason, Map<String, String> mutationClasspathFilesById,
+                                          Duration budget, List<MutationModuleEvidence> evidence,
+                                          List<AnalysisReason> warnings, EvidenceDiagnostics diagnostics) {
         if (targetClasses.isEmpty()) {
             // D-64: see PerTestCollector - a silent return here is exactly
             // how WTA's first --mutation-report run produced an empty
             // mutation block with a "complete" verdict and no explanation.
-            warnings.add(new AnalysisReason("MUTATION_NO_CHANGED_TARGETS",
-                "Module '" + module.id() + "' has no mapped changed production class, so no mutation evidence "
-                    + "was requested from the engine.", null, module.id(), 0));
+            if (noTargetsReason != null) {
+                warnings.add(noTargetsReason);
+            }
             return;
         }
         diagnostics.progress("mutation: module '" + module.id() + "' - " + targetClasses.size()
@@ -66,7 +95,7 @@ public final class MutationCollector {
         String classpathFile = mutationClasspathFilesById.get(module.id());
         if (classpathFile == null) {
             warnings.add(new AnalysisReason("MUTATION_CLASSPATH_MISSING",
-                "Module '" + module.id() + "' has changed production classes but no --mutation-classpath "
+                "Module '" + module.id() + "' has target classes to mutate but no --mutation-classpath "
                     + "bound to it; mutation evidence skipped for this module.", null, module.id()));
             return;
         }

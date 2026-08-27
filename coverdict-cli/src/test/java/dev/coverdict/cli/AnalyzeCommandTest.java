@@ -540,9 +540,9 @@ class AnalyzeCommandTest {
 
     // --- --classpath (M0-CLI-INPUT.md's classpath input, wired for real) ---
 
-    /** Same validation shape for all three classpath-list flags (SonarQube java:S5976). */
+    /** Same validation shape for all four id-keyed list/target flags (SonarQube java:S5976). */
     @ParameterizedTest
-    @ValueSource(strings = {"--classpath", "--per-test-classpath", "--mutation-classpath"})
+    @ValueSource(strings = {"--classpath", "--per-test-classpath", "--mutation-classpath", "--mutation-target"})
     void classpathIdNotMatchingAnyDeclaredModuleIsInvalidInvocation(String flag) {
         int exitCode = run("analyze", "--no-vcs",
             "--repo", repoRoot.toString(),
@@ -597,6 +597,50 @@ class AnalyzeCommandTest {
         assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
         assertTrue(err.toString().contains("--mutation-report"), err.toString());
         assertFalse(Files.exists(outFile));
+    }
+
+    // --- --mutation-target (Plan.md Faz 2) ---
+
+    @Test
+    void mutationTargetWithoutMutationReportIsInvalidInvocationAndWritesNoJson() {
+        Path outFile = repoRoot.resolve("verdict.json");
+        int exitCode = run("analyze", "--no-vcs", "--mutation-target", "root=com.example.Calc",
+            "--repo", repoRoot.toString(),
+            "--report", FIXTURES.resolve("mixed-coverage.xml").toString(),
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
+        assertTrue(err.toString().contains("--mutation-target requires --mutation-report"), err.toString());
+        assertFalse(Files.exists(outFile));
+    }
+
+    /**
+     * The carve-out this whole flag exists for: {@code --mutation-report}
+     * alone is rejected under {@code --no-vcs} (the test just above this
+     * section), but adding a real {@code --mutation-target} lifts that -
+     * proven here without a real PIT run by naming a class that does not
+     * exist, so target resolution fails fast with a warning instead of
+     * spawning the engine (the real-PIT, real-finding path is {@code
+     * PlaygroundMutationIT#mutationTargetFindsAKnownL3FindingWithNoDiffAtAllUnderNoVcs}).
+     */
+    @Test
+    void mutationTargetLiftsTheNoVcsRestrictionAndAnUnresolvedTargetWarnsRatherThanFailing() throws IOException {
+        Files.createDirectories(repoRoot.resolve("src/main/java/com/example"));
+        Files.writeString(repoRoot.resolve("src/main/java/com/example/Calc.java"), "class Calc {}\n");
+        Path outFile = outputDir.resolve("verdict.json");
+
+        int exitCode = run("analyze", "--no-vcs", "--mutation-report",
+            "--mutation-target", "root=com.example.NoSuchClass",
+            "--repo", repoRoot.toString(),
+            "--report", FIXTURES.resolve("mixed-coverage.xml").toString(),
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.COMPLETE.value(), exitCode, err.toString());
+        assertTrue(validate(outFile).isEmpty(), validate(outFile).toString());
+        assertTrue(warningCodes(outFile).contains("MUTATION_TARGET_UNRESOLVED"), warningCodes(outFile).toString());
+
+        JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(outFile));
+        assertTrue(doc.at("/mutation/modules").isEmpty(), "no target resolved, so no module was ever collected: " + doc.at("/mutation"));
     }
 
     @Test

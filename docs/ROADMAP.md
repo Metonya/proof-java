@@ -634,9 +634,15 @@ and the bug-repro workflow (shrink a real finding into a new scenario there).
   opt-in `--file-coverage` block shipped (D-70) - serializes the same
   already-filtered per-file dataset `coverage.overall` is computed from, zero
   new analysis, per-file `MetricSet` from the same `MetricsEngine`. Faz 2
-  (single-target mutation, `--mutation-target`) and Faz 3 (⛔ freeze v1 - D-01
-  gate, schema 1.0.0) are next; the `coverdict-vscode` repo itself does not
-  start until Faz 3 closes.
+  (D-71, 2026-08-27): `--mutation-target <id>=<FQCN>` mutates an explicit
+  class independent of the diff, lifting `--mutation-report`'s `--no-vcs`
+  restriction when used - verified end to end with a real PIT subprocess
+  against coverdict-playground (`PlaygroundMutationIT`, `-Pmutation-it`): a
+  class named this way under bare `--no-vcs` (no git repo at all) produces a
+  real, path-resolved `PSEUDO_TESTED_METHOD` finding. Faz 2's open item
+  (`RedundancyRuleEngine`/`TestLocator` changed-files assumption) checked
+  clean - neither has one. Faz 3 (⛔ freeze v1 - D-01 gate, schema 1.0.0) is
+  next; the `coverdict-vscode` repo itself does not start until Faz 3 closes.
 - **Backlog:** standalone HTML · AI-assistant skill (agent reads verdict JSON,
   writes tests for gaps it names, reruns, interprets the result through
   coverdict again) · VS Code extension (inline per-line coverage gutter

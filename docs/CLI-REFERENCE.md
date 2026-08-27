@@ -109,7 +109,8 @@ is a generic Maven multi-module property, not specific to any one repo -
 
 | Flag | Purpose | Default |
 |---|---|---|
-| `--mutation-report` | Collects mutation evidence (gregor `RETURNS` + `VOID_METHOD_CALLS`) for changed production classes. Feeds `PSEUDO_TESTED_METHOD` and `SUBSUMED_TEST`. Requires a diff mode | — |
+| `--mutation-report` | Collects mutation evidence (gregor `RETURNS` + `VOID_METHOD_CALLS`). Feeds `PSEUDO_TESTED_METHOD` and `SUBSUMED_TEST`. Requires a diff mode, unless `--mutation-target` is also given | — |
+| `--mutation-target <id>=<FQCN>` | Repeatable: explicit classes to mutate, independent of the diff (Plan.md M6 Faz 2 - the IDE's "mutate this class now" gesture). Requires `--mutation-report`; lifts its `--no-vcs` restriction. **All-or-nothing**: giving at least one target makes every module's diff-derived targets ignored entirely, including modules with none of their own. An unresolved class (no matching file under any declared source root) warns as `MUTATION_TARGET_UNRESOLVED` rather than failing the run; a declared module with no `--mutation-target` bound to it warns as `MUTATION_TARGET_NOT_BOUND` | — |
 | `--mutation-classpath <id>=<file>` | Same list-file shape, separate opt-in flag | — |
 | `--mutation-timeout` | Wall-clock budget in seconds before a module's mutation run is force-killed | `300` |
 | `--diagnostics-dir <dir>` | Writes each L2/L3 module's whole subprocess log to `<dir>/<module>-<layer>.log` and switches the engine to verbose (D-64) — the only route to the engine's own minion-crash detail. Off by default: verbose output with nowhere to land is just a slower run | — |

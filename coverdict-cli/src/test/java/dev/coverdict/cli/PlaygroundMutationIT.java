@@ -108,6 +108,44 @@ class PlaygroundMutationIT {
     }
 
     /**
+     * Plan.md M6 Faz 2's own "bitti sayılır" criterion: a class outside any
+     * diff - here, no git repo exists at all, {@code --no-vcs} - still gets
+     * mutated and produces a path-resolved {@code PSEUDO_TESTED_METHOD}
+     * finding. Proves {@code SourceRootClassIndex}/{@code
+     * MutationTargetResolver} against the real fixture's {@code
+     * src/main/java} layout, and that {@code validateMutationReport}'s
+     * {@code --mutation-target} carve-out really does let {@code
+     * --mutation-report} run under bare {@code --no-vcs}.
+     */
+    @Test
+    void mutationTargetFindsAKnownL3FindingWithNoDiffAtAllUnderNoVcs() throws IOException, InterruptedException {
+        Files.copy(FIXTURE_ROOT.resolve("pom.xml"), repoRoot.resolve("pom.xml"));
+        copyDirectory(FIXTURE_ROOT.resolve("src"), repoRoot.resolve("src"));
+        Files.copy(FIXTURE_ROOT.resolve("jacoco.xml"), repoRoot.resolve("jacoco.xml"));
+
+        runMaven(repoRoot, "test-compile");
+        Path mutationClasspath = buildMutationClasspathFile(repoRoot);
+
+        Path out = workDir.resolve("verdict.json");
+        StringWriter err = new StringWriter();
+        int exitCode = run(err, "analyze",
+            "--repo", repoRoot.toString(),
+            "--no-vcs",
+            "--report", "jacoco.xml",
+            "--mutation-report",
+            "--mutation-target", "root=dev.coverdict.playground.Calculator",
+            "--mutation-classpath", "root=" + mutationClasspath,
+            "--out", out.toString());
+        assertEquals(0, exitCode, "expected a complete analyze run: " + err);
+
+        JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(out));
+        List<String> findings = mutationFindingSummaries(doc);
+        String pkg = "dev.coverdict.playground.";
+        assertTrue(findings.contains("PSEUDO_TESTED_METHOD HIGH " + pkg + "Calculator#subtract(II)I"),
+            "expected a resolved PSEUDO_TESTED_METHOD finding, got: " + findings);
+    }
+
+    /**
      * D-68: the whole reason L2 needed a real-PIT-subprocess test at all -
      * every unit-level test either stubs the SPI directly or only exercises
      * the non-spawning paths, so the "coverage genuinely gathered but every
