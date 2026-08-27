@@ -715,7 +715,50 @@ and the bug-repro workflow (shrink a real finding into a new scenario there).
   - Local SonarQube scans wired for the extension repo too (`sonar-scanner`
     CLI, `sonar.javascript.lcov.reportPaths` from a real `c8`-generated lcov
     report) - 0 open findings after every review pass so far.
-- **Backlog:** standalone HTML · AI-assistant skill (agent reads verdict JSON,
+  - **Faz 9 (drop the native Test Coverage API, done 2026-08-27, commit
+    `c571e69`):** user testing found the Explorer-badge/gutter toggle
+    settings genuinely broken, not just cosmetically confusing. Root-caused
+    against the real `@types/vscode` `.d.ts`: `TestRun.addCoverage` has no
+    documented clear/remove/replace, and nothing separates control of the
+    Explorer badge from the editor gutter - any toggle built on the native
+    API was fighting it. Replaced with two self-owned renderers:
+    `ui/explorerBadges.ts` (`FileDecorationProvider`, CLI's own per-file
+    `Metric.percent` for the badge, a single sum-then-divide for folder
+    rollups - `model/metrics.ts`, the one arithmetic operation the plan
+    allows the extension itself) and `ui/gutterRenderer.ts` (plain
+    `TextEditorDecorationType`s, `setDecorations(type, [])` reliably
+    clears). `coverdict.show.explorerBadges`/`coverdict.show.lineGutter`
+    are now genuinely independent; `coverdict.toggleCoverageGutter` ->
+    `coverdict.toggleCoverage` toggles both together.
+  - **Faz 10 (promptless runs + real startup activation, done 2026-08-27,
+    commit `6d393a9`):** every analyze run asked for the report path (and
+    per-test asked for the classpath file) via an input box, every single
+    time. Replaced with `coverdict.reportPath`/`coverdict.perTestClasspathPath`/
+    `coverdict.diffMode`/`coverdict.baseRef` settings - a run only prompts
+    if the configured file is genuinely missing. `coverdict.diffMode` also
+    makes `--base` reachable from the UI for the first time (it was fully
+    implemented and unit-tested in `argsBuilder` but unreachable).
+    `activationEvents` was `[]`, so "restore last run on window reopen"
+    (added the prior session) could never fire on a plain window open -
+    now `onStartupFinished`, and `activate()` awaits the restore instead of
+    racing it against a command dispatched right after startup.
+  - **Faz 11a-c (findings surfaced, sidebar Activity Bar, panel fix, done
+    2026-08-27, commits `f10150c`/`b969847`/`6b6ce44`):** `findings[]`,
+    `changedFiles[]`, and `coverage.newCode` are now modeled and validated
+    in `verdict/types.ts`/`parse.ts` (previously `findings[]` wasn't
+    modeled at all despite the extension's own description promising it,
+    and `newCode` was typed but silently unvalidated). Each finding becomes
+    a real `vscode.Diagnostic` in the Problems panel. A `coverdict` Activity
+    Bar container adds three TreeViews (Çalıştır/Kapsama/Test Kalitesi) so
+    no step requires the Command Palette - Kapsama shows overall + new-code
+    metrics in all three modes and every changed file's uncovered new line
+    ranges (the schema has no "new and covered" line list, so that state is
+    never attempted). The "Satır → Testler" panel's `PER_TEST_NO_CHANGED_
+    TARGETS` case (an empty diff, not a real bug) now gets its own
+    `noChangedTargets` panel state with the actual fix spelled out, instead
+    of reading identically to "this class is out of L2's scope".
+- **Backlog:** Faz 12 (F5/F6 mutation view + single-target mutation UI,
+  planned next) · standalone HTML · AI-assistant skill (agent reads verdict JSON,
   writes tests for gaps it names, reruns, interprets the result through
   coverdict again) · VS Code extension (inline per-line coverage gutter
   annotations, toggleable) · IntelliJ plugin (same gutter/panel concept as the
