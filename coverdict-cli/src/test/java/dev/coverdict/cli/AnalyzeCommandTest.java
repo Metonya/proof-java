@@ -884,7 +884,7 @@ class AnalyzeCommandTest {
             """);
         Path outFile = outputDir.resolve("verdict.json");
 
-        int exitCode = run("analyze", "--no-vcs", "--repo", repoRoot.toString(),
+        run("analyze", "--no-vcs", "--repo", repoRoot.toString(),
             "--module", "clioverride=.", "--out", outFile.toString());
 
         // Neither module ends up with bound-report evidence: 'clioverride'

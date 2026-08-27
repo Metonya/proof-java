@@ -36,6 +36,8 @@ import dev.coverdict.analysis.model.RepoPaths;
  */
 public final class MavenProjectScanner {
 
+    private static final String MODULES_ELEMENT = "modules";
+
     private MavenProjectScanner() {
     }
 
@@ -96,11 +98,11 @@ public final class MavenProjectScanner {
                     } else if (depth == 2 && "packaging".equals(name)) {
                         packaging = readCharacters(r);
                         depth--;
-                    } else if (depth == 3 && "module".equals(name) && "modules".equals(currentPath)) {
+                    } else if (depth == 3 && "module".equals(name) && MODULES_ELEMENT.equals(currentPath)) {
                         childModules.add(readCharacters(r));
                         depth--;
-                    } else if (depth == 2 && "modules".equals(name)) {
-                        currentPath = "modules";
+                    } else if (depth == 2 && MODULES_ELEMENT.equals(name)) {
+                        currentPath = MODULES_ELEMENT;
                     }
                     if (depth == 2 && ("parent".equals(name) || "dependencies".equals(name) || "build".equals(name)
                             || "properties".equals(name) || "profiles".equals(name))) {

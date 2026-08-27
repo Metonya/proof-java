@@ -68,6 +68,8 @@ public final class MutationRunner {
      */
     private static final Duration HEARTBEAT = Duration.ofSeconds(30);
 
+    private static final String PROGRESS_PREFIX = "mutation: module '";
+
     private MutationRunner() {
     }
 
@@ -165,7 +167,7 @@ public final class MutationRunner {
         if (!finished) {
             SubprocessWorkspace.destroyProcessTree(run.process());
             ProcessOutputTail.joinQuietly(run.outputThread());
-            run.diagnostics().progress("mutation: module '" + run.moduleId() + "' - FAILED, budget of "
+            run.diagnostics().progress(PROGRESS_PREFIX + run.moduleId() + "' - FAILED, budget of "
                 + run.budget().toSeconds() + "s exhausted after " + progressCount(run) + " completed");
             throw new MutationCollectionException("Module '" + run.moduleId() + "' mutation run exceeded its "
                 + run.budget().toSeconds() + "s budget (" + progressCount(run) + " completed)"
@@ -176,18 +178,18 @@ public final class MutationRunner {
         int exitCode = run.process().exitValue();
         if (!Files.exists(run.outputFile())) {
             if (exitCode == 0) {
-                run.diagnostics().progress("mutation: module '" + run.moduleId()
+                run.diagnostics().progress(PROGRESS_PREFIX + run.moduleId()
                     + "' - no mutable target found by the engine");
                 return Optional.empty(); // no mutable target found - PIT's own skip, not a failure
             }
-            run.diagnostics().progress("mutation: module '" + run.moduleId() + "' - FAILED, subprocess exited "
+            run.diagnostics().progress(PROGRESS_PREFIX + run.moduleId() + "' - FAILED, subprocess exited "
                 + exitCode + " after " + progressCount(run) + " completed");
             throw new MutationCollectionException("Module '" + run.moduleId() + "' mutation subprocess exited "
                 + exitCode + " (" + progressCount(run) + " completed)" + run.output().tailMessage());
         }
         try (InputStream in = Files.newInputStream(run.outputFile())) {
             MutationModuleEvidence evidence = MutationJsonReader.read(in);
-            run.diagnostics().progress("mutation: module '" + run.moduleId() + "' - done, "
+            run.diagnostics().progress(PROGRESS_PREFIX + run.moduleId() + "' - done, "
                 + evidence.methods().size() + " method(s) with mutants");
             return Optional.of(evidence);
         } catch (IOException e) {
@@ -215,7 +217,7 @@ public final class MutationRunner {
                 if (run.process().waitFor(Math.max(1, remaining / 1_000_000L), TimeUnit.MILLISECONDS)) {
                     return true;
                 }
-                run.diagnostics().progress("mutation: module '" + run.moduleId() + "' - " + progressCount(run)
+                run.diagnostics().progress(PROGRESS_PREFIX + run.moduleId() + "' - " + progressCount(run)
                     + ", " + ProgressMarker.formatElapsed(Duration.ofNanos(System.nanoTime() - start)) + " elapsed");
             }
             return !run.process().isAlive();

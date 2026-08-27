@@ -21,6 +21,7 @@ import dev.coverdict.analysis.subprocess.ClasspathListFile;
 public final class DoctorDiagnostics {
 
     private static final String JACOCO_REPORT_RELATIVE = "target/site/jacoco/jacoco.xml";
+    private static final String JACOCO_REPORT_PRESENT = "JACOCO_REPORT_PRESENT";
     private static final String PER_TEST_CLASSPATH_NAME = "target/coverdict-per-test-classpath.txt";
     private static final String MUTATION_CLASSPATH_NAME = "target/coverdict-mutation-classpath.txt";
 
@@ -35,7 +36,7 @@ public final class DoctorDiagnostics {
         checkSourceRoot(checks, moduleRoot, "src/test/java", "TEST_ROOT");
         boolean compiled = checkCompiled(checks, moduleRoot);
 
-        String jacocoReportPath = checkJacocoReport(checks, repoRoot, module, moduleRoot, compiled);
+        String jacocoReportPath = checkJacocoReport(checks, module, moduleRoot, compiled);
         checkGeneratedSources(checks, moduleRoot);
 
         String perTestClasspath = checkClasspathList(checks, repoRoot, module, moduleRoot,
@@ -76,7 +77,7 @@ public final class DoctorDiagnostics {
      * PIT subprocess or a whole {@code analyze} run has already spent time
      * on stale evidence.
      */
-    private static String checkJacocoReport(List<DoctorCheck> checks, Path repoRoot, MavenModule module,
+    private static String checkJacocoReport(List<DoctorCheck> checks, MavenModule module,
                                              Path moduleRoot, boolean compiled) {
         Path report = moduleRoot.resolve(JACOCO_REPORT_RELATIVE);
         if (!Files.isRegularFile(report)) {
@@ -86,7 +87,7 @@ public final class DoctorDiagnostics {
         }
         String repoRelative = RepoPaths.join(module.root(), JACOCO_REPORT_RELATIVE);
         if (!compiled) {
-            checks.add(DoctorCheck.ok("JACOCO_REPORT_PRESENT", JACOCO_REPORT_RELATIVE + " found"));
+            checks.add(DoctorCheck.ok(JACOCO_REPORT_PRESENT, JACOCO_REPORT_RELATIVE + " found"));
             return repoRelative;
         }
         try {
@@ -97,10 +98,10 @@ public final class DoctorDiagnostics {
                     JACOCO_REPORT_RELATIVE + " is older than the module's compiled output - rebuild with coverage "
                         + "before analyze, or its new-code numbers will be silently incomplete"));
             } else {
-                checks.add(DoctorCheck.ok("JACOCO_REPORT_PRESENT", JACOCO_REPORT_RELATIVE + " found and up to date"));
+                checks.add(DoctorCheck.ok(JACOCO_REPORT_PRESENT, JACOCO_REPORT_RELATIVE + " found and up to date"));
             }
         } catch (IOException e) {
-            checks.add(DoctorCheck.ok("JACOCO_REPORT_PRESENT", JACOCO_REPORT_RELATIVE + " found (freshness unverified)"));
+            checks.add(DoctorCheck.ok(JACOCO_REPORT_PRESENT, JACOCO_REPORT_RELATIVE + " found (freshness unverified)"));
         }
         return repoRelative;
     }

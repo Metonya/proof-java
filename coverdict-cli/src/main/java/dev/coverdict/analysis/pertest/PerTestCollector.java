@@ -23,6 +23,8 @@ import dev.coverdict.analysis.subprocess.EvidenceDiagnostics;
  */
 public final class PerTestCollector {
 
+    private static final String MODULE_PREFIX = "Module '";
+
     private PerTestCollector() {
     }
 
@@ -57,7 +59,7 @@ public final class PerTestCollector {
             // ref, so nothing had changed) and the verdict explained none
             // of it.
             warnings.add(new AnalysisReason("PER_TEST_NO_CHANGED_TARGETS",
-                "Module '" + module.id() + "' has no mapped changed production class, so no per-test evidence "
+                MODULE_PREFIX + module.id() + "' has no mapped changed production class, so no per-test evidence "
                     + "was requested from the engine.", null, module.id(), 0));
             return;
         }
@@ -65,7 +67,7 @@ public final class PerTestCollector {
         String classpathFile = perTestClasspathFilesById.get(module.id());
         if (classpathFile == null) {
             warnings.add(new AnalysisReason("PER_TEST_CLASSPATH_MISSING",
-                "Module '" + module.id() + "' has changed production classes but no --per-test-classpath "
+                MODULE_PREFIX + module.id() + "' has changed production classes but no --per-test-classpath "
                     + "bound to it; per-test evidence skipped for this module.", null, module.id()));
             return;
         }
@@ -82,7 +84,7 @@ public final class PerTestCollector {
             result.ifPresent(one -> recordEvidence(module, one, evidence, warnings));
         } catch (PerTestCollectionException e) {
             warnings.add(new AnalysisReason("PER_TEST_COLLECTION_FAILED",
-                "Module '" + module.id() + "' per-test coverage collection failed (" + e.getMessage()
+                MODULE_PREFIX + module.id() + "' per-test coverage collection failed (" + e.getMessage()
                     + "); per-test evidence skipped for this module.", null, module.id()));
         }
     }
@@ -99,7 +101,7 @@ public final class PerTestCollector {
         evidence.add(one);
         if (one.entries().isEmpty() && one.ambient().isEmpty()) {
             warnings.add(new AnalysisReason("PER_TEST_EMPTY_EVIDENCE",
-                "Module '" + module.id() + "' per-test coverage ran but resolved no test-to-line record; "
+                MODULE_PREFIX + module.id() + "' per-test coverage ran but resolved no test-to-line record; "
                     + "no per-test evidence is available for it despite being requested.", null, module.id(), 0));
         }
     }

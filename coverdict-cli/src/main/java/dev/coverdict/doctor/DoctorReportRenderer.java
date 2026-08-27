@@ -31,8 +31,7 @@ public final class DoctorReportRenderer {
         List<ModuleDiagnosis> usable = diagnoses.stream().filter(ModuleDiagnosis::usableForAnalyze).toList();
 
         if (blockers > 0) {
-            sb.append(blockers).append(" module(s) have at least one BLOCKER - fix those first, or run "
-                + "'doctor --fix' to resolve what it can.\n\n");
+            sb.append(blockers).append(" module(s) have at least one BLOCKER - fix those first, or run 'doctor --fix' to resolve what it can.\n\n");
         }
 
         if (usable.isEmpty()) {

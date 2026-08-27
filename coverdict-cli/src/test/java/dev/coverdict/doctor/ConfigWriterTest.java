@@ -46,7 +46,7 @@ class ConfigWriterTest {
     }
 
     @Test
-    void writesNothingWhenNoModuleIsUsable() throws IOException {
+    void writesNothingWhenNoModuleIsUsable() {
         ModuleDiagnosis blocked = new ModuleDiagnosis(APP, List.of(DoctorCheck.blocker("JACOCO_REPORT_MISSING", "missing")),
             null, null, null);
         Path target = repoRoot.resolve("coverdict.config.json");
@@ -92,7 +92,7 @@ class ConfigWriterTest {
 
     /** Module ids/paths could in principle carry a quote or backslash - not attacker input here, but real JSON escaping is cheap and the alternative is a config file the writer's own reader cannot parse back. */
     @Test
-    void escapesSpecialCharactersInWrittenStrings() throws IOException {
+    void escapesSpecialCharactersInWrittenStrings() {
         MavenModule odd = new MavenModule("app\"quoted", "app");
         ModuleDiagnosis d = new ModuleDiagnosis(odd, List.of(DoctorCheck.ok("JACOCO_REPORT_PRESENT", "found")),
             "app/jacoco.xml", null, null);

@@ -5,13 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
@@ -50,14 +48,14 @@ class ProcessOutputTailTest {
     }
 
     @Test
-    void teeReceivesEveryLineNotJustTheTail() throws IOException {
+    void teeReceivesEveryLineNotJustTheTail() {
         String[] many = IntStream.rangeClosed(1, ProcessOutputTail.TAIL_LINES + 10)
             .mapToObj(i -> "line " + i).toArray(String[]::new);
         Writer tee = new StringWriter();
 
         ProcessOutputTail.of(lines(many), tee, null).run();
 
-        List<String> teed = tee.toString().lines().collect(Collectors.toList());
+        List<String> teed = tee.toString().lines().toList();
         assertEquals(ProcessOutputTail.TAIL_LINES + 10, teed.size(), "the log keeps what the tail discards");
         assertEquals("line 1", teed.get(0));
     }

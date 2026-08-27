@@ -52,6 +52,8 @@ public final class PerTestRunner {
 
     private static final String TEMP_DIR_PREFIX = "coverdict-pertest-";
 
+    private static final String PROGRESS_PREFIX = "per-test: module '";
+
     private PerTestRunner() {
     }
 
@@ -140,14 +142,14 @@ public final class PerTestRunner {
                                                                   ProcessOutputTail output,
                                                                   EvidenceDiagnostics diagnostics) {
         if (!Files.exists(outputFile)) {
-            diagnostics.progress("per-test: module '" + moduleId + "' - FAILED, no coverage export produced");
+            diagnostics.progress(PROGRESS_PREFIX + moduleId + "' - FAILED, no coverage export produced");
             throw new PerTestCollectionException("Module '" + moduleId
                 + "' produced no per-test coverage export before its " + TIMEOUT.toSeconds() + "s timeout"
                 + output.tailMessage());
         }
         try (InputStream in = Files.newInputStream(outputFile)) {
             PerTestModuleEvidence evidence = PerTestJsonReader.read(in);
-            diagnostics.progress("per-test: module '" + moduleId + "' - done, " + evidence.entries().size()
+            diagnostics.progress(PROGRESS_PREFIX + moduleId + "' - done, " + evidence.entries().size()
                 + " method entr(ies)");
             return Optional.of(evidence);
         } catch (IOException e) {
@@ -175,7 +177,7 @@ public final class PerTestRunner {
                 return;
             }
             if (System.nanoTime() >= nextHeartbeat) {
-                diagnostics.progress("per-test: module '" + moduleId + "' - collecting coverage, "
+                diagnostics.progress(PROGRESS_PREFIX + moduleId + "' - collecting coverage, "
                     + ProgressMarker.formatElapsed(Duration.ofNanos(System.nanoTime() - start)) + " elapsed");
                 nextHeartbeat = System.nanoTime() + HEARTBEAT.toNanos();
             }

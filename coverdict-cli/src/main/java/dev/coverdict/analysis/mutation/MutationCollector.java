@@ -23,6 +23,8 @@ import dev.coverdict.analysis.subprocess.EvidenceDiagnostics;
  */
 public final class MutationCollector {
 
+    private static final String MODULE_PREFIX = "Module '";
+
     private MutationCollector() {
     }
 
@@ -41,7 +43,7 @@ public final class MutationCollector {
         for (ModuleDefinition module : modules) {
             List<String> targetClasses = ChangedClassTargets.globsFor(module, changedFiles);
             AnalysisReason noTargetsReason = new AnalysisReason("MUTATION_NO_CHANGED_TARGETS",
-                "Module '" + module.id() + "' has no mapped changed production class, so no mutation evidence "
+                MODULE_PREFIX + module.id() + "' has no mapped changed production class, so no mutation evidence "
                     + "was requested from the engine.", null, module.id(), 0);
             collectOneModule(repoRoot, module, targetClasses, noTargetsReason, mutationClasspathFilesById, budget,
                 evidence, warnings, diagnostics);
@@ -95,7 +97,7 @@ public final class MutationCollector {
         String classpathFile = mutationClasspathFilesById.get(module.id());
         if (classpathFile == null) {
             warnings.add(new AnalysisReason("MUTATION_CLASSPATH_MISSING",
-                "Module '" + module.id() + "' has target classes to mutate but no --mutation-classpath "
+                MODULE_PREFIX + module.id() + "' has target classes to mutate but no --mutation-classpath "
                     + "bound to it; mutation evidence skipped for this module.", null, module.id()));
             return;
         }
@@ -112,7 +114,7 @@ public final class MutationCollector {
             result.ifPresent(one -> recordEvidence(module, one, evidence, warnings));
         } catch (MutationCollectionException e) {
             warnings.add(new AnalysisReason(e.reasonCode(),
-                "Module '" + module.id() + "' mutation evidence collection failed (" + e.getMessage()
+                MODULE_PREFIX + module.id() + "' mutation evidence collection failed (" + e.getMessage()
                     + "); mutation evidence skipped for this module.", null, module.id()));
         }
     }
@@ -124,7 +126,7 @@ public final class MutationCollector {
         warnings.addAll(one.warnings());
         if (one.methods().isEmpty()) {
             warnings.add(new AnalysisReason("MUTATION_EMPTY_EVIDENCE",
-                "Module '" + module.id() + "' mutation run produced no mutated method; no mutation evidence is "
+                MODULE_PREFIX + module.id() + "' mutation run produced no mutated method; no mutation evidence is "
                     + "available for it despite being requested.", null, module.id(), 0));
         }
     }
