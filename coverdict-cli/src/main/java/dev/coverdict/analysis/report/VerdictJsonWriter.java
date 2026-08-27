@@ -12,6 +12,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.util.DefaultIndenter;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 
+import dev.coverdict.analysis.jacoco.LineCoverage;
 import dev.coverdict.analysis.metrics.Metric;
 import dev.coverdict.analysis.metrics.MetricSet;
 import dev.coverdict.analysis.model.AnalysisReason;
@@ -123,6 +124,10 @@ public final class VerdictJsonWriter {
                 writeMutation(g, doc.mutation());
             }
 
+            if (doc.fileCoverage() != null) {
+                writeFileCoverage(g, doc.fileCoverage());
+            }
+
             g.writeEndObject();
         }
     }
@@ -186,6 +191,47 @@ public final class VerdictJsonWriter {
                 .thenComparing(MutatedMethod::methodName)
                 .thenComparing(MutatedMethod::methodDescription))
             .toList();
+    }
+
+    /** {@code fileCoverage} is entirely opt-in (Plan.md Faz 1): only written when {@code --file-coverage} was set. */
+    private static void writeFileCoverage(JsonGenerator g, FileCoverageBlock block) throws IOException {
+        g.writeObjectFieldStart("fileCoverage");
+        g.writeArrayFieldStart("files");
+        List<FileCoverageEntry> sorted = block.files().stream()
+            .sorted(Comparator.comparing(FileCoverageEntry::module, Comparator.nullsFirst(Comparator.naturalOrder()))
+                .thenComparing(FileCoverageEntry::path))
+            .toList();
+        for (FileCoverageEntry entry : sorted) {
+            writeFileCoverageEntry(g, entry);
+        }
+        g.writeEndArray();
+        g.writeArrayFieldStart("excluded");
+        for (String path : block.excluded().stream().sorted().toList()) {
+            g.writeString(path);
+        }
+        g.writeEndArray();
+        g.writeEndObject();
+    }
+
+    private static void writeFileCoverageEntry(JsonGenerator g, FileCoverageEntry entry) throws IOException {
+        g.writeStartObject();
+        g.writeStringField(FIELD_MODULE, entry.module());
+        g.writeStringField("path", entry.path());
+        g.writeObjectFieldStart("metrics");
+        writeMetricSet(g, entry.metrics());
+        g.writeEndObject();
+        g.writeArrayFieldStart("lines");
+        for (LineCoverage line : entry.lines().stream().sorted(Comparator.comparingInt(LineCoverage::number)).toList()) {
+            g.writeStartArray();
+            g.writeNumber(line.number());
+            g.writeNumber(line.missedInstructions());
+            g.writeNumber(line.coveredInstructions());
+            g.writeNumber(line.missedBranches());
+            g.writeNumber(line.coveredBranches());
+            g.writeEndArray();
+        }
+        g.writeEndArray();
+        g.writeEndObject();
     }
 
     private static void writeInputs(JsonGenerator g, VerdictDocument doc) throws IOException {

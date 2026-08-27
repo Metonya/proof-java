@@ -50,6 +50,19 @@ Zero or more than one of these is rejected with exit `2` before any JSON is writ
 A repeated id in `--module`/`--source-roots`/`--test-roots` is a rejected
 invocation, never a silent last-one-wins.
 
+## `fileCoverage` — optional, whole-repo line coverage
+
+| Flag | Purpose | Default |
+|---|---|---|
+| `--file-coverage` | Emits the `fileCoverage` block: every filtered source file's own line-level `[line, mi, ci, mb, cb]` tuples (same field order as JaCoCo's own `<line>` counters) plus a per-file `MetricSet`, and the `excluded` path list. Off by default — can add several MB on a large report | off |
+
+Built for IDE surfaces (gutter annotations): every metric is computed by the
+same `MetricsEngine` `coverage.overall` uses, scoped to one file — an IDE
+never recomputes a percentage from raw line tuples itself (hard rule 4).
+`excluded` distinguishes an explicitly-excluded file from one that is simply
+absent from the report, so a gutter can render "excluded" rather than
+"unknown" or "uncovered" (hard rule 3a).
+
 ## L0 — static oracle critic
 
 Always runs; tuned by:
@@ -122,7 +135,7 @@ from a mutation phase that is merely slow (D-64).
 - **JSON** (`--out`): schema/tool version, `complete` flag, incomplete
   reasons, `overall` metric set, `newCode` metric set (diff modes only),
   changed-file classification, `findings`, `warnings`, and `perTest`/
-  `mutation` blocks when those layers are enabled.
+  `mutation`/`fileCoverage` blocks when those are enabled.
 - **Text** (stdout): the same document rendered for humans, followed by
   `verdict written to <out>`.
 - Every percentage names its metric mode: `jacoco-line`, `strict-line`,

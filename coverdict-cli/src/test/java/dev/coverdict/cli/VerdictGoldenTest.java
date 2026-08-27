@@ -102,6 +102,24 @@ class VerdictGoldenTest {
         compareOrRegenerate("base-ref.json", out);
     }
 
+    @Test
+    void noVcsFileCoverageRunMatchesTheCheckedInGoldenByteForByte() throws IOException {
+        Files.createDirectories(repoRoot.resolve("src/main/java/com/example"));
+        Files.writeString(repoRoot.resolve("src/main/java/com/example/Calc.java"), calcJavaBody());
+        Files.createDirectories(repoRoot.resolve("src/test/java/com/example"));
+        Files.writeString(repoRoot.resolve("src/test/java/com/example/CalcTest.java"), noOracleTestSource());
+        copyJacocoFixtureIntoRepo(repoRoot);
+
+        Path out = outputDir.resolve("verdict.json");
+        int exitCode = run("analyze", "--no-vcs", "--file-coverage",
+            "--repo", repoRoot.toString(),
+            "--report", "coverage.xml",
+            "--out", out.toString());
+        assertEquals(0, exitCode);
+
+        compareOrRegenerate("file-coverage.json", out);
+    }
+
     /**
      * A second, independent run to prove the determinism claim itself, not
      * just that the checked-in golden happens to match one run.

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "0.1.0",
+  "tool": { "name": "coverdict", "version": "0.1.0" },
+  "analysis": { "status": "complete", "exitCode": 0, "incompleteReasons": [] },
+  "inputs": {
+    "diffMode": "no-vcs",
+    "findingsScope": "all",
+    "languageLevel": 17,
+    "encoding": "UTF-8",
+    "exclusions": ["**/generated/**"],
+    "modules": [
+      {
+        "id": "core",
+        "root": ".",
+        "sourceRoots": ["src/main/java"],
+        "testRoots": ["src/test/java"],
+        "reports": [
+          { "path": "target/site/jacoco/jacoco.xml", "freshness": "unverified" }
+        ]
+      }
+    ]
+  },
+  "coverage": {
+    "overall": {
+      "jacoco-line": { "numeratorName": "coveredLines", "numerator": 2, "denominatorName": "executableLines", "denominator": 3, "percent": 66.7 },
+      "strict-line": { "numeratorName": "fullyCoveredLines", "numerator": 1, "denominatorName": "executableLines", "denominator": 3, "percent": 33.3 },
+      "sonar-compatible": { "numeratorName": "coveredBranchesPlusCoveredLines", "numerator": 4, "denominatorName": "branchesPlusExecutableLines", "denominator": 6, "percent": 66.7 }
+    },
+    "newCode": { "status": "unavailable_no_vcs" }
+  },
+  "changedFiles": [],
+  "findings": [],
+  "warnings": [],
+  "fileCoverage": {
+    "files": [
+      {
+        "module": "core",
+        "path": "src/main/java/com/demo/core/IbanValidator.java",
+        "metrics": {
+          "jacoco-line": { "numeratorName": "coveredLines", "numerator": 2, "denominatorName": "executableLines", "denominator": 3, "percent": 66.7 },
+          "strict-line": { "numeratorName": "fullyCoveredLines", "numerator": 1, "denominatorName": "executableLines", "denominator": 3, "percent": 33.3 },
+          "sonar-compatible": { "numeratorName": "coveredBranchesPlusCoveredLines", "numerator": 4, "denominatorName": "branchesPlusExecutableLines", "denominator": 6, "percent": 66.7 }
+        },
+        "lines": [
+          [14, 0, 3, 0, 0],
+          [15, 4, 2, 0, 2],
+          [16, 2, 0, 1, 0]
+        ]
+      }
+    ],
+    "excluded": ["src/main/java/com/demo/core/generated/Codec.java"]
+  }
+}

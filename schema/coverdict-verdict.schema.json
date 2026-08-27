@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://coverdict.dev/schema/coverdict-verdict/0.1.0",
   "title": "coverdict verdict",
-  "description": "Output contract of the coverdict CLI (experimental during 0.x, D-01). Deterministic: no timestamps or machine-local absolute paths; two clean runs on the same inputs are byte-identical. Ordering rules (all lexicographic by UTF-8 code point unless stated): inputs.modules by id; changedFiles by (module, path); findings by (path, startLine, rule, fingerprint); warnings and analysis.incompleteReasons by (code, path, message); perTest.modules by id; perTest entries and ambient by (className, methodName); lines by line ascending; tests lexicographic; mutation.modules by id; mutation methods by (className, methodName, methodDescription); mutants by (line, mutator, status); killingTests lexicographic. All paths are repo-relative with forward slashes. Percentages are rounded half-up to one decimal.",
+  "description": "Output contract of the coverdict CLI (experimental during 0.x, D-01). Deterministic: no timestamps or machine-local absolute paths; two clean runs on the same inputs are byte-identical. Ordering rules (all lexicographic by UTF-8 code point unless stated): inputs.modules by id; changedFiles by (module, path); findings by (path, startLine, rule, fingerprint); warnings and analysis.incompleteReasons by (code, path, message); perTest.modules by id; perTest entries and ambient by (className, methodName); lines by line ascending; tests lexicographic; mutation.modules by id; mutation methods by (className, methodName, methodDescription); mutants by (line, mutator, status); killingTests lexicographic; fileCoverage.files by (module, path); fileCoverage.files[].lines by line ascending; fileCoverage.excluded lexicographic. All paths are repo-relative with forward slashes. Percentages are rounded half-up to one decimal.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -246,6 +246,30 @@
         }
       },
       "description": "Opt-in L3 evidence (--mutation-report, D-56/M5): present only when the flag was set, absent (never null) otherwise. Mutants come from PIT's own RETURNS+VOID_METHOD_CALLS gregor mutators, a gregor approximation of Descartes' extreme mutation (Descartes itself is never a dependency, hard rule 9). Never a finding source on its own - COVERAGE_EQUIVALENT_CANDIDATE requires L0+L2+L3 together (D-46)."
+    },
+    "fileCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "files",
+        "excluded"
+      ],
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/fileCoverageEntry"
+          }
+        },
+        "excluded": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          },
+          "description": "Repo-relative paths ExclusionFilter removed from the filtered dataset - shown as explicitly excluded (hard rule 3a), never as unknown or uncovered."
+        }
+      },
+      "description": "Opt-in, whole-repo, line-level coverage of every filtered source file (--file-coverage, IDE surface Plan.md Faz 1): present only when the flag was set, absent (never null) otherwise. Every metric here is the same MetricsEngine output coverage.overall is computed from, scoped to one file - never a client-side recomputation."
     }
   },
   "$defs": {
@@ -722,6 +746,64 @@
             "minLength": 1
           },
           "description": "Every test that killed this mutant (setFullMutationMatrix(true)), not just the first - M4's redundancy gate needs the full kill set. Empty for a SURVIVED or NO_COVERAGE mutant."
+        }
+      }
+    },
+    "fileCoverageEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module",
+        "path",
+        "metrics",
+        "lines"
+      ],
+      "properties": {
+        "module": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "metrics": {
+          "$ref": "#/$defs/metricSet"
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Source line number"
+              },
+              {
+                "type": "integer",
+                "minimum": 0,
+                "description": "missedInstructions"
+              },
+              {
+                "type": "integer",
+                "minimum": 0,
+                "description": "coveredInstructions"
+              },
+              {
+                "type": "integer",
+                "minimum": 0,
+                "description": "missedBranches"
+              },
+              {
+                "type": "integer",
+                "minimum": 0,
+                "description": "coveredBranches"
+              }
+            ],
+            "minItems": 5,
+            "maxItems": 5
+          },
+          "description": "Compact [line, mi, ci, mb, cb] tuples, ascending by line - same field order and meaning as JacocoXmlParser's LineCoverage (D-04's jacoco-line/strict-line membership, D-19)."
         }
       }
     }

@@ -28,18 +28,29 @@ public final class ExclusionFilter {
     private ExclusionFilter() {
     }
 
+    /** Kept and excluded paths in one pass - {@code --file-coverage} (Plan.md Faz 1) needs both; {@link #apply} is kept for every caller that only needs the kept set. */
+    public record Partition(List<ResolvedSourceFile> kept, List<String> excludedPaths) {
+    }
+
     public static List<ResolvedSourceFile> apply(List<ResolvedSourceFile> files, List<String> globs) {
+        return partition(files, globs).kept();
+    }
+
+    public static Partition partition(List<ResolvedSourceFile> files, List<String> globs) {
         if (globs.isEmpty()) {
-            return files;
+            return new Partition(files, List.of());
         }
         List<Pattern> patterns = compile(globs);
         List<ResolvedSourceFile> kept = new ArrayList<>();
+        List<String> excludedPaths = new ArrayList<>();
         for (ResolvedSourceFile file : files) {
-            if (!matchesAny(file.repoRelativePath(), patterns)) {
+            if (matchesAny(file.repoRelativePath(), patterns)) {
+                excludedPaths.add(file.repoRelativePath());
+            } else {
                 kept.add(file);
             }
         }
-        return kept;
+        return new Partition(kept, excludedPaths);
     }
 
     /** Compiles once so a caller checking many paths (e.g. the changed-file classifier) never recompiles per path. */

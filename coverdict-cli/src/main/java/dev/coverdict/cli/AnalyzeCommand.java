@@ -46,6 +46,8 @@ import dev.coverdict.analysis.subprocess.EvidenceDiagnostics;
 import dev.coverdict.config.ConfigException;
 import dev.coverdict.config.ConfigLoader;
 import dev.coverdict.config.CoverdictConfig;
+import dev.coverdict.analysis.report.FileCoverageBlock;
+import dev.coverdict.analysis.report.FileCoverageEntry;
 import dev.coverdict.analysis.report.ModuleInput;
 import dev.coverdict.analysis.report.NewCodeCoverage;
 import dev.coverdict.analysis.report.ReportInput;
@@ -142,6 +144,9 @@ class AnalyzeCommand implements Callable<Integer> {
 
     @Option(names = "--coverage-exclusions", description = "Comma-separated sonar.coverage.exclusions globs, one list for the whole run (D-05).")
     private String exclusionsArg;
+
+    @Option(names = "--file-coverage", description = "Emit the fileCoverage block: every filtered source file's own line-level coverage and per-file MetricSet, plus the excluded path list (Plan.md Faz 1). Opt-in - can add several MB on a large report.")
+    private boolean fileCoverage;
 
     @Option(names = "--findings-scope", defaultValue = FINDINGS_SCOPE_ALL,
         description = "Which test sources the L0 oracle rules scan: 'all' (default, every test source under every module's testRoots) or 'changed' (only test files touched by the diff; requires --uncommitted or --base).")
@@ -509,8 +514,10 @@ class AnalyzeCommand implements Callable<Integer> {
             .withTypeSolvers(classpath.solvers());
 
         BindingResult binding = new ModuleBinder(repoRoot).bind(evidencedModules, parsedReportsById);
-        List<ResolvedSourceFile> filtered = ExclusionFilter.apply(binding.resolvedFiles(), exclusions);
+        ExclusionFilter.Partition partition = ExclusionFilter.partition(binding.resolvedFiles(), exclusions);
+        List<ResolvedSourceFile> filtered = partition.kept();
         MetricSet overall = MetricsEngine.compute(filtered);
+        FileCoverageBlock fileCoverageBlock = fileCoverage ? buildFileCoverageBlock(partition) : null;
 
         List<ModuleInput> moduleInputs = evidencedModules.stream()
             .map(m -> new ModuleInput(m.id(), m.root(), m.sourceRoots(), m.testRoots(), reportInputsById.get(m.id())))
@@ -529,7 +536,8 @@ class AnalyzeCommand implements Callable<Integer> {
             noVcsWarnings.addAll(scan.warnings());
             return new VerdictDocument(version.schemaVersion(), version.version(), allReasons.isEmpty(), allReasons,
                 languageLevel, encoding, exclusions, moduleInputs, diffMode, findingsScopeOption, null, overall,
-                NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), scan.findings(), noVcsWarnings);
+                NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), scan.findings(), noVcsWarnings,
+                null, null, fileCoverageBlock);
         }
 
         // Diff-mode phase: a failure here does NOT discard the overall data
@@ -589,7 +597,7 @@ class AnalyzeCommand implements Callable<Integer> {
             return new VerdictDocument(version.schemaVersion(), version.version(), complete,
                 allIncompleteReasons, languageLevel, encoding, exclusions, moduleInputs,
                 diffMode, findingsScopeOption, diffResult.identity(), overall, NewCodeCoverage.available(newCode),
-                classification.changedFiles(), allFindings, allWarnings, perTest, mutation);
+                classification.changedFiles(), allFindings, allWarnings, perTest, mutation, fileCoverageBlock);
         } catch (AnalysisException e) {
             // findings-scope=all does not need the diff that just failed - real
             // oracle evidence is still worth reporting alongside the failure.
@@ -602,8 +610,23 @@ class AnalyzeCommand implements Callable<Integer> {
             return new VerdictDocument(version.schemaVersion(), version.version(), false,
                 allReasons, languageLevel, encoding, exclusions,
                 moduleInputs, diffMode, findingsScopeOption, null, overall, NewCodeCoverage.unavailable("unavailable_incomplete"),
-                List.of(), scan.findings(), warnings);
+                List.of(), scan.findings(), warnings, null, null, fileCoverageBlock);
         }
+    }
+
+    /**
+     * {@code --file-coverage}: one {@link FileCoverageEntry} per already-
+     * filtered file (same dataset {@code coverage.overall} is computed from,
+     * hard rule 4), each file's own {@link MetricSet} computed by the same
+     * {@link MetricsEngine} the headline numbers use - never a client-side
+     * recomputation (Plan.md Faz 1).
+     */
+    private static FileCoverageBlock buildFileCoverageBlock(ExclusionFilter.Partition partition) {
+        List<FileCoverageEntry> entries = partition.kept().stream()
+            .map(f -> new FileCoverageEntry(f.moduleId(), f.repoRelativePath(),
+                MetricsEngine.compute(List.of(f)), f.lines()))
+            .toList();
+        return new FileCoverageBlock(entries, partition.excludedPaths());
     }
 
     /**

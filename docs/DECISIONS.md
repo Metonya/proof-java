@@ -1575,6 +1575,33 @@ instead of absolute ones, reproducing the real WTA bug locally - it
 passes end to end (4 known L3 findings, non-empty L2 entries) only with
 this fix in place. `mvn verify` full green.
 
+**D-70 · `fileCoverage` is an opt-in block, one per-file `MetricSet` recomputed
+by the same `MetricsEngine`, never a client-side calculation** (2026-08-27)
+Plan.md's M6 (IDE surface) Faz 1: `changedFiles[].uncoveredNewRanges` is
+diff-scoped only, but `AnalyzeCommand`'s already-filtered `ResolvedSourceFile`
+list (post `ExclusionFilter`, pre-`MetricsEngine.compute`, hard rule 4) is the
+single dataset `coverage.overall` is built from - serializing it needs zero
+new analysis. `--file-coverage` (opt-in: assertj-scale payload measured at
++~2MB in Plan.md's research) emits `fileCoverage.files[]` (`module`, `path`,
+a per-file `MetricSet` computed by the same `MetricsEngine.compute` call
+`overall` uses - `Metric.percent()`'s `BigDecimal` half-up rounding is not
+float-safely reproducible in TypeScript, so an IDE must never recompute a
+percentage itself) and compact `[line, mi, ci, mb, cb]` tuples matching
+`LineCoverage`'s own field order, plus `fileCoverage.excluded` (repo-relative
+paths `ExclusionFilter` removed) so an IDE can render "excluded" rather than
+"unknown"/"uncovered" (hard rule 3a). `ExclusionFilter` gained `partition()`
+(returns kept+excluded together); `apply()` now delegates to it. Wired at
+all three `VerdictDocument` construction sites that have the filtered dataset
+in scope (no-vcs, diff-mode success, diff-mode's D-26 `AnalysisException`
+catch) - `incompleteDocument` (pre-binding failure) correctly has none to
+give, same as `overall` there. Schema addition only (new `fileCoverage`
+$defs, existing goldens unchanged) - `schema/examples/golden-file-coverage.json`
+and a third tool-output golden (`fixtures/verdicts/file-coverage.json`,
+`VerdictGoldenTest`) added; `validation/SHA256SUMS` updated for both plus a
+pre-existing drift found while touching it (`golden-per-test.json`/
+`golden-mutation.json` were never added after D-55/D-56, per the c4377d2
+precedent D-42 already named).
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

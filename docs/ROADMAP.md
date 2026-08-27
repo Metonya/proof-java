@@ -624,6 +624,19 @@ and the bug-repro workflow (shrink a real finding into a new scenario there).
   relative string, tripping the trap for the first time. Fixed with a
   shared `CanonicalPaths.canonicalize()` helper applied in
   `MutationDriver`/`PerTestDriver`/`ClasspathListFile`. See D-69.
+- **M6 (IDE surface) prep, not yet a declared milestone (D-01 gate) - Faz 0
+  and Faz 1 of `coverdict-corpus/Plan.md` done (2026-08-27).** Faz 0: real
+  `@types/vscode@1.134.0` `.d.ts` confirms `FileCoverage`/`StatementCoverage`/
+  `BranchCoverage`/`DeclarationCoverage` signatures match the plan's
+  assumptions (`FileCoverage.fromDetails()` static factory included); Cursor/
+  Windsurf's actual base VS Code version is still unmeasured (open risk 1,
+  needs a manual Help→About check, not automatable from this machine). Faz 1:
+  opt-in `--file-coverage` block shipped (D-70) - serializes the same
+  already-filtered per-file dataset `coverage.overall` is computed from, zero
+  new analysis, per-file `MetricSet` from the same `MetricsEngine`. Faz 2
+  (single-target mutation, `--mutation-target`) and Faz 3 (⛔ freeze v1 - D-01
+  gate, schema 1.0.0) are next; the `coverdict-vscode` repo itself does not
+  start until Faz 3 closes.
 - **Backlog:** standalone HTML · AI-assistant skill (agent reads verdict JSON,
   writes tests for gaps it names, reruns, interprets the result through
   coverdict again) · VS Code extension (inline per-line coverage gutter
