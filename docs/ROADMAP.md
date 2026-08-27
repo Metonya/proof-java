@@ -661,21 +661,37 @@ and the bug-repro workflow (shrink a real finding into a new scenario there).
     byte-matches the CLI's own stdout percent, same real run) and a manual
     run against coverdict-playground through the real command (7 real
     findings, 94.4% jacoco-line).
-  - **Faz 6 / F2 (gutter, done):** `fileCoverage.files[]` -> real
-    `vscode.FileCoverage`/`StatementCoverage`/`BranchCoverage` via a
-    `TestRun` (no test items needed). Native API existence is detected, not
-    assumed (`hasNativeCoverageApi()`), and `addCoverage` is wrapped in
-    try/catch so an unsupported fork degrades to a status-bar warning
-    instead of crashing - verified for real in a live Extension Host
-    (`coverageApi.test.ts`, on the current vscode-test 1.135.0 download;
-    the ^1.88.0 engine floor itself is still unverified against an old real
-    install, open risk 1). Excluded files get a distinct grey decoration -
-    the one state the native API has no concept of. Partial-line rendering
-    (`coverdict.gutter.partialLineMode`) is still an unvalidated bet on real
-    VS Code rendering (open risk 3) pending manual visual confirmation.
+  - **Faz 6 / F2 (gutter, done - confirmed working by the user, 2026-08-27):**
+    `fileCoverage.files[]` -> real `vscode.FileCoverage`/`StatementCoverage`/
+    `BranchCoverage` via a `TestRun` (no test items needed). Native API
+    existence is detected, not assumed (`hasNativeCoverageApi()`), and
+    `addCoverage` is wrapped in try/catch. Verified for real in a live
+    Extension Host (`coverageApi.test.ts`) and visually in coverdict-
+    playground: Explorer file-percentage badges and editor gutter marks both
+    render. Real branch data (JaCoCo's `mb`/`cb`) is exactly what makes
+    `sonar-compatible` read lower than `jacoco-line` (D-04's formula) -
+    confirmed against real playground data (`Calculator.java` lines 26/30/33,
+    the only ones with `mb>0`) - those lines are the same ones the gutter
+    already paints yellow, now labeled in the hover so it's self-explanatory.
+    Three metric modes (not just jacoco-line) now shown side by side; a new
+    `coverdict.coverageExclusions` setting passes `--coverage-exclusions`
+    through (same glob syntax as `sonar.coverage.exclusions`).
+  - **Faz 7 (fallback + F4 toggle, code done 2026-08-27, fork verification
+    still open):** `verdict/coverageMapping.ts`'s `classifyLine()` is the one
+    classification both the native path and a new decoration-based fallback
+    (`ui/decorationFallback.ts`, colored left border per line) render from -
+    "İki yol da özdeş durum üretiyor" holds by construction. `coverdict.
+    gutter.forceFallback` exercises the fallback without needing an old VS
+    Code build. `coverdict.toggleCoverageGutter` (F4) republishes or clears
+    the last run's data from `model/store` without re-scanning - the
+    decoration-path clear is a real, guaranteed VS Code API call; the
+    native-path clear (an empty `TestRun`) is unverified in a live host,
+    left as an open risk pending the user's manual check. ^1.88.0 engine
+    floor and both target forks (Cursor/Windsurf) remain unmeasured (open
+    risk 1) - neither installed on this machine.
   - Local SonarQube scans wired for the extension repo too (`sonar-scanner`
     CLI, `sonar.javascript.lcov.reportPaths` from a real `c8`-generated lcov
-    report) - 0 open findings after two review passes.
+    report) - 0 open findings after every review pass so far.
 - **Backlog:** standalone HTML · AI-assistant skill (agent reads verdict JSON,
   writes tests for gaps it names, reruns, interprets the result through
   coverdict again) · VS Code extension (inline per-line coverage gutter
