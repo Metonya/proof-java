@@ -19,6 +19,12 @@ repo root is used when present. Strict JSON, schema-validated (same schema
 discipline as the output, hard rule 7). No comments; entries that need
 rationale (suppressions) carry an explicit `reason` field instead.
 
+`modules` (D-66) carries the same binding `--module`/`--report`/
+`--per-test-classpath`/`--mutation-classpath` express on the command line -
+`coverdict doctor --write-config` generates it. All-or-nothing: a single
+`--module` on the command line makes this array invisible entirely, never
+partially merged with it.
+
 ## Repository and diff modes
 
 - `--repo <path>` — repository root. Default: the current working directory

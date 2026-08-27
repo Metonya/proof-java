@@ -1421,10 +1421,35 @@ SECURITY-POLICY.md #3) and reusing `ProcessOutputTail` (D-64) for output
 draining. This is a deliberate, narrow flex of "verdict layer, never own
 engines" (AGENTS.md): confined to this one opt-in command, which only ever
 asks Maven a question (never changes what it built), and `analyze` itself
-never shells to a build tool. Whether `doctor` should also write
-`coverdict.config.json` (so a rerun needs no flags at all) is left for a
-follow-up - `CoverdictConfig`/its schema do not carry module/report/
-classpath fields yet, a real gap this decision does not close.
+never shells to a build tool.
+
+**D-66 · `coverdict.config.json` can carry module/report/classpath
+bindings; `doctor --write-config` generates it** (2026-08-27)
+Closes the follow-up D-65 left open. `CoverdictConfig` gains a `modules`
+array (`id`, `root`, optional `sourceRoots`/`testRoots`, `report`,
+`perTestClasspath`, `mutationClasspath` - the same shape
+`--module`/`--report`/`--per-test-classpath`/`--mutation-classpath`
+express on the command line), validated by the hand-written `ConfigLoader`
+reader exactly like every other config key (D-40: no schema-validator
+dependency in the shipped jar) and by the checked-in JSON Schema, kept in
+agreement by `ConfigLoaderTest`'s existing accept/reject parity check.
+
+Precedence is all-or-nothing at the module-set level, the same rule
+`coverageExclusions` already uses: a single `--module` on the command line
+makes `config.modules()` invisible entirely, never partially merged with
+it - a user overriding one module via a flag should never have to wonder
+whether a different, forgotten config module is silently still in play.
+Per-module L2/L3 classpath *within* an already-config-sourced module set
+does merge, command line over config, since overriding one module's
+classpath without restating every other module's full binding is a
+reasonable thing to want (`AnalyzeCommand.mergeConfigThenCli`).
+
+`doctor --write-config` (`ConfigWriter`, hand-written JSON writer - same
+D-40 reasoning) writes only modules with no BLOCKER, mirroring the filter
+`DoctorReportRenderer`'s suggested command already applies. Verified end
+to end against coverdict's own repo: `doctor --write-config` followed by
+`analyze --no-vcs --repo .` with zero `--module`/`--report` flags produced
+a real, correct coverage number from the generated config alone.
 
 ## Rejected
 

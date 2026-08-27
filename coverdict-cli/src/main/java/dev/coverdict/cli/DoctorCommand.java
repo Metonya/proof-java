@@ -9,7 +9,9 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Spec;
 
+import dev.coverdict.config.ConfigLoader;
 import dev.coverdict.doctor.ClasspathFixer;
+import dev.coverdict.doctor.ConfigWriter;
 import dev.coverdict.doctor.DoctorDiagnostics;
 import dev.coverdict.doctor.DoctorReportRenderer;
 import dev.coverdict.doctor.MavenModule;
@@ -42,6 +44,9 @@ class DoctorCommand implements Callable<Integer> {
     @Option(names = "--fix", description = "Regenerate missing or empty L2/L3 classpath lists via a real 'mvn dependency:build-classpath' call.")
     private boolean fix;
 
+    @Option(names = "--write-config", description = "Write every usable module's binding to coverdict.config.json (D-66), so a rerun of 'analyze' needs no --module/--report flags at all.")
+    private boolean writeConfig;
+
     @Override
     public Integer call() {
         Path repoRoot = Path.of(repoOption != null ? repoOption : System.getProperty("user.dir"));
@@ -59,6 +64,10 @@ class DoctorCommand implements Callable<Integer> {
         List<ModuleDiagnosis> diagnoses = modules.stream()
             .map(m -> DoctorDiagnostics.diagnose(repoRoot, m))
             .toList();
+
+        if (writeConfig) {
+            writeConfigFile(repoRoot, diagnoses);
+        }
 
         // System.exit() (Main.main) can otherwise cut the process before an
         // autoFlush PrintWriter's buffer is drained - found live while
@@ -88,6 +97,17 @@ class DoctorCommand implements Callable<Integer> {
             if (!result.ok()) {
                 printErr("coverdict: doctor: '" + module.id() + "' - " + result.problem());
             }
+        }
+    }
+
+    private void writeConfigFile(Path repoRoot, List<ModuleDiagnosis> diagnoses) {
+        Path target = repoRoot.resolve(ConfigLoader.DEFAULT_FILE_NAME);
+        boolean wrote = ConfigWriter.write(diagnoses, target);
+        if (wrote) {
+            printErr("coverdict: doctor: wrote " + ConfigLoader.DEFAULT_FILE_NAME);
+        } else {
+            printErr("coverdict: doctor: no module has a usable report yet - " + ConfigLoader.DEFAULT_FILE_NAME
+                + " not written");
         }
     }
 

@@ -119,6 +119,6 @@ class CustomOraclesTest {
 
     private static dev.coverdict.config.CoverdictConfig config(String... customOracles) {
         return new dev.coverdict.config.CoverdictConfig(
-            null, null, null, null, List.of(customOracles), List.of());
+            null, null, null, null, List.of(customOracles), List.of(), List.of());
     }
 }

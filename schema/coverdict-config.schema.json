@@ -40,6 +40,58 @@
         "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)*#[A-Za-z0-9_$*]+$"
       }
     },
+    "modules": {
+      "description": "Module/report/classpath bindings (D-66), the same shape --module/--report/--per-test-classpath/--mutation-classpath express on the command line - 'coverdict doctor --write-config' generates this. Applies only when the command line declares zero --module flags; a single --module on the command line ignores this array entirely rather than partially merging with it (same all-or-nothing rule as coverageExclusions).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "root"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "root": {
+            "description": "Repo-relative, forward-slash. '.' for a single-module repo.",
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceRoots": {
+            "description": "Default: <root>/src/main/java.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "testRoots": {
+            "description": "Default: <root>/src/test/java.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "report": {
+            "description": "Repo-relative path to this module's JaCoCo XML. A module with none is excluded from the analyzed set (MODULE_WITHOUT_REPORT), same as an unbound --module.",
+            "type": "string",
+            "minLength": 1
+          },
+          "perTestClasspath": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mutationClasspath": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
     "suppressions": {
       "description": "Suppressed findings are not listed but are counted in a SUPPRESSED_FINDINGS warning, so they stay visible (hard rule 3a).",
       "type": "array",

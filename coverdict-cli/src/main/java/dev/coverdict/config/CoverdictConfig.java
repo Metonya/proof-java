@@ -14,6 +14,14 @@ import java.util.List;
  *                           "no exclusions" and is NOT the same as unset)
  * @param findingsScope      null when unset
  * @param customOracles      never null; empty when unset (D-24 allowlist extension)
+ * @param modules            never null; empty when unset (D-66 - the same
+ *                           binding {@code --module}/{@code --report}/
+ *                           {@code --per-test-classpath}/{@code
+ *                           --mutation-classpath} express on the command
+ *                           line). Applies only when the command line
+ *                           declares zero {@code --module} flags - a single
+ *                           one ignores this array entirely rather than
+ *                           partially merging with it.
  * @param suppressions       never null; empty when unset
  */
 public record CoverdictConfig(
@@ -22,10 +30,11 @@ public record CoverdictConfig(
     List<String> coverageExclusions,
     String findingsScope,
     List<String> customOracles,
+    List<ModuleConfig> modules,
     List<Suppression> suppressions) {
 
     public static CoverdictConfig empty() {
-        return new CoverdictConfig(null, null, null, null, List.of(), List.of());
+        return new CoverdictConfig(null, null, null, null, List.of(), List.of(), List.of());
     }
 
     /**
@@ -36,5 +45,29 @@ public record CoverdictConfig(
      *                          set out to prevent
      */
     public record Suppression(String rule, String pathGlob, String testMethodPattern, String reason) {
+    }
+
+    /**
+     * One {@code --module <id>=<root>} binding plus its report and L2/L3
+     * classpath, in one place - the shape {@code coverdict doctor
+     * --write-config} generates (D-65/D-66).
+     *
+     * @param sourceRoots       null means "not specified in config" -
+     *                          {@code AnalyzeCommand} applies the same
+     *                          {@code <root>/src/main/java} default it
+     *                          would for an equivalent {@code --module}
+     *                          with no {@code --source-roots}
+     * @param testRoots         same null-means-default rule as sourceRoots
+     * @param report            null when this module has no bound report
+     *                          yet (excluded from the analyzed set with
+     *                          {@code MODULE_WITHOUT_REPORT}, same as an
+     *                          unbound {@code --module})
+     * @param perTestClasspath  null when L2 evidence is not configured for
+     *                          this module
+     * @param mutationClasspath null when L3 evidence is not configured for
+     *                          this module
+     */
+    public record ModuleConfig(String id, String root, List<String> sourceRoots, List<String> testRoots,
+                                String report, String perTestClasspath, String mutationClasspath) {
     }
 }

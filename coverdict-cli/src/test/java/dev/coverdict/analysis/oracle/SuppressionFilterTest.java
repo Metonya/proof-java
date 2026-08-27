@@ -55,7 +55,7 @@ class SuppressionFilterTest {
 
     private static OracleScanOptions with(CoverdictConfig.Suppression... suppressions) {
         return OracleScanOptions.defaults().withConfig(new CoverdictConfig(
-            null, null, null, null, List.of(), List.of(suppressions)));
+            null, null, null, null, List.of(), List.of(), List.of(suppressions)));
     }
 
     private static CoverdictConfig.Suppression suppression(String rule, String pathGlob, String methodPattern) {

@@ -89,6 +89,76 @@ class ConfigLoaderTest {
         assertNull(config.suppressions().get(0).testMethodPattern(), "optional field stays null when absent");
     }
 
+    // --- modules (D-66): the config-file shape of --module/--report/--per-test-classpath/--mutation-classpath ---
+
+    @Test
+    void modulesRoundTripEveryField() throws IOException {
+        writeConfig("""
+            {
+              "modules": [
+                {"id": "app", "root": "app", "report": "app/target/site/jacoco/jacoco.xml"},
+                {"id": "data", "root": "data", "sourceRoots": ["data/src/main/java"],
+                 "testRoots": ["data/src/test/java"], "report": "data/target/site/jacoco/jacoco.xml",
+                 "perTestClasspath": "data/target/coverdict-per-test-classpath.txt",
+                 "mutationClasspath": "data/target/coverdict-mutation-classpath.txt"}
+              ]
+            }
+            """);
+
+        CoverdictConfig config = ConfigLoader.load(repoRoot, null);
+
+        assertEquals(2, config.modules().size());
+        CoverdictConfig.ModuleConfig app = config.modules().get(0);
+        assertEquals("app", app.id());
+        assertEquals("app", app.root());
+        assertNull(app.sourceRoots(), "unset stays null, distinct from an authored empty list");
+        assertEquals("app/target/site/jacoco/jacoco.xml", app.report());
+        assertNull(app.perTestClasspath());
+
+        CoverdictConfig.ModuleConfig data = config.modules().get(1);
+        assertEquals(List.of("data/src/main/java"), data.sourceRoots());
+        assertEquals("data/target/coverdict-per-test-classpath.txt", data.perTestClasspath());
+        assertEquals("data/target/coverdict-mutation-classpath.txt", data.mutationClasspath());
+    }
+
+    @Test
+    void aModuleWithNoReportIsAllowedInConfig() throws IOException {
+        // Mirrors an unbound --module: the module is simply excluded from
+        // the analyzed set (MODULE_WITHOUT_REPORT) rather than rejected here.
+        writeConfig("{\"modules\": [{\"id\": \"app\", \"root\": \"app\"}]}");
+
+        CoverdictConfig config = ConfigLoader.load(repoRoot, null);
+
+        assertNull(config.modules().get(0).report());
+    }
+
+    @Test
+    void aDuplicateModuleIdIsRejected() throws IOException {
+        writeConfig("{\"modules\": [{\"id\": \"app\", \"root\": \"a\"}, {\"id\": \"app\", \"root\": \"b\"}]}");
+
+        ConfigException e = assertThrows(ConfigException.class, () -> ConfigLoader.load(repoRoot, null));
+
+        assertTrue(e.getMessage().contains("Duplicate module id 'app'"), e.getMessage());
+    }
+
+    @Test
+    void aModuleMissingRootIsRejected() throws IOException {
+        writeConfig("{\"modules\": [{\"id\": \"app\"}]}");
+
+        ConfigException e = assertThrows(ConfigException.class, () -> ConfigLoader.load(repoRoot, null));
+
+        assertTrue(e.getMessage().contains("'id' and 'root'"), e.getMessage());
+    }
+
+    @Test
+    void anUnknownKeyInsideAModuleIsRejected() throws IOException {
+        writeConfig("{\"modules\": [{\"id\": \"app\", \"root\": \"app\", \"typoRoot\": \"x\"}]}");
+
+        ConfigException e = assertThrows(ConfigException.class, () -> ConfigLoader.load(repoRoot, null));
+
+        assertTrue(e.getMessage().contains("typoRoot"), e.getMessage());
+    }
+
     // --- strictness: each of these would otherwise be a silent misconfiguration ---
 
     @Test
@@ -163,14 +233,17 @@ class ConfigLoaderTest {
             "{\"coverageExclusions\": []}",
             "{\"findingsScope\": \"changed\"}",
             "{\"customOracles\": [\"com.example.MoreAsserts#assert*\"]}",
-            "{\"suppressions\": [{\"rule\": \"NULL_CHECK_ONLY\", \"pathGlob\": \"**\", \"reason\": \"r\"}]}");
+            "{\"suppressions\": [{\"rule\": \"NULL_CHECK_ONLY\", \"pathGlob\": \"**\", \"reason\": \"r\"}]}",
+            "{\"modules\": [{\"id\": \"app\", \"root\": \"app\", \"report\": \"app/jacoco.xml\"}]}");
         List<String> invalid = List.of(
             "{\"supressions\": []}",
             "{\"languageLevel\": \"17\"}",
             "{\"findingsScope\": \"everything\"}",
             "{\"customOracles\": [\"NoHashHere\"]}",
             "{\"suppressions\": [{\"rule\": \"NULL_CHECK_ONLY\", \"pathGlob\": \"**\"}]}",
-            "{\"suppressions\": [{\"rule\": \"NOT_A_RULE\", \"pathGlob\": \"**\", \"reason\": \"r\"}]}");
+            "{\"suppressions\": [{\"rule\": \"NOT_A_RULE\", \"pathGlob\": \"**\", \"reason\": \"r\"}]}",
+            "{\"modules\": [{\"id\": \"app\"}]}",
+            "{\"modules\": [{\"id\": \"app\", \"root\": \"app\", \"typoRoot\": \"x\"}]}");
 
         for (String json : valid) {
             assertTrue(schema.validate(mapper.readTree(json)).isEmpty(), "schema should accept: " + json);

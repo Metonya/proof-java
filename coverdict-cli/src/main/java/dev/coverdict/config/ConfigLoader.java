@@ -95,6 +95,7 @@ public final class ConfigLoader {
         List<String> coverageExclusions = null;
         String findingsScope = null;
         List<String> customOracles = List.of();
+        List<CoverdictConfig.ModuleConfig> modules = List.of();
         List<CoverdictConfig.Suppression> suppressions = List.of();
 
         try (JsonParser p = factory.createParser(new String(bytes, StandardCharsets.UTF_8))) {
@@ -114,10 +115,11 @@ public final class ConfigLoader {
                     case "coverageExclusions" -> coverageExclusions = stringArray(p, key);
                     case "findingsScope" -> findingsScope = enumValue(p, key, "all", "changed");
                     case "customOracles" -> customOracles = customOracleArray(p);
+                    case "modules" -> modules = moduleConfigArray(p);
                     case "suppressions" -> suppressions = suppressionArray(p);
                     default -> throw new ConfigException("Unknown config key '" + key
                         + "'. Known keys: languageLevel, encoding, coverageExclusions, findingsScope, "
-                        + "customOracles, suppressions.");
+                        + "customOracles, modules, suppressions.");
                 }
             }
         } catch (IOException e) {
@@ -125,7 +127,7 @@ public final class ConfigLoader {
         }
 
         return new CoverdictConfig(languageLevel, encoding, coverageExclusions, findingsScope,
-            customOracles, suppressions);
+            customOracles, modules, suppressions);
     }
 
     private static int intValue(JsonParser p, String key) throws IOException {
@@ -192,6 +194,57 @@ public final class ConfigLoader {
                 + String.join(", ", new java.util.TreeSet<>(RuleIds.ALL)) + ".");
         }
         return value;
+    }
+
+    /** D-66: the config-file shape of a {@code --module}/{@code --report}/{@code --per-test-classpath}/{@code --mutation-classpath} binding. */
+    private static List<CoverdictConfig.ModuleConfig> moduleConfigArray(JsonParser p) throws IOException {
+        if (p.currentToken() != JsonToken.START_ARRAY) {
+            throw new ConfigException("Config key 'modules' must be an array of objects.");
+        }
+        List<CoverdictConfig.ModuleConfig> result = new ArrayList<>();
+        Set<String> ids = new LinkedHashSet<>();
+        while (p.nextToken() != JsonToken.END_ARRAY) {
+            CoverdictConfig.ModuleConfig module = oneModuleConfig(p);
+            if (!ids.add(module.id())) {
+                throw new ConfigException("Duplicate module id '" + module.id()
+                    + "' in 'modules' - each id may be declared at most once (same rule as --module on the command line).");
+            }
+            result.add(module);
+        }
+        return List.copyOf(result);
+    }
+
+    private static CoverdictConfig.ModuleConfig oneModuleConfig(JsonParser p) throws IOException {
+        if (p.currentToken() != JsonToken.START_OBJECT) {
+            throw new ConfigException("Config key 'modules' must contain only objects.");
+        }
+        String id = null;
+        String root = null;
+        List<String> sourceRoots = null;
+        List<String> testRoots = null;
+        String report = null;
+        String perTestClasspath = null;
+        String mutationClasspath = null;
+        while (p.nextToken() != JsonToken.END_OBJECT) {
+            String key = p.currentName();
+            p.nextToken();
+            switch (key) {
+                case "id" -> id = stringValue(p, "modules.id");
+                case "root" -> root = stringValue(p, "modules.root");
+                case "sourceRoots" -> sourceRoots = stringArray(p, "modules.sourceRoots");
+                case "testRoots" -> testRoots = stringArray(p, "modules.testRoots");
+                case "report" -> report = stringValue(p, "modules.report");
+                case "perTestClasspath" -> perTestClasspath = stringValue(p, "modules.perTestClasspath");
+                case "mutationClasspath" -> mutationClasspath = stringValue(p, "modules.mutationClasspath");
+                default -> throw new ConfigException("Unknown key '" + key + "' in a modules entry. Known keys: "
+                    + "id, root, sourceRoots, testRoots, report, perTestClasspath, mutationClasspath.");
+            }
+        }
+        if (id == null || root == null) {
+            throw new ConfigException("Every modules entry needs 'id' and 'root'.");
+        }
+        return new CoverdictConfig.ModuleConfig(id, root, sourceRoots, testRoots, report, perTestClasspath,
+            mutationClasspath);
     }
 
     private static List<CoverdictConfig.Suppression> suppressionArray(JsonParser p) throws IOException {

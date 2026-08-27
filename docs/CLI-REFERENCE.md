@@ -149,9 +149,16 @@ Produces all of the above plus a `mutation` evidence block and any
 ## `doctor` — diagnose a Maven repo before `analyze` runs
 
 ```bash
-java -jar coverdict.jar doctor --repo .          # read-only: checks + a suggested command
-java -jar coverdict.jar doctor --repo . --fix    # also regenerates broken L2/L3 classpath lists
+java -jar coverdict.jar doctor --repo .                  # read-only: checks + a suggested command
+java -jar coverdict.jar doctor --repo . --fix            # also regenerates broken L2/L3 classpath lists
+java -jar coverdict.jar doctor --repo . --write-config   # writes coverdict.config.json (D-66)
 ```
+
+`--write-config` writes every usable module's `id`/`root`/`report`/
+`perTestClasspath`/`mutationClasspath` to `coverdict.config.json`'s
+`modules` array - after that, `analyze` needs no `--module`/`--report`
+flags at all (command-line `--module` still overrides the config's
+`modules` entirely if given, never a partial merge).
 
 Walks the Maven reactor and checks, per module: source/test roots, compiled
 output, JaCoCo report presence *and freshness* (older than the newest
