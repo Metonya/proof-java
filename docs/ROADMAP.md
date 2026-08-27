@@ -676,19 +676,42 @@ and the bug-repro workflow (shrink a real finding into a new scenario there).
     Three metric modes (not just jacoco-line) now shown side by side; a new
     `coverdict.coverageExclusions` setting passes `--coverage-exclusions`
     through (same glob syntax as `sonar.coverage.exclusions`).
-  - **Faz 7 (fallback + F4 toggle, code done 2026-08-27, fork verification
-    still open):** `verdict/coverageMapping.ts`'s `classifyLine()` is the one
-    classification both the native path and a new decoration-based fallback
-    (`ui/decorationFallback.ts`, colored left border per line) render from -
-    "İki yol da özdeş durum üretiyor" holds by construction. `coverdict.
-    gutter.forceFallback` exercises the fallback without needing an old VS
-    Code build. `coverdict.toggleCoverageGutter` (F4) republishes or clears
-    the last run's data from `model/store` without re-scanning - the
-    decoration-path clear is a real, guaranteed VS Code API call; the
-    native-path clear (an empty `TestRun`) is unverified in a live host,
-    left as an open risk pending the user's manual check. ^1.88.0 engine
-    floor and both target forks (Cursor/Windsurf) remain unmeasured (open
-    risk 1) - neither installed on this machine.
+  - **Faz 7 (fallback + F4 toggle, done 2026-08-27):** `verdict/
+    coverageMapping.ts`'s `classifyLine()` is the one classification both
+    the native path and a decoration-based fallback (`ui/decorationFallback
+    .ts`, colored left border per line) render from - "İki yol da özdeş
+    durum üretiyor" holds by construction. `coverdict.gutter.forceFallback`
+    exercises the fallback without needing an old VS Code build.
+    `coverdict.toggleCoverageGutter` (F4) republishes or clears the last
+    run's data without re-scanning. The native-path clear was a real,
+    confirmed bug, not just an open risk: publishing an empty `TestRun`
+    does NOT clear a prior run's Explorer file-percentage badges - the user
+    caught this by hand. Fixed by disposing and rebuilding the whole
+    `TestController` (`resetCoverageController`), the only mechanism VS
+    Code actually offers. ^1.88.0 engine floor and both target forks
+    (Cursor/Windsurf) remain unmeasured (open risk 1) - neither installed
+    on this machine.
+  - **Faz 8 / F3 (line->tests panel, done 2026-08-27):** `coverdict.
+    analyzePerTest` runs a diff-mode scan with `--per-test-report` (still
+    paints the gutter, one CLI call); `coverdict.showLineTests` opens a
+    webview showing, per line of the active file, which tests cover it.
+    `model/lineIndex.ts` (`testsForClass`) and `verdict/testIdentity.ts`
+    (ported from coverdict-cli's `TestIdentity.java`) are both pure.
+    Verified against Plan.md's own completion criterion with a real
+    `--per-test-report` run against coverdict-playground: real perTest
+    data parsed, `testsForClass` found `Calculator`'s real lines, and
+    `testIdentity` correctly handled a real-world id shape neither the
+    Java original's doc comment nor this port's own tests anticipated (PIT
+    prefixed the JUnit5 `UniqueId` with a bare class name - the port's
+    regex still found `[class:]`/`[method:]` anywhere in the string and
+    resolved it correctly).
+  - Also fixed the same session: `coverdict.coverageExclusions` setting
+    (passes `--coverage-exclusions`, Sonar-glob syntax), all three metric
+    modes shown (not just jacoco-line - `sonar-compatible` reading lower
+    was traced to real evidence: coverdict-playground's `Calculator.java`
+    lines 26/30/33, its only lines with a real missed JaCoCo branch), and
+    `verdict-current.json` is read back on activation so a window reload no
+    longer forces a fresh CLI run just to see the last result again.
   - Local SonarQube scans wired for the extension repo too (`sonar-scanner`
     CLI, `sonar.javascript.lcov.reportPaths` from a real `c8`-generated lcov
     report) - 0 open findings after every review pass so far.
