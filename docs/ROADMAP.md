@@ -548,17 +548,40 @@ and the bug-repro workflow (shrink a real finding into a new scenario there).
   (`PlaygroundMutationIT`), not stubbed. Exit-code semantics were
   deliberately left unchanged - see the WTA dogfood note below for what
   is still open.
-- **WTA dogfood, next round pending:** D-64 is diagnostics only, not a fix.
-  Still unexplained: why `service` (219 mapped files, root-commit-as-diff)
-  never finished a 1800s mutation budget - is the counter stuck at 0
-  (never reached the mutation phase) or merely slow; why `grpc`'s coverage
-  minion died with `UNKNOWN_ERROR` (bytecode/JDK mismatch was ruled out by
-  the user directly - `javap` showed major version 65 against a running
-  JDK 21.0.2); and why `app`/`data` per-test evidence resolved to `entries:
-  []` despite the same target classes producing real mutants under
-  `--mutation-report` (proves the classes are covered - the gap is in L2's
-  own coverage-to-line resolution, not WTA's tests). Re-run with the D-64
-  jar and `--diagnostics-dir` before designing any of these three fixes.
+- **WTA dogfood, round 3 (2026-08-27) - D-64's progress counter confirmed
+  `service` is genuinely working, just slow, not stuck.** With
+  `--diagnostics-dir` in place: `service`'s counter sat at 0/219 for the
+  first ~5 minutes (JVM start + first-class cost), then climbed steadily -
+  23/219 at 20 minutes, 64/219 at the 1800s budget cutoff (`incomplete`,
+  exit 3, correctly reported this time). Per-class rate improved sharply
+  over the run (~40s/class in the first 15 minutes down to ~15s/class in
+  the last 10), consistent with Spring context caching (`@SpringBootTest`
+  pays its context-startup cost once, subsequent test classes reuse the
+  cached context) rather than a runaway/exploding cost - a materially
+  different shape from D-59's actual bug. Extrapolating the late-run rate,
+  a full pass over 219 classes needs on the order of 70-90 minutes, not
+  30 - the next round re-runs with `--mutation-timeout 7200` to confirm it
+  actually completes rather than degrading further. Checked in code while
+  answering: no `-Xmx`/heap limit is ever passed to PIT's child JVMs (the
+  observed ~1.25 GB peak RSS is the JVM's own default sizing, not a
+  coverdict-imposed cap) - `ReportOptions.addChildJVMArgs` exists and is
+  unused, a real but likely-not-the-bottleneck lever (see the Spring-cache
+  explanation above), backlogged below rather than reached for reflexively.
+  `grpc` still not re-run this round (skipped in favor of the `service`
+  retry) - `UNKNOWN_ERROR` with a real cause still unconfirmed.
+- **WTA dogfood: L2 zero-record result confirmed twice, ruled out as a
+  classpath/setup problem (2026-08-27).** Round 3's `--per-test-report`
+  run had a genuinely valid classpath this time (`per-test: module 'app' -
+  1 target class(es)` / `'data' - 13 target class(es)` printed, no
+  `PER_TEST_CLASSPATH_MISSING`) and still resolved to `done, 0 method
+  entr(ies)` for both modules - identical to round 2's result, but that
+  time the classpath truly had been missing, so this is the first run
+  where the zero result cannot be blamed on setup. This is now a
+  confirmed, reproducible coverdict defect in L2's own coverage-to-line
+  resolution (the same target classes produce real mutants under
+  `--mutation-report`, proving they ARE covered). Not yet root-caused:
+  `diagnostics/app-pertest.log` and `diagnostics/data-pertest.log` from
+  this run were not captured/shared - needed before designing a fix.
 - **Backlog:** standalone HTML · AI-assistant skill (agent reads verdict JSON,
   writes tests for gaps it names, reruns, interprets the result through
   coverdict again) · VS Code extension (inline per-line coverage gutter
