@@ -74,6 +74,19 @@ reserved but unused in v0.1). No rule at any confidence suggests deletion.
 
 ## L2 — per-test evidence (optional, via PIT)
 
+**Cross-module dependency warning (D-67):** if the analyzed module depends
+on a sibling reactor module (a real cross-module test dependency, e.g.
+`grpc` depending on `service`), build the repo with `mvn clean install`,
+**not** `mvn clean verify`, before generating that module's L2/L3
+classpath. `dependency:build-classpath` always resolves a sibling module
+through its installed jar in the local repository (`~/.m2`), never through
+the sibling's freshly-built `target/classes` - `verify` never installs
+that jar, so a stale or missing one produces a real
+`java.lang.NoClassDefFoundError` inside PIT's own minion (visible only
+with `--diagnostics-dir`, D-64) rather than a coverdict-side failure. This
+is a generic Maven multi-module property, not specific to any one repo -
+`doctor` cannot detect it today (see ROADMAP.md backlog).
+
 | Flag | Purpose |
 |---|---|
 | `--per-test-report` | Collects per-test line-coverage evidence via PIT for changed production classes. Never a finding by itself — optional message enrichment for `SUBSUMED_TEST`. Requires a diff mode |

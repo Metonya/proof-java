@@ -569,6 +569,26 @@ and the bug-repro workflow (shrink a real finding into a new scenario there).
   explanation above), backlogged below rather than reached for reflexively.
   `grpc` still not re-run this round (skipped in favor of the `service`
   retry) - `UNKNOWN_ERROR` with a real cause still unconfirmed.
+- **WTA dogfood, round 5 (2026-08-27) - `service` confirmed genuinely
+  complete (not a bug) and `grpc`'s real root cause found via
+  `--diagnostics-dir`'s verbose log (D-64 working as designed).** `service`
+  finished at 3350s (55m49s) under a 7200s budget - real PIT summary in
+  the log (13522 mutations, 5172 killed 38%, 68893 tests), confirming
+  round 3's Spring-context-caching theory rather than any runaway cost.
+  `grpc`'s minion crash was never a coverdict-side bug: the verbose log
+  showed the minion's own `java.lang.NoClassDefFoundError` for
+  `service.contract.ApiCallService` - `grpc` depends on `service` as a
+  real cross-module Maven dependency, and `dependency:build-classpath`
+  resolves that through the sibling module's **installed** jar in
+  `~/.m2`, never through its freshly-built `target/classes`. The dogfood
+  had been running `mvn clean verify` (never installs), so the `.m2` jar
+  was stale/missing `ApiCallService`. Re-running with `mvn clean install`
+  fixed it completely - `grpc` now has 395 real methods with mutation
+  evidence, `MUTATION_COLLECTION_FAILED` gone. Documented in
+  `docs/CLI-REFERENCE.md`'s L2 section (D-67) - this is a generic Maven
+  multi-module property, not WTA-specific, and will recur on any repo
+  with cross-module test dependencies among analyzed modules.
+  `doctor` does not detect this today (see backlog below).
 - **WTA dogfood: L2 zero-record result confirmed twice, ruled out as a
   classpath/setup problem (2026-08-27).** Round 3's `--per-test-report`
   run had a genuinely valid classpath this time (`per-test: module 'app' -
@@ -640,6 +660,16 @@ and the bug-repro workflow (shrink a real finding into a new scenario there).
   `doctor --fix` regenerates a broken classpath list via a real `mvn
   dependency:build-classpath` call. Verified end to end against coverdict's
   own reactor.
+  · `doctor` cross-module staleness check (found in WTA round 5, D-67):
+  a module's classpath list can reference a sibling reactor module through
+  a stale/missing jar in `~/.m2` (`dependency:build-classpath` always
+  resolves a sibling module that way, never through its freshly-built
+  `target/classes`) - this only ever surfaces as a real
+  `NoClassDefFoundError` inside PIT's own minion, at collection time, not
+  as anything `doctor`'s current checks catch beforehand. Detecting it
+  ahead of time needs comparing a classpath jar's contents (or mtime)
+  against the owning sibling module's own `target/classes` - real design
+  work, not a quick addition to the existing per-module checks.
   Each remaining item gets its own design pass at its milestone, not now.
 
 ## Kill and pivot criteria
