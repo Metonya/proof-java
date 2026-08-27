@@ -528,6 +528,37 @@ and the bug-repro workflow (shrink a real finding into a new scenario there).
   completing in ~1.1s, twice, back to back. `--mutation-report`'s 5-minute
   default timeout stays as a sensible ceiling, no longer a blind safety
   margin around an unknown risk.
+
+  **L2/L3 subprocess observability done (D-64, 2026-08-27):** the WTA
+  dogfood (see the classpath-UX backlog item below) hit `service` budget
+  exhaustion, a `grpc` minion crash, and empty `app`/`data` per-test
+  evidence, and could root-cause none of them - the subprocesses' output
+  was either discarded (`PerTestRunner`) or cut to a 20-line tail
+  (`MutationRunner`), and nothing reported progress during a run that can
+  take tens of minutes. Both runners now merge and drain their child's
+  streams, report live progress to the CLI's own stderr (a target-class
+  count before starting, a heartbeat while running, done/failed at the
+  end), and `--diagnostics-dir` tees the whole (optionally verbose)
+  subprocess log to a file per module. Three matching silent returns
+  closed under hard rule 3a: `MUTATION_NO_CHANGED_TARGETS` /
+  `PER_TEST_NO_CHANGED_TARGETS` when a module has nothing mapped to mutate
+  (WTA's first run silently hit this on every module), and
+  `MUTATION_EMPTY_EVIDENCE` / `PER_TEST_EMPTY_EVIDENCE` when the engine
+  runs but resolves zero records. Verified against a real PIT subprocess
+  (`PlaygroundMutationIT`), not stubbed. Exit-code semantics were
+  deliberately left unchanged - see the WTA dogfood note below for what
+  is still open.
+- **WTA dogfood, next round pending:** D-64 is diagnostics only, not a fix.
+  Still unexplained: why `service` (219 mapped files, root-commit-as-diff)
+  never finished a 1800s mutation budget - is the counter stuck at 0
+  (never reached the mutation phase) or merely slow; why `grpc`'s coverage
+  minion died with `UNKNOWN_ERROR` (bytecode/JDK mismatch was ruled out by
+  the user directly - `javap` showed major version 65 against a running
+  JDK 21.0.2); and why `app`/`data` per-test evidence resolved to `entries:
+  []` despite the same target classes producing real mutants under
+  `--mutation-report` (proves the classes are covered - the gap is in L2's
+  own coverage-to-line resolution, not WTA's tests). Re-run with the D-64
+  jar and `--diagnostics-dir` before designing any of these three fixes.
 - **Backlog:** standalone HTML · AI-assistant skill (agent reads verdict JSON,
   writes tests for gaps it names, reruns, interprets the result through
   coverdict again) · VS Code extension (inline per-line coverage gutter

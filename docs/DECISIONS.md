@@ -1345,6 +1345,52 @@ class it covers is not discovered) - a real limitation, not a silent one,
 and out of scope for this fix (would need L2's actual coverage data wired
 through, not just a naming convention).
 
+**D-64 · PIT subprocesses report progress, and can log verbosely** (2026-08-27)
+The WTA dogfood (4-module Maven repo, two rounds) hit three separate L2/L3
+problems and could root-cause none of them: `service` exhausted both a 300s
+and a 1800s mutation budget, `grpc`'s coverage minion died with
+`UNKNOWN_ERROR`, and `app`/`data` returned `entries: []` per-test evidence
+with no warning at all. In each case the subprocess output that would have
+explained it was discarded (`PerTestRunner` discarded both streams) or cut
+to a 20-line failure tail (`MutationRunner`), and nothing reported progress
+during runs that last tens of minutes.
+
+Decision: both PIT-driving runners merge their child's streams, drain them
+on one thread (`ProcessOutputTail`, extracted from `MutationRunner`'s
+private `StderrTail` - the `ClasspathListFile` precedent), and report
+progress through `EvidenceDiagnostics`. Progress is always on and goes to
+**stderr**, never stdout: stdout carries the text report and the JSON must
+stay byte-deterministic (hard rule 7). The per-class counter comes from
+`MutationResultListener.handleMutationResult`, which PIT calls once per
+mutated class - the only stable per-class hook either driver has - relayed
+over the output stream the parent already drains (`ProgressMarker`).
+`--diagnostics-dir` additionally tees each module's whole subprocess log to
+a file and switches the drivers to `Verbosity.VERBOSE`, the only verbosity
+whose `showMinionOutput()` is true and precisely what PIT's own minion-crash
+message asks the user to enable. Verbosity is tied to the flag rather than
+being separately switchable: verbose output with nowhere to land is just a
+slower run.
+
+Why this matters beyond logging: a module sitting at 0/219 classes for its
+entire budget is a run that never reached the mutation phase, which is a
+different defect from a mutation phase that is merely slow. The dogfood had
+no way to tell those apart, so no fix could be designed honestly (hard rule
+1, hard rule 6).
+
+Same decision closes three silent returns that made requested-but-absent
+evidence look like success (hard rule 3a): a module with no mapped changed
+production class now warns (`MUTATION_NO_CHANGED_TARGETS` /
+`PER_TEST_NO_CHANGED_TARGETS`) instead of returning silently - WTA's first
+run had every module land there, since its base ref *was* `HEAD`; evidence
+that comes back structurally valid but carrying zero records now warns
+(`MUTATION_EMPTY_EVIDENCE` / `PER_TEST_EMPTY_EVIDENCE`); and
+`PerTestRunner` producing no export at all is now a collection failure
+carrying the output tail rather than an `Optional.empty()` indistinguishable
+from "nothing to instrument". Exit-code semantics are deliberately NOT
+changed here - whether partial evidence should stop being `complete`/0 is a
+separate decision, and one that should be made once the logs from the next
+dogfood round say what is actually failing.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

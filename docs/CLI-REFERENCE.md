@@ -86,6 +86,14 @@ reserved but unused in v0.1). No rule at any confidence suggests deletion.
 | `--mutation-report` | Collects mutation evidence (gregor `RETURNS` + `VOID_METHOD_CALLS`) for changed production classes. Feeds `PSEUDO_TESTED_METHOD` and `SUBSUMED_TEST`. Requires a diff mode | — |
 | `--mutation-classpath <id>=<file>` | Same list-file shape, separate opt-in flag | — |
 | `--mutation-timeout` | Wall-clock budget in seconds before a module's mutation run is force-killed | `300` |
+| `--diagnostics-dir <dir>` | Writes each L2/L3 module's whole subprocess log to `<dir>/<module>-<layer>.log` and switches the engine to verbose (D-64) — the only route to the engine's own minion-crash detail. Off by default: verbose output with nowhere to land is just a slower run | — |
+
+L2/L3 runs always print progress to **stderr** as they go (never stdout,
+so the text report and JSON stay untouched): a target-class count before a
+module starts, a heartbeat with a completed-class counter while it runs,
+and a done/failed line at the end. A module still at `0/219` after most of
+its budget never reached the mutation phase at all — a different problem
+from a mutation phase that is merely slow (D-64).
 
 | Rule | Severity | One-line summary |
 |---|---|---|
