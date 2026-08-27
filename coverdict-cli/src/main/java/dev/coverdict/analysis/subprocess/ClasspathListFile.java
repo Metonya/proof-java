@@ -62,12 +62,17 @@ public record ClasspathListFile(List<String> classPathElements, List<String> cod
             return;
         }
         Path resolved = repoRoot.resolve(entry);
-        if (!seen.add(resolved.toString())) {
+        // D-69: canonicalize before comparing/handing to PIT - `resolve()`
+        // alone never collapses `.`/`./` segments, and PIT's own
+        // classpath-matching needs a canonical form (D-51) or its mutation
+        // pre-scan silently finds zero units.
+        String canonical = CanonicalPaths.canonicalize(resolved.toString());
+        if (!seen.add(canonical)) {
             return; // same entry named twice - use it once
         }
-        classPathElements.add(resolved.toString());
+        classPathElements.add(canonical);
         if (Files.isDirectory(resolved)) {
-            codePaths.add(resolved.toString());
+            codePaths.add(canonical);
         }
     }
 

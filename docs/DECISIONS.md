@@ -1507,6 +1507,74 @@ Verified end to end against a real PIT subprocess, not stubbed:
 non-empty against the checked-in playground fixture - the exact
 regression this class of bug would reintroduce silently otherwise.
 
+**D-69 · D-51's canonicalization rule was documented but never actually
+applied - `doctor --fix`'s relative codePaths made both L2 and L3
+silently find zero units on a real WTA module** (2026-08-27)
+Round 6 of the WTA dogfood: after D-68 closed L2's `entries: []` bug,
+`app`/`data` regressed to a different symptom - PIT's own log:
+`Created 0 mutation test units in pre scan` / `No mutations found. This
+probably means there is an issue with either the supplied classpath or
+filters.`, instantly (<1s), for BOTH `--per-test-report` and
+`--mutation-report` against `data`'s 13 real DAO classes. Ruled out by
+direct evidence before looking at code: the target `.class` files
+genuinely exist on disk (`ls` against the real WTA checkout, fresh
+timestamps matching a real `mvn clean install`); the classpath file's two
+stray `.pom` entries (a `mvn dependency:build-classpath -Dmdep.
+includeScope=test` quirk for import-scope BOM dependencies) were a red
+herring - stripping them and rerunning produced the identical zero-units
+result.
+
+Root-caused by disassembling `pitest-entry:1.15.8`'s
+`MutationCoverage.class` with `javap`: `findMutations()` calls
+`buildMutationTests(new NoCoverage(), ...)` - `MutationTestBuilder.
+createMutationTestUnits(code.getCodeUnderTestNames())` runs entirely
+*before* any coverage pass or test execution, confirming the zero count
+is a pure static codePaths/classPathElements resolution failure, not a
+test-execution problem. That pointed straight back to **D-51's own
+already-documented rule**, written the day PIT was first integrated:
+"Every path handed to `setClassPathElements`/`setCodePaths`/
+`setSourceDirs` must be canonicalized (`File.getCanonicalPath()`)...
+makes the mutation pre-scan silently find zero units, no error raised."
+Reading `MutationDriver.main()` and `PerTestDriver.main()` confirmed the
+rule was never actually implemented anywhere in the codebase - both read
+`codePaths`/`classPath` raw from a list file and pass them straight to
+`options.setCodePaths(...)`/`setClassPathElements(...)` with zero
+transformation. `ClasspathListFile.resolveLine()` (the shared parser
+behind `--mutation-classpath`/`--per-test-classpath`/`doctor --fix`) had
+the same gap: `repoRoot.resolve(entry).toString()` never collapses `.`/
+`./` segments.
+
+This survived undetected because every classpath file used in the dogfood
+until now was hand-built or already-absolute (`.m2` jar paths, or a
+manually `.toAbsoluteString()`'d module output dir). `doctor --fix`'s
+`ClasspathFixer` (D-65) was the first caller to write a module's own
+`target/classes`/`target/test-classes` as a plain relative string
+(`RepoPaths.join(module.root(), "target/classes")`, no canonicalization
+step) - exactly D-51's documented trap, just never exercised by a real
+run until this round.
+
+Fixed with a new shared helper, `dev.coverdict.analysis.subprocess.
+CanonicalPaths.canonicalize(List<String>)` (`File.getCanonicalPath()`
+per entry, falling back to the absolute form on a rare `IOException`
+rather than dropping the entry or throwing - hard rule 3a), applied at
+three points: `MutationDriver.main()` and `PerTestDriver.main()`
+immediately before their `options.set...` calls (the literal call site
+D-51 is about, and a guaranteed choke point regardless of how the list
+files were produced), and `ClasspathListFile.resolveLine()` (fixes
+`--mutation-classpath`/`--per-test-classpath`/`doctor --fix` dedup too -
+`./target/classes` and `target/classes` now correctly collapse to one
+entry instead of two).
+
+Verified two ways: a new `ClasspathListFileTest` asserts a `./`-prefixed
+directory entry resolves to its canonical form and that two
+differently-written equivalent entries dedup to one; `PlaygroundMutationIT`
+(the real-PIT-subprocess test D-68 added) now deliberately writes the
+playground fixture's own `target/classes`/`target/test-classes` as
+relative `./`-prefixed entries (the exact shape `doctor --fix` produces)
+instead of absolute ones, reproducing the real WTA bug locally - it
+passes end to end (4 known L3 findings, non-empty L2 entries) only with
+this fix in place. `mvn verify` full green.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

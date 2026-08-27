@@ -165,6 +165,16 @@ class PlaygroundMutationIT {
         return cmd.execute(args);
     }
 
+    /**
+     * D-69: the module's own output dirs are deliberately written as
+     * relative, {@code ./}-prefixed entries (not {@code
+     * .toAbsolutePath()}) - this is the exact shape {@code doctor --fix}'s
+     * {@code ClasspathFixer} produces for a relative module root, and is
+     * what made PIT's mutation pre-scan silently find zero units against a
+     * real WTA module before the {@code CanonicalPaths} fix. Dependency
+     * jars stay as Maven reports them (already absolute, like real {@code
+     * .m2} paths), matching the real bug's shape exactly.
+     */
     private static Path buildMutationClasspathFile(Path repoRoot) throws IOException, InterruptedException {
         Path rawClasspathFile = repoRoot.resolve("cp.txt");
         runMaven(repoRoot, "dependency:build-classpath", "-Dmdep.outputFile=" + rawClasspathFile);
@@ -172,8 +182,8 @@ class PlaygroundMutationIT {
         Files.delete(rawClasspathFile);
 
         List<String> entries = new ArrayList<>(Arrays.asList(raw.split(File.pathSeparator)));
-        entries.add(repoRoot.resolve("target/classes").toAbsolutePath().toString());
-        entries.add(repoRoot.resolve("target/test-classes").toAbsolutePath().toString());
+        entries.add("./target/classes");
+        entries.add("./target/test-classes");
 
         Path mutationClasspathFile = repoRoot.resolve("mutation-classpath.txt");
         Files.write(mutationClasspathFile, entries, StandardCharsets.UTF_8);

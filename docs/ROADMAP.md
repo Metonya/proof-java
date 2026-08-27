@@ -611,6 +611,19 @@ and the bug-repro workflow (shrink a real finding into a new scenario there).
   unscoped `targetTests`, never narrowed like `MutationDriver` - now
   shares `MutationDriver`'s exact narrowing via a new
   `TestGlobs.samePackageGlobsFor`. See D-68 for the full mechanism.
+- **WTA dogfood, round 6 (2026-08-27): a different zero-evidence symptom
+  - root-caused and fixed (D-69).** After D-68, `app`/`data` regressed to
+  PIT logging `Created 0 mutation test units in pre scan` instantly, for
+  both L2 and L3, against real target classes confirmed present on disk.
+  Not a new class of bug - D-51 (written the day PIT was first integrated)
+  already documented that every codePaths/classPathElements entry must be
+  canonicalized (`File.getCanonicalPath()`) or PIT's mutation pre-scan
+  silently finds zero units; that rule was simply never implemented
+  anywhere in the code. `doctor --fix`'s `ClasspathFixer` (D-65) was the
+  first caller to write a module's own `target/classes` as a plain
+  relative string, tripping the trap for the first time. Fixed with a
+  shared `CanonicalPaths.canonicalize()` helper applied in
+  `MutationDriver`/`PerTestDriver`/`ClasspathListFile`. See D-69.
 - **Backlog:** standalone HTML · AI-assistant skill (agent reads verdict JSON,
   writes tests for gaps it names, reruns, interprets the result through
   coverdict again) · VS Code extension (inline per-line coverage gutter

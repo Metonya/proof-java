@@ -18,6 +18,7 @@ import org.pitest.testapi.TestGroupConfig;
 import org.pitest.util.Glob;
 import org.pitest.util.Verbosity;
 
+import dev.coverdict.analysis.subprocess.CanonicalPaths;
 import dev.coverdict.analysis.subprocess.TestGlobs;
 
 /**
@@ -65,8 +66,11 @@ public final class MutationDriver {
 
         ReportOptions options = new ReportOptions();
         options.setReportDir(reportDir);
-        options.setClassPathElements(classPath);
-        options.setCodePaths(codePaths);
+        // D-69: PIT's own classpath-matching does not normalize `.`/`./`
+        // segments (D-51) - an un-canonicalized entry makes the mutation
+        // pre-scan silently find zero units, no error raised.
+        options.setClassPathElements(CanonicalPaths.canonicalize(classPath));
+        options.setCodePaths(CanonicalPaths.canonicalize(codePaths));
         options.setSourceDirs(List.of()); // no source-locating report is ever read; avoids SmartSourceLocator's NPE on a null roots collection
         options.setTargetClasses(targetClasses);
         options.setTargetTests(Glob.toGlobPredicates(TestGlobs.samePackageGlobsFor(targetClasses)));
