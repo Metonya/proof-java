@@ -44,7 +44,7 @@ import org.pitest.util.Verbosity;
  */
 public final class MutationDriver {
 
-    private static final int EXPECTED_ARG_COUNT = 5;
+    private static final int EXPECTED_ARG_COUNT = 6;
 
     private MutationDriver() {
     }
@@ -60,6 +60,7 @@ public final class MutationDriver {
         List<String> classPath = Files.readAllLines(Path.of(args[2]), StandardCharsets.UTF_8);
         List<String> codePaths = Files.readAllLines(Path.of(args[3]), StandardCharsets.UTF_8);
         List<String> targetClasses = Files.readAllLines(Path.of(args[4]), StandardCharsets.UTF_8);
+        boolean verbose = Boolean.parseBoolean(args[5]);
 
         System.setProperty(CoverdictMutationListener.MODULE_ID_PROPERTY, moduleId);
 
@@ -78,7 +79,13 @@ public final class MutationDriver {
         options.addOutputFormats(List.of("XML", CoverdictMutationListener.NAME));
         options.setShouldCreateTimestampedReports(false);
         options.setFailWhenNoMutations(false);
-        options.setVerbosity(Verbosity.QUIET);
+        // D-64: VERBOSE is the only setting whose showMinionOutput() is true,
+        // and PIT's own coverage-minion crash message tells the user to
+        // enable verbose logging before reporting the problem - which had no
+        // route through coverdict until --diagnostics-dir. QUIET stays the
+        // default: verbose output with no log file to land in is just a
+        // slower run.
+        options.setVerbosity(verbose ? Verbosity.VERBOSE : Verbosity.QUIET);
 
         Map<String, String> env = new HashMap<>(System.getenv());
         PluginServices plugins = PluginServices.makeForContextLoader();

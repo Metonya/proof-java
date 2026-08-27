@@ -13,6 +13,8 @@ import org.pitest.mutationtest.MutationResultListener;
 import org.pitest.mutationtest.MutationResultListenerFactory;
 import org.pitest.util.ResultOutputStrategy;
 
+import dev.coverdict.analysis.subprocess.ProgressMarker;
+
 /**
  * PIT {@link MutationResultListenerFactory} SPI implementation (D-56):
  * accumulates every {@link ClassMutationResults} PIT hands it in RAM and
@@ -71,6 +73,11 @@ public final class CoverdictMutationListener implements MutationResultListenerFa
         @Override
         public void handleMutationResult(ClassMutationResults classResults) {
             results.add(classResults);
+            // D-64: PIT calls this once per mutated class, which makes it the
+            // only stable per-class progress hook either driver has. The
+            // parent turns these into a live counter; a module that never
+            // emits one never reached the mutation phase at all.
+            ProgressMarker.emit(results.size());
         }
 
         @Override

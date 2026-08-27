@@ -42,6 +42,7 @@ import dev.coverdict.analysis.oracle.OracleScanOptions;
 import dev.coverdict.analysis.oracle.OracleScanResult;
 import dev.coverdict.analysis.pertest.PerTestCollector;
 import dev.coverdict.analysis.redundancy.RedundancyRuleEngine;
+import dev.coverdict.analysis.subprocess.EvidenceDiagnostics;
 import dev.coverdict.config.ConfigException;
 import dev.coverdict.config.ConfigLoader;
 import dev.coverdict.config.CoverdictConfig;
@@ -129,6 +130,9 @@ class AnalyzeCommand implements Callable<Integer> {
 
     @Option(names = "--mutation-timeout", defaultValue = "300", description = "Wall-clock budget in seconds for one module's mutation run before it is force-killed (default 300s = 5 minutes - deliberately conservative, D-59: raise it only after confirming this environment doesn't spawn PIT minions faster than the default can safely bound).")
     private long mutationTimeoutSeconds;
+
+    @Option(names = "--diagnostics-dir", description = "Directory for per-module L2/L3 subprocess logs. Also turns the engine verbose, which is the only way to see why its own coverage minion died (D-64). Off by default: verbose output with nowhere to land is just a slower run.")
+    private String diagnosticsDirOption;
 
     @Option(names = "--language-level", defaultValue = "17", description = "Java language level for JavaParser (oracle critic) and recorded as provenance.")
     private int languageLevel;
@@ -490,10 +494,12 @@ class AnalyzeCommand implements Callable<Integer> {
             allWarnings.addAll(classification.warnings());
             allWarnings.addAll(scan.warnings());
 
+            EvidenceDiagnostics diagnostics = buildDiagnostics();
+
             List<dev.coverdict.analysis.pertest.PerTestModuleEvidence> perTest = null;
             if (perTestReport) {
                 PerTestCollector.Result perTestResult = PerTestCollector.collect(repoRoot, evidencedModules,
-                    classification.changedFiles(), inv.perTestClasspathFilesById());
+                    classification.changedFiles(), inv.perTestClasspathFilesById(), diagnostics);
                 perTest = perTestResult.modules();
                 allWarnings.addAll(perTestResult.warnings());
             }
@@ -503,7 +509,7 @@ class AnalyzeCommand implements Callable<Integer> {
             if (mutationReport) {
                 MutationCollector.Result mutationResult = MutationCollector.collect(repoRoot, evidencedModules,
                     classification.changedFiles(), inv.mutationClasspathFilesById(),
-                    Duration.ofSeconds(mutationTimeoutSeconds));
+                    Duration.ofSeconds(mutationTimeoutSeconds), diagnostics);
                 mutation = mutationResult.modules();
                 allWarnings.addAll(mutationResult.warnings());
 
@@ -536,6 +542,27 @@ class AnalyzeCommand implements Callable<Integer> {
                 moduleInputs, diffMode, findingsScopeOption, null, overall, NewCodeCoverage.unavailable("unavailable_incomplete"),
                 List.of(), scan.findings(), warnings);
         }
+    }
+
+    /**
+     * D-64: progress goes to stderr, never stdout. stdout carries the text
+     * report and must stay exactly what {@link TextRenderer} produced;
+     * progress is transient status about a run that can take half an hour,
+     * which is what a pipe or a redirect should drop. Always on - a caller
+     * who does not want it redirects stderr, and the alternative (a run
+     * that prints nothing for thirty minutes and then reports a timeout)
+     * is what made the WTA dogfood undiagnosable.
+     */
+    private EvidenceDiagnostics buildDiagnostics() {
+        java.io.PrintWriter err = spec.commandLine().getErr();
+        java.util.function.Consumer<String> sink = message -> {
+            err.println("coverdict: " + message);
+            err.flush(); // a progress line is worthless if it only appears once the run ends
+        };
+        if (diagnosticsDirOption == null || diagnosticsDirOption.isBlank()) {
+            return EvidenceDiagnostics.progressOnly(sink);
+        }
+        return new EvidenceDiagnostics(Path.of(diagnosticsDirOption), sink);
     }
 
     private static java.util.Set<String> changedAndUntrackedPaths(DiffResult diffResult) {

@@ -12,4 +12,9 @@ final class PerTestCollectionException extends RuntimeException {
     PerTestCollectionException(String message, Throwable cause) {
         super(message, cause);
     }
+
+    /** D-64: a timeout with no exported coverage has no underlying exception - the subprocess output tail carries the diagnosis instead. */
+    PerTestCollectionException(String message) {
+        super(message);
+    }
 }

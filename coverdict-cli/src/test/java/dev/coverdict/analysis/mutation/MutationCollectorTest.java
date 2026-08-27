@@ -29,8 +29,15 @@ class MutationCollectorTest {
     private static final ModuleDefinition MODULE =
         new ModuleDefinition("app", "app", List.of("app/src/main/java"), List.of("app/src/test/java"));
 
+    /**
+     * D-64 reversed the original "skipped silently" contract - see the L2
+     * twin in {@code PerTestCollectorTest}. This is the exact shape of
+     * WTA's first {@code --mutation-report} run: an empty {@code mutation}
+     * block, a {@code complete} verdict, exit 0, and nothing anywhere
+     * saying the engine was never asked to do anything.
+     */
     @Test
-    void aModuleWithNoMappedChangedFilesIsSkippedSilently() {
+    void aModuleWithNoMappedChangedFilesWarnsRatherThanSkippingSilently() {
         ChangedFile unrelated = new ChangedFile("app/src/main/java/com/example/Other.java", "app",
             Classification.EXCLUDED, null, null, null);
 
@@ -38,7 +45,9 @@ class MutationCollectorTest {
             List.of(unrelated), Map.of(), Duration.ofMinutes(1));
 
         assertTrue(result.modules().isEmpty());
-        assertTrue(result.warnings().isEmpty());
+        assertEquals(1, result.warnings().size());
+        assertEquals("MUTATION_NO_CHANGED_TARGETS", result.warnings().get(0).code());
+        assertEquals("app", result.warnings().get(0).module());
     }
 
     @Test

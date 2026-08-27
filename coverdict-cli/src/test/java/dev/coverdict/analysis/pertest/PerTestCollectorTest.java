@@ -28,15 +28,25 @@ class PerTestCollectorTest {
     private static final ModuleDefinition MODULE =
         new ModuleDefinition("app", "app", List.of("app/src/main/java"), List.of("app/src/test/java"));
 
+    /**
+     * D-64 reversed the original "skipped silently" contract. {@code
+     * --per-test-report} was asked for explicitly, so a module that
+     * contributed nothing is a fact the caller needs (hard rule 3a) - WTA's
+     * first dogfood run had every module land here (its base ref was
+     * {@code HEAD}, so nothing had changed) and the verdict explained none
+     * of it, reporting only an empty {@code perTest} block.
+     */
     @Test
-    void aModuleWithNoMappedChangedFilesIsSkippedSilently() {
+    void aModuleWithNoMappedChangedFilesWarnsRatherThanSkippingSilently() {
         ChangedFile unrelated = new ChangedFile("app/src/main/java/com/example/Other.java", "app",
             Classification.EXCLUDED, null, null, null);
 
         PerTestCollector.Result result = PerTestCollector.collect(repoRoot, List.of(MODULE), List.of(unrelated), Map.of());
 
         assertTrue(result.modules().isEmpty());
-        assertTrue(result.warnings().isEmpty());
+        assertEquals(1, result.warnings().size());
+        assertEquals("PER_TEST_NO_CHANGED_TARGETS", result.warnings().get(0).code());
+        assertEquals("app", result.warnings().get(0).module());
     }
 
     @Test

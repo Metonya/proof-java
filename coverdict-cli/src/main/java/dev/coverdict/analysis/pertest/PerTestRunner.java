@@ -3,12 +3,17 @@ package dev.coverdict.analysis.pertest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import dev.coverdict.analysis.subprocess.EvidenceDiagnostics;
+import dev.coverdict.analysis.subprocess.ProcessOutputTail;
+import dev.coverdict.analysis.subprocess.ProgressMarker;
 import dev.coverdict.analysis.subprocess.SubprocessWorkspace;
 
 /**
@@ -24,6 +29,13 @@ import dev.coverdict.analysis.subprocess.SubprocessWorkspace;
  * classpath problem, or a genuinely stuck run) surfaced by {@link
  * PerTestCollector} as {@code PER_TEST_COLLECTION_FAILED} - never silent
  * (hard rule 3a).
+ *
+ * <p>D-64: this used to discard the child's stdout AND stderr outright,
+ * which made a real WTA dogfood result - two modules reporting {@code
+ * entries: []} with no warning and no error - impossible to diagnose at
+ * all. It now drains the merged stream like {@code MutationRunner} does,
+ * keeps a failure tail, and can tee the whole thing to a
+ * {@code --diagnostics-dir} log.
  */
 public final class PerTestRunner {
 
@@ -34,6 +46,9 @@ public final class PerTestRunner {
      * both add fixed overhead this budget must absorb.
      */
     private static final Duration TIMEOUT = Duration.ofSeconds(120);
+
+    private static final Duration HEARTBEAT = Duration.ofSeconds(30);
+    private static final Duration POLL = Duration.ofMillis(200);
 
     private static final String TEMP_DIR_PREFIX = "coverdict-pertest-";
 
@@ -48,17 +63,18 @@ public final class PerTestRunner {
      *                          directories (never a dependency jar).
      * @param targetClasses     FQCN globs for the changed production classes
      *                          this run should collect evidence for.
+     * @param diagnostics       where progress and subprocess logs go.
      * @return evidence if the exporter wrote its file before the timeout;
-     *         empty if the run found no mutable target (PIT's own coverage
-     *         skip, not a failure) - the two are distinguished by exit code.
+     *         empty if the run produced no output file at all.
      * @throws PerTestCollectionException on process failure, timeout, or a malformed output file.
      */
-    public static java.util.Optional<PerTestModuleEvidence> run(String moduleId, Path repoRoot,
-                                                                  List<String> classPathElements,
-                                                                  List<String> codePaths,
-                                                                  List<String> targetClasses) {
+    public static Optional<PerTestModuleEvidence> run(String moduleId, Path repoRoot,
+                                                        List<String> classPathElements,
+                                                        List<String> codePaths,
+                                                        List<String> targetClasses,
+                                                        EvidenceDiagnostics diagnostics) {
         Path workDir = createWorkDir(moduleId);
-        try {
+        try (Writer log = diagnostics.openLog(moduleId, "pertest")) {
             List<String> ownClasspathEntries = SubprocessWorkspace.ownRuntimeClasspathEntries();
             // The minion PIT spawns needs org.pitest.coverage.execute.CoverageMinion and
             // CoverdictLineExporter on ITS OWN -cp (verified empirically: EntryPoint builds
@@ -78,10 +94,9 @@ public final class PerTestRunner {
                 SubprocessWorkspace.javaExecutable(), "@" + classpathArgFile,
                 PerTestDriver.class.getName(),
                 moduleId, workDir.toString(), classpathFile.toString(), codePathsFile.toString(),
-                targetClassesFile.toString());
+                targetClassesFile.toString(), String.valueOf(diagnostics.verbose()));
             pb.directory(repoRoot.toFile());
-            pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
-            pb.redirectError(ProcessBuilder.Redirect.DISCARD);
+            pb.redirectErrorStream(true); // one chronological stream, one drain thread (D-64)
 
             Process process;
             try {
@@ -90,39 +105,79 @@ public final class PerTestRunner {
                 throw new PerTestCollectionException("Could not start the per-test coverage subprocess for module '"
                     + moduleId + "'", e);
             }
+
+            ProcessOutputTail output = ProcessOutputTail.of(process.getInputStream(), log, null);
+            Thread outputThread = output.start("coverdict-pertest-output");
             try {
-                waitForOutputOrTimeout(process, outputFile);
+                waitForOutputOrTimeout(process, outputFile, moduleId, diagnostics);
             } finally {
                 SubprocessWorkspace.destroyProcessTree(process);
+                ProcessOutputTail.joinQuietly(outputThread);
             }
 
-            if (!Files.exists(outputFile)) {
-                return java.util.Optional.empty(); // no mutable target found - PIT's own skip, not a failure
-            }
-            try (InputStream in = Files.newInputStream(outputFile)) {
-                return java.util.Optional.of(PerTestJsonReader.read(in));
-            } catch (IOException e) {
-                throw new PerTestCollectionException("Module '" + moduleId + "' produced an unreadable per-test result file", e);
-            }
+            return readEvidence(moduleId, outputFile, output, diagnostics);
+        } catch (IOException e) {
+            throw new PerTestCollectionException("Could not write the diagnostics log for module '" + moduleId + "'", e);
         } finally {
             SubprocessWorkspace.deleteQuietly(workDir);
         }
     }
 
-    /** Returns as soon as {@code outputFile} exists or the process exits; otherwise blocks up to {@link #TIMEOUT}. */
-    private static void waitForOutputOrTimeout(Process process, Path outputFile) {
-        long deadline = System.nanoTime() + TIMEOUT.toNanos();
+    public static Optional<PerTestModuleEvidence> run(String moduleId, Path repoRoot,
+                                                        List<String> classPathElements,
+                                                        List<String> codePaths,
+                                                        List<String> targetClasses) {
+        return run(moduleId, repoRoot, classPathElements, codePaths, targetClasses, EvidenceDiagnostics.none());
+    }
+
+    /**
+     * D-64: the no-output-file case used to return {@link Optional#empty()}
+     * with no explanation at all, indistinguishable from a legitimate "PIT
+     * found nothing to instrument". The tail now travels with it so {@link
+     * PerTestCollector} can say which it was.
+     */
+    private static Optional<PerTestModuleEvidence> readEvidence(String moduleId, Path outputFile,
+                                                                  ProcessOutputTail output,
+                                                                  EvidenceDiagnostics diagnostics) {
+        if (!Files.exists(outputFile)) {
+            diagnostics.progress("per-test: module '" + moduleId + "' - FAILED, no coverage export produced");
+            throw new PerTestCollectionException("Module '" + moduleId
+                + "' produced no per-test coverage export before its " + TIMEOUT.toSeconds() + "s timeout"
+                + output.tailMessage());
+        }
+        try (InputStream in = Files.newInputStream(outputFile)) {
+            PerTestModuleEvidence evidence = PerTestJsonReader.read(in);
+            diagnostics.progress("per-test: module '" + moduleId + "' - done, " + evidence.entries().size()
+                + " method entr(ies)");
+            return Optional.of(evidence);
+        } catch (IOException e) {
+            throw new PerTestCollectionException("Module '" + moduleId
+                + "' produced an unreadable per-test result file", e);
+        }
+    }
+
+    /** Returns as soon as {@code outputFile} exists or the process exits; otherwise blocks up to {@link #TIMEOUT}, reporting progress along the way. */
+    private static void waitForOutputOrTimeout(Process process, Path outputFile, String moduleId,
+                                                EvidenceDiagnostics diagnostics) {
+        long start = System.nanoTime();
+        long deadline = start + TIMEOUT.toNanos();
+        long nextHeartbeat = start + HEARTBEAT.toNanos();
         while (System.nanoTime() < deadline) {
             if (Files.exists(outputFile) || !process.isAlive()) {
                 return;
             }
             try {
-                if (process.waitFor(200, TimeUnit.MILLISECONDS)) {
+                if (process.waitFor(POLL.toMillis(), TimeUnit.MILLISECONDS)) {
                     return;
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return;
+            }
+            if (System.nanoTime() >= nextHeartbeat) {
+                diagnostics.progress("per-test: module '" + moduleId + "' - collecting coverage, "
+                    + ProgressMarker.formatElapsed(Duration.ofNanos(System.nanoTime() - start)) + " elapsed");
+                nextHeartbeat = System.nanoTime() + HEARTBEAT.toNanos();
             }
         }
     }

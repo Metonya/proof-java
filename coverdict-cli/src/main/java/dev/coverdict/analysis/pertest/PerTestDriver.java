@@ -51,6 +51,7 @@ public final class PerTestDriver {
         List<String> classPath = Files.readAllLines(Path.of(args[2]), StandardCharsets.UTF_8);
         List<String> codePaths = Files.readAllLines(Path.of(args[3]), StandardCharsets.UTF_8);
         List<String> targetClasses = Files.readAllLines(Path.of(args[4]), StandardCharsets.UTF_8);
+        boolean verbose = args.length > 5 && Boolean.parseBoolean(args[5]);
 
         System.setProperty(CoverdictLineExporter.MODULE_ID_PROPERTY, moduleId);
 
@@ -70,7 +71,10 @@ public final class PerTestDriver {
         options.setShouldCreateTimestampedReports(false);
         options.setFailWhenNoMutations(false);
         options.setFeatures(List.of("+coverdictspike", "-defaultcoverage"));
-        options.setVerbosity(Verbosity.QUIET);
+        // D-64: see MutationDriver - VERBOSE is the only verbosity whose
+        // showMinionOutput() is true, and it is gated on --diagnostics-dir
+        // so an ordinary run stays quiet.
+        options.setVerbosity(verbose ? Verbosity.VERBOSE : Verbosity.QUIET);
 
         Map<String, String> env = new HashMap<>(System.getenv());
         PluginServices plugins = PluginServices.makeForContextLoader();
