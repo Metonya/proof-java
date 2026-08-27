@@ -641,8 +641,41 @@ and the bug-repro workflow (shrink a real finding into a new scenario there).
   class named this way under bare `--no-vcs` (no git repo at all) produces a
   real, path-resolved `PSEUDO_TESTED_METHOD` finding. Faz 2's open item
   (`RedundancyRuleEngine`/`TestLocator` changed-files assumption) checked
-  clean - neither has one. Faz 3 (⛔ freeze v1 - D-01 gate, schema 1.0.0) is
-  next; the `coverdict-vscode` repo itself does not start until Faz 3 closes.
+  clean - neither has one.
+
+  **Faz 3's formal v1-freeze ceremony (schema 1.0.0, D-01 gate, dual
+  distribution channel, npm license policy) is deliberately skipped for now
+  - user decision, 2026-08-27**: `coverdict-vscode` is private dogfood only,
+  not published or shared, so there is nothing yet that needs a frozen
+  public contract. Revisit before any real distribution. The extension repo
+  (`coverdict-vscode`, separate, private) proceeded straight to Faz 4-6
+  against the current 0.1.x schema:
+  - **Faz 4 (skeleton, done):** esbuild-bundled build, tsc test harness
+    (`node:test` for `verdict`/`model`, `@vscode/test-cli` for a real
+    Extension Host), `extension.ts` registration-only. Verified: a real
+    Extension Host activates cleanly.
+  - **Faz 5 / F1 (self-scan, done):** `coverdict.analyze` command drives the
+    real jar (`cli/jarLocator`, `cli/argsBuilder`, `cli/runner`) and parses
+    the result (`verdict/parse`, `Result<>`, never throws). Verified two
+    ways: an automated real self-scan of coverdict-cli itself (JSON percent
+    byte-matches the CLI's own stdout percent, same real run) and a manual
+    run against coverdict-playground through the real command (7 real
+    findings, 94.4% jacoco-line).
+  - **Faz 6 / F2 (gutter, done):** `fileCoverage.files[]` -> real
+    `vscode.FileCoverage`/`StatementCoverage`/`BranchCoverage` via a
+    `TestRun` (no test items needed). Native API existence is detected, not
+    assumed (`hasNativeCoverageApi()`), and `addCoverage` is wrapped in
+    try/catch so an unsupported fork degrades to a status-bar warning
+    instead of crashing - verified for real in a live Extension Host
+    (`coverageApi.test.ts`, on the current vscode-test 1.135.0 download;
+    the ^1.88.0 engine floor itself is still unverified against an old real
+    install, open risk 1). Excluded files get a distinct grey decoration -
+    the one state the native API has no concept of. Partial-line rendering
+    (`coverdict.gutter.partialLineMode`) is still an unvalidated bet on real
+    VS Code rendering (open risk 3) pending manual visual confirmation.
+  - Local SonarQube scans wired for the extension repo too (`sonar-scanner`
+    CLI, `sonar.javascript.lcov.reportPaths` from a real `c8`-generated lcov
+    report) - 0 open findings after two review passes.
 - **Backlog:** standalone HTML · AI-assistant skill (agent reads verdict JSON,
   writes tests for gaps it names, reruns, interprets the result through
   coverdict again) · VS Code extension (inline per-line coverage gutter
