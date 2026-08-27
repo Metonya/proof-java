@@ -1391,6 +1391,41 @@ changed here - whether partial evidence should stop being `complete`/0 is a
 separate decision, and one that should be made once the logs from the next
 dogfood round say what is actually failing.
 
+**D-65 · `coverdict doctor` diagnoses a Maven repo, `--fix` may call Maven**
+(2026-08-27)
+Closes the "L2/L3 classpath UX gap" backlog item. Three of four WTA dogfood
+rounds lost time to a setup problem discovered only after `analyze` or a PIT
+subprocess had already started - a Maven aggregator mistaken for an
+analyzable module, a classpath file silently landing under a duplicated
+path because `-pl` changes Maven's own working directory, a `mvn clean`
+deleting classpath lists a rerun then failed against with no clue why. New
+`doctor` subcommand: read-only by default, walks the reactor from the root
+`pom.xml` (StAX, same OWASP XXE posture as `JacocoXmlParser`), and for every
+real (non-`packaging=pom`) module checks source/test roots, compiled
+output, JaCoCo report presence *and freshness* (older than the newest
+`.class` - the exact "report may be older than this diff" condition
+`ChangedFileClassifier` only reports after the fact), generated-source
+directories outside `src/main/java` (the WTA `MISSING_SOURCE_FILE` noise
+source), and L2/L3 classpath lists via the same `ClasspathListFile.load`
+`analyze` itself uses - a list with zero code paths is a BLOCKER, not a
+pass, because that is exactly the silent-empty-evidence shape D-64 closed
+on the collector side. Ends with a copy-pasteable `analyze` invocation
+built only from modules that are actually usable.
+
+`--fix` regenerates a missing/broken classpath list via a real `mvn
+dependency:build-classpath -Dmdep.outputFile=target/... -Dmdep.includeScope=
+test` call (module-relative output path - the corrected form the dogfood
+runbook settled on) through a new `MavenClient`, modeled directly on
+`GitClient`'s subprocess discipline (argv array, never a shell,
+SECURITY-POLICY.md #3) and reusing `ProcessOutputTail` (D-64) for output
+draining. This is a deliberate, narrow flex of "verdict layer, never own
+engines" (AGENTS.md): confined to this one opt-in command, which only ever
+asks Maven a question (never changes what it built), and `analyze` itself
+never shells to a build tool. Whether `doctor` should also write
+`coverdict.config.json` (so a rerun needs no flags at all) is left for a
+follow-up - `CoverdictConfig`/its schema do not carry module/report/
+classpath fields yet, a real gap this decision does not close.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

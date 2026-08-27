@@ -633,22 +633,13 @@ and the bug-repro workflow (shrink a real finding into a new scenario there).
   confirmed by a real coverdict-playground run where enabling
   `--per-test-report` added an (empty, for that scenario) `perTest` block to
   the JSON but left the `SUBSUMED_TEST` finding's message byte-identical.
-  · L2/L3 classpath UX gap (found in WTA dogfood, 2026-08-26): `--per-test-
-  classpath`/`--mutation-classpath` require the user to hand-run a separate
-  `mvn dependency:build-classpath` recipe outside coverdict and get every
-  detail right (`-pl` changes Maven's cwd, `-Dmdep.outputFile` must be
-  relative, module output dirs must be prepended) - one wrong flag produces
-  a classpath list with zero code paths, `MUTATION_CLASSPATH_MISSING`/
-  `PER_TEST_CLASSPATH_MISSING` fires, and the module's evidence is silently
-  empty while the run still reports `complete`/exit 0 (compounds the still-
-  open "empty evidence looks like success" gap above). coverdict never
-  shells out to a build tool today (hard rule "verdict layer, never own
-  engines" - see AGENTS.md); whether that boundary should flex for exactly
-  this one Maven-only convenience path, or whether the fix is instead a
-  loud preflight check (did the classpath file actually resolve to code
-  paths / were tests actually compiled recently) before the PIT subprocess
-  even starts, is undecided - needs its own design pass, not a silent
-  default.
+  · ~~L2/L3 classpath UX gap~~ **closed, D-65 (2026-08-27):** new `coverdict
+  doctor` command diagnoses a Maven reactor before `analyze` runs (stale
+  JaCoCo report, empty classpath list, generated sources outside
+  `src/main/java`, ...) and prints a copy-pasteable invocation;
+  `doctor --fix` regenerates a broken classpath list via a real `mvn
+  dependency:build-classpath` call. Verified end to end against coverdict's
+  own reactor.
   Each remaining item gets its own design pass at its milestone, not now.
 
 ## Kill and pivot criteria

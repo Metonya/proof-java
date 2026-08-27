@@ -8,7 +8,7 @@ import picocli.CommandLine.Command;
     name = "coverdict",
     versionProvider = VersionProvider.class,
     mixinStandardHelpOptions = true,
-    subcommands = { AnalyzeCommand.class },
+    subcommands = { AnalyzeCommand.class, DoctorCommand.class },
     description = "Deterministic verdict layer for Java test suites."
 )
 public class Main implements Runnable {

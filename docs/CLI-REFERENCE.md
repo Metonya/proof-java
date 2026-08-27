@@ -145,3 +145,21 @@ java -jar coverdict-cli/target/coverdict.jar analyze \
 ```
 Produces all of the above plus a `mutation` evidence block and any
 `PSEUDO_TESTED_METHOD`/`SUBSUMED_TEST` findings.
+
+## `doctor` — diagnose a Maven repo before `analyze` runs
+
+```bash
+java -jar coverdict.jar doctor --repo .          # read-only: checks + a suggested command
+java -jar coverdict.jar doctor --repo . --fix    # also regenerates broken L2/L3 classpath lists
+```
+
+Walks the Maven reactor and checks, per module: source/test roots, compiled
+output, JaCoCo report presence *and freshness* (older than the newest
+`.class` is a BLOCKER, not a pass), generated sources outside
+`src/main/java`, and L2/L3 classpath list validity (same check
+`--mutation-report` applies at collection time - a list with no code path
+is a BLOCKER here too, D-64/D-65). Ends with a copy-pasteable `analyze`
+invocation built only from modules with no BLOCKER. `--fix` regenerates a
+missing/broken classpath list via a real `mvn dependency:build-classpath`
+call - the only place coverdict shells out to a build tool (D-65). Exit `0`
+if every module is clean, `3` if any has a BLOCKER.
