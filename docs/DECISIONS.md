@@ -1451,6 +1451,62 @@ to end against coverdict's own repo: `doctor --write-config` followed by
 `analyze --no-vcs --repo .` with zero `--module`/`--report` flags produced
 a real, correct coverage number from the generated config alone.
 
+**D-68 · L2's real root cause: `CoverdictLineExporter` read the wrong
+classpath; `PerTestDriver`'s targetTests narrowed to match D-63**
+(2026-08-27)
+Closes the WTA dogfood's last open finding (`app`/`data` L2 returning
+`entries: []`). `--diagnostics-dir`'s verbose log (D-64) proved PIT's
+minion genuinely gathered real coverage against WTA - "Found 143 tests",
+"All 143 tests were executed", real `ActionDAOImpl` log output from real
+test execution - so the bug was never in evidence collection, only in
+what coverdict did with it afterward.
+
+Root cause, confirmed by disassembling PIT 1.15.8's bytecode (`javap`):
+`CoverdictLineExporter.recordCoverage()` called `new
+org.pitest.classpath.ClassPathByteArraySource()` (no-arg), which resolves
+class bytes through `ClassPath.getClassPathElementsAsFiles()` - the
+*running JVM's own* `java.class.path`, not `ReportOptions.classPathElements`.
+This code runs in the `PerTestDriver` subprocess, whose own `-cp` is only
+coverdict's shaded jar (`PerTestRunner`'s `classpathArgFile` never included
+the target module's classes - those go to PIT separately, through
+`ReportOptions`). So every `BlockCoverage` PIT's minion sent back
+genuinely existed, but `LineMapper.mapLines()` could never find the
+target class's bytes to map blocks to lines - `BlockLineResolver`'s own
+`resolvedLines == null || resolvedLines.isEmpty()` early return then
+silently dropped every block, with no error and no warning, because
+nothing was ever wrong with *that* check - the input handed to it already
+was. Fix: `PerTestDriver` now publishes the real classpath file path via
+a second system property (`CLASSPATH_FILE_PROPERTY`, same channel
+`MODULE_ID_PROPERTY` already used - the only way to reach an
+SPI-instantiated exporter); `CoverdictLineExporter` reads it and
+constructs `ClassPathByteArraySource(ClassPath)` explicitly, falling back
+to the no-arg default only when the property is absent (a bare unit test
+instantiating the SPI directly).
+
+Fixing this exposed a second, independent gap while writing the first
+real-PIT-subprocess test for L2 (`PlaygroundMutationIT`, extended to
+assert non-empty `entries`, not just no error): `PerTestDriver` still had
+D-59/D-63's unscoped `targetTests=List.of("*")` - never narrowed like
+`MutationDriver`'s package-scoped globs. Under
+`SubprocessWorkspace.ownRuntimeClasspathEntries()` (this JVM's own
+dev/test classpath, appended to every driver's `-cp` unconditionally),
+that told PIT every test reachable there - including coverdict's own
+`MainTest`/`PlaygroundFunctionalTest` - was a covering-test candidate,
+which blew well past the 120s per-test collection timeout running under
+`-Pmutation-it`. `MutationDriver`'s `testGlobsFor` (private, package-only
+narrowing) is now `TestGlobs.samePackageGlobsFor` in
+`dev.coverdict.analysis.subprocess` - shared by both drivers, no behavior
+change for `MutationDriver` itself. Real WTA production runs (`java -jar
+coverdict.jar`, single shaded jar on `-cp`) were not exposed to the same
+failure mode as sharply, since there is no large dev/test suite riding
+along - but the narrowing is correct there too, for the same D-63
+reasoning.
+
+Verified end to end against a real PIT subprocess, not stubbed:
+`PlaygroundMutationIT` now asserts `perTest.modules[0].entries` is
+non-empty against the checked-in playground fixture - the exact
+regression this class of bug would reintroduce silently otherwise.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

@@ -1,12 +1,19 @@
 package dev.coverdict.analysis.pertest;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
 import org.pitest.classinfo.ClassByteArraySource;
+import org.pitest.classpath.ClassPath;
+import org.pitest.classpath.ClassPathByteArraySource;
 import org.pitest.coverage.BlockCoverage;
 import org.pitest.coverage.CoverageExporter;
 import org.pitest.coverage.CoverageExporterFactory;
@@ -26,10 +33,29 @@ import org.pitest.util.ResultOutputStrategy;
  * repo embedding coverdict is unaffected.
  *
  * <p>Runs in the same JVM that calls {@link org.pitest.mutationtest.tooling.EntryPoint#execute}
- * (the PIT "driver" process, not the coverage minion) - {@code
- * ClassByteArraySource} here reads class bytes off the classpath PIT itself
- * was pointed at (production classes; PIT's compiled test classes are
- * covered separately by its own bytecode-analysis, not by this source).
+ * (the PIT "driver" process, not the coverage minion).
+ *
+ * <p><strong>D-68:</strong> {@code new ClassPathByteArraySource()}'s
+ * no-arg constructor resolves class bytes through {@code
+ * ClassPath.getClassPathElementsAsFiles()} - the running JVM's own {@code
+ * java.class.path}, confirmed by disassembling the constructor. That is
+ * never the target repo's classes: this driver JVM is launched with only
+ * coverdict's own shaded jar on its {@code -cp} ({@code PerTestRunner}
+ * only needs its own classes plus PIT's on that launch command - the
+ * target classpath is handed to PIT separately, through {@code
+ * ReportOptions}). The result before this fix: PIT's minion genuinely
+ * gathered real {@link BlockCoverage} (proven live against WTA - the
+ * minion log showed real test execution and real production-code log
+ * output), but every block silently failed to resolve to a line here,
+ * because {@code ClassPathByteArraySource} was looking for the target
+ * module's `.class` files on a classpath that never had them - {@link
+ * BlockLineResolver} then dropped every block with no error and no
+ * warning (its own {@code resolvedLines == null || resolvedLines.isEmpty()}
+ * early return, working exactly as designed against an input that was
+ * already wrong). {@link PerTestDriver} now passes the real classpath file
+ * path through {@link #CLASSPATH_FILE_PROPERTY} - the same channel {@link
+ * #MODULE_ID_PROPERTY} already used, since a system property is the only
+ * way to reach an SPI-instantiated instance like this one.
  */
 public final class CoverdictLineExporter implements CoverageExporterFactory {
 
@@ -37,6 +63,9 @@ public final class CoverdictLineExporter implements CoverageExporterFactory {
 
     /** Set by {@link PerTestDriver} before calling {@code EntryPoint.execute} - the only channel available to an SPI-instantiated exporter. */
     static final String MODULE_ID_PROPERTY = "coverdict.pertest.moduleId";
+
+    /** Set by {@link PerTestDriver}: path to the classpath list file (one entry per line) - the real target-module classpath, distinct from this driver JVM's own launch {@code -cp} (D-68). */
+    static final String CLASSPATH_FILE_PROPERTY = "coverdict.pertest.classpathFile";
 
     @Override
     public CoverageExporter create(ResultOutputStrategy outputStrategy) {
@@ -63,7 +92,7 @@ public final class CoverdictLineExporter implements CoverageExporterFactory {
 
         @Override
         public void recordCoverage(Collection<BlockCoverage> coverage) {
-            ClassByteArraySource source = new org.pitest.classpath.ClassPathByteArraySource();
+            ClassByteArraySource source = new ClassPathByteArraySource(targetClassPath());
             LineMap lineMap = new LineMapper(source);
             String moduleId = System.getProperty(MODULE_ID_PROPERTY, "");
             BlockLineResolver.Result resolved = BlockLineResolver.resolve(moduleId, List.copyOf(coverage), lineMap);
@@ -71,6 +100,35 @@ public final class CoverdictLineExporter implements CoverageExporterFactory {
                 PerTestJsonWriter.write(w, resolved.evidence());
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
+            }
+        }
+
+        /**
+         * The real target-module classpath (D-68), read from the file
+         * {@link #CLASSPATH_FILE_PROPERTY} names. Falls back to PIT's
+         * default no-arg {@link ClassPath} (this driver JVM's own {@code
+         * -cp}) when the property is unset - a bare unit test instantiating
+         * this SPI directly, outside {@link PerTestDriver}, is the only
+         * case that should ever hit this path; never throws, since a
+         * degraded classpath is still better than aborting evidence
+         * collection entirely (hard rule 3a).
+         */
+        private static ClassPath targetClassPath() {
+            String classpathFilePath = System.getProperty(CLASSPATH_FILE_PROPERTY);
+            if (classpathFilePath == null) {
+                return new ClassPath();
+            }
+            try {
+                List<String> lines = Files.readAllLines(Path.of(classpathFilePath), StandardCharsets.UTF_8);
+                List<File> files = new ArrayList<>(lines.size());
+                for (String line : lines) {
+                    if (!line.isBlank()) {
+                        files.add(new File(line));
+                    }
+                }
+                return new ClassPath(files);
+            } catch (IOException e) {
+                return new ClassPath();
             }
         }
     }

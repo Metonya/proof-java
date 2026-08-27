@@ -1,6 +1,7 @@
 package dev.coverdict.cli;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -82,11 +83,14 @@ class PlaygroundMutationIT {
             "--report", "jacoco.xml",
             "--mutation-report",
             "--mutation-classpath", "root=" + mutationClasspath,
+            "--per-test-report",
+            "--per-test-classpath", "root=" + mutationClasspath,
             "--diagnostics-dir", diagnosticsDir.toString(),
             "--out", out.toString());
         assertEquals(0, exitCode, "expected a complete analyze run");
 
         assertMutationRunWasObservable(err.toString(), diagnosticsDir);
+        assertPerTestEvidenceWasReallyCollected(out);
 
         JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(out));
         List<String> findings = mutationFindingSummaries(doc);
@@ -101,6 +105,23 @@ class PlaygroundMutationIT {
         assertTrue(findings.contains("PSEUDO_TESTED_METHOD HIGH " + pkg + "Calculator#square(I)I"));
         assertTrue(findings.contains("SUBSUMED_TEST MEDIUM " + pkg
             + "CalculatorSubsumedTest.[engine:junit-jupiter]/[class:" + pkg + "CalculatorSubsumedTest]/[method:divideNarrow()]"));
+    }
+
+    /**
+     * D-68: the whole reason L2 needed a real-PIT-subprocess test at all -
+     * every unit-level test either stubs the SPI directly or only exercises
+     * the non-spawning paths, so the "coverage genuinely gathered but every
+     * block silently drops" bug survived undetected. Real ground truth:
+     * {@code Calculator} has real production lines, so a real per-test run
+     * against it must resolve at least one line-to-test record.
+     */
+    private static void assertPerTestEvidenceWasReallyCollected(Path outFile) throws IOException {
+        JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(outFile));
+        JsonNode modules = doc.at("/perTest/modules");
+        assertEquals(1, modules.size(), "expected exactly one perTest module: " + modules);
+        JsonNode entries = modules.get(0).get("entries");
+        assertFalse(entries.isEmpty(),
+            "D-68 regression: per-test coverage collected zero line records despite a real target with real coverage");
     }
 
     private static List<String> mutationFindingSummaries(JsonNode doc) {

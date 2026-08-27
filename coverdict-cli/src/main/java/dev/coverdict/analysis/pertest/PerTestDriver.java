@@ -17,6 +17,8 @@ import org.pitest.testapi.TestGroupConfig;
 import org.pitest.util.Glob;
 import org.pitest.util.Verbosity;
 
+import dev.coverdict.analysis.subprocess.TestGlobs;
+
 /**
  * Subprocess entry point spawned by {@link PerTestRunner} (never invoked as
  * {@code coverdict}'s own main command). Drives PIT's real {@code
@@ -54,6 +56,12 @@ public final class PerTestDriver {
         boolean verbose = args.length > 5 && Boolean.parseBoolean(args[5]);
 
         System.setProperty(CoverdictLineExporter.MODULE_ID_PROPERTY, moduleId);
+        // D-68: the only channel available to tell the SPI-instantiated
+        // exporter where to actually find the target module's class bytes -
+        // this driver JVM's own -cp is coverdict's shaded jar alone (see
+        // PerTestRunner), never the target repo's classes, so
+        // CoverdictLineExporter cannot rely on the JVM's ambient classpath.
+        System.setProperty(CoverdictLineExporter.CLASSPATH_FILE_PROPERTY, args[2]);
 
         ReportOptions options = new ReportOptions();
         options.setReportDir(reportDir);
@@ -61,7 +69,14 @@ public final class PerTestDriver {
         options.setCodePaths(codePaths);
         options.setSourceDirs(List.of()); // no mutation report is ever produced (outputFormats=[]); avoids SmartSourceLocator's NPE on a null roots collection
         options.setTargetClasses(targetClasses);
-        options.setTargetTests(Glob.toGlobPredicates(List.of("*")));
+        // D-68: was unscoped List.of("*") - under a dev/test classpath
+        // (SubprocessWorkspace.ownRuntimeClasspathEntries() appends this
+        // JVM's own runtime classpath to every driver's -cp), that made PIT
+        // try to run every test class reachable there, not just the target
+        // repo's - PlaygroundMutationIT hit this directly, discovering and
+        // executing coverdict's own MainTest/PlaygroundFunctionalTest
+        // alongside the fixture's real tests and blowing the 120s timeout.
+        options.setTargetTests(Glob.toGlobPredicates(TestGlobs.samePackageGlobsFor(targetClasses)));
         options.setGroupConfig(TestGroupConfig.emptyConfig()); // D-51: mandatory, else createMinionSettings() NPEs
         options.setSkipFailingTests(true);
         options.setNumberOfThreads(1); // D-52: the determinism gate held at exactly this setting

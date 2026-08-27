@@ -589,19 +589,28 @@ and the bug-repro workflow (shrink a real finding into a new scenario there).
   multi-module property, not WTA-specific, and will recur on any repo
   with cross-module test dependencies among analyzed modules.
   `doctor` does not detect this today (see backlog below).
-- **WTA dogfood: L2 zero-record result confirmed twice, ruled out as a
-  classpath/setup problem (2026-08-27).** Round 3's `--per-test-report`
-  run had a genuinely valid classpath this time (`per-test: module 'app' -
-  1 target class(es)` / `'data' - 13 target class(es)` printed, no
-  `PER_TEST_CLASSPATH_MISSING`) and still resolved to `done, 0 method
-  entr(ies)` for both modules - identical to round 2's result, but that
-  time the classpath truly had been missing, so this is the first run
-  where the zero result cannot be blamed on setup. This is now a
-  confirmed, reproducible coverdict defect in L2's own coverage-to-line
-  resolution (the same target classes produce real mutants under
-  `--mutation-report`, proving they ARE covered). Not yet root-caused:
-  `diagnostics/app-pertest.log` and `diagnostics/data-pertest.log` from
-  this run were not captured/shared - needed before designing a fix.
+- **WTA dogfood: L2 zero-record result - root-caused and fixed (D-68,
+  2026-08-27), closing the dogfood's last open finding.** Round 3-5
+  confirmed the defect was real and reproducible (same target classes
+  produce real mutants under `--mutation-report`, proving coverage exists)
+  but not yet root-caused. `--diagnostics-dir`'s verbose log from a real
+  WTA run finally gave the answer: PIT's minion genuinely gathered
+  coverage ("Found 143 tests", "All 143 tests were executed", real
+  `ActionDAOImpl` log output), so the bug was never in collection.
+  `CoverdictLineExporter` was resolving class bytes through the wrong
+  classpath (`new ClassPathByteArraySource()`'s no-arg constructor reads
+  the *running JVM's own* `-cp`, confirmed by disassembling PIT's
+  bytecode - not the target module's classes at all, which the
+  `PerTestDriver` subprocess never had on its own launch classpath).
+  Every real block of coverage was silently unmappable to a line as a
+  result. Fixed by publishing the real classpath through a second system
+  property, the same channel `MODULE_ID_PROPERTY` already used. Verified
+  against a real PIT subprocess (`PlaygroundMutationIT`, now asserting
+  non-empty `entries`, not just "no error"). A second, independent gap
+  surfaced while building that test: `PerTestDriver` still had D-59/D-63's
+  unscoped `targetTests`, never narrowed like `MutationDriver` - now
+  shares `MutationDriver`'s exact narrowing via a new
+  `TestGlobs.samePackageGlobsFor`. See D-68 for the full mechanism.
 - **Backlog:** standalone HTML · AI-assistant skill (agent reads verdict JSON,
   writes tests for gaps it names, reruns, interprets the result through
   coverdict again) · VS Code extension (inline per-line coverage gutter
