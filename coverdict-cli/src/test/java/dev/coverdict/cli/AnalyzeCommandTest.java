@@ -540,9 +540,9 @@ class AnalyzeCommandTest {
 
     // --- --classpath (M0-CLI-INPUT.md's classpath input, wired for real) ---
 
-    /** Same validation shape for all four id-keyed list/target flags (SonarQube java:S5976). */
+    /** Same validation shape for all five id-keyed list/target flags (SonarQube java:S5976). */
     @ParameterizedTest
-    @ValueSource(strings = {"--classpath", "--per-test-classpath", "--mutation-classpath", "--mutation-target"})
+    @ValueSource(strings = {"--classpath", "--per-test-classpath", "--mutation-classpath", "--mutation-target", "--per-test-target"})
     void classpathIdNotMatchingAnyDeclaredModuleIsInvalidInvocation(String flag) {
         int exitCode = run("analyze", "--no-vcs",
             "--repo", repoRoot.toString(),
@@ -582,6 +582,50 @@ class AnalyzeCommandTest {
         assertEquals(ExitCode.COMPLETE.value(), exitCode);
         JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(outFile));
         assertTrue(doc.at("/perTest").isMissingNode(), "perTest must be entirely absent, not null, when the flag is off");
+    }
+
+    // --- --per-test-target (Faz 14a: L2's diff-free entry point, mirrors --mutation-target) ---
+
+    @Test
+    void perTestTargetWithoutPerTestReportIsInvalidInvocationAndWritesNoJson() {
+        Path outFile = repoRoot.resolve("verdict.json");
+        int exitCode = run("analyze", "--no-vcs", "--per-test-target", "root=com.example.Calc",
+            "--repo", repoRoot.toString(),
+            "--report", FIXTURES.resolve("mixed-coverage.xml").toString(),
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
+        assertTrue(err.toString().contains("--per-test-target requires --per-test-report"), err.toString());
+        assertFalse(Files.exists(outFile));
+    }
+
+    /**
+     * The carve-out this flag exists for: {@code --per-test-report} alone is
+     * rejected under {@code --no-vcs} (the test just above the per-test
+     * section), but adding a real {@code --per-test-target} lifts that -
+     * proven here without a real PIT run by naming a class that does not
+     * exist, so target resolution fails fast with a warning instead of
+     * spawning the engine (same shape as {@code
+     * mutationTargetLiftsTheNoVcsRestrictionAndAnUnresolvedTargetWarnsRatherThanFailing}).
+     */
+    @Test
+    void perTestTargetLiftsTheNoVcsRestrictionAndAnUnresolvedTargetWarnsRatherThanFailing() throws IOException {
+        Files.createDirectories(repoRoot.resolve("src/main/java/com/example"));
+        Files.writeString(repoRoot.resolve("src/main/java/com/example/Calc.java"), "class Calc {}\n");
+        Path outFile = outputDir.resolve("verdict.json");
+
+        int exitCode = run("analyze", "--no-vcs", "--per-test-report",
+            "--per-test-target", "root=com.example.NoSuchClass",
+            "--repo", repoRoot.toString(),
+            "--report", FIXTURES.resolve("mixed-coverage.xml").toString(),
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.COMPLETE.value(), exitCode, err.toString());
+        assertTrue(validate(outFile).isEmpty(), validate(outFile).toString());
+        assertTrue(warningCodes(outFile).contains("PER_TEST_TARGET_UNRESOLVED"), warningCodes(outFile).toString());
+
+        JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(outFile));
+        assertTrue(doc.at("/perTest/modules").isEmpty(), "no target resolved, so no module was ever collected: " + doc.at("/perTest"));
     }
 
     // --- --mutation-report / --mutation-classpath (D-56) ---

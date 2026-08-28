@@ -39,18 +39,50 @@ public final class PerTestCollector {
         List<AnalysisReason> warnings = new ArrayList<>();
 
         for (ModuleDefinition module : modules) {
-            collectOneModule(repoRoot, module, changedFiles, perTestClasspathFilesById, evidence, warnings, diagnostics);
+            List<String> targetClasses = ChangedClassTargets.globsFor(module, changedFiles);
+            AnalysisReason noTargetsReason = new AnalysisReason("PER_TEST_NO_CHANGED_TARGETS",
+                MODULE_PREFIX + module.id() + "' has no mapped changed production class, so no per-test evidence "
+                    + "was requested from the engine.", null, module.id(), 0);
+            collectOneModule(repoRoot, module, targetClasses, noTargetsReason, perTestClasspathFilesById, evidence, warnings, diagnostics);
         }
 
         return new Result(List.copyOf(evidence), List.copyOf(warnings));
     }
 
-    /** One module's collection attempt (SonarQube java:S135 - {@link #collect} stays continue-free). */
-    private static void collectOneModule(Path repoRoot, ModuleDefinition module, List<ChangedFile> changedFiles,
-                                          Map<String, String> perTestClasspathFilesById,
+    /**
+     * {@code --per-test-target} (Faz 14a): target classes come from {@link
+     * PerTestTargetResolver}, never {@link ChangedClassTargets} - no diff is
+     * consulted at all, which is what lets {@code --per-test-target} work
+     * under {@code --no-vcs}. A module absent from {@code targetGlobsById}
+     * is never re-warned here - {@link PerTestTargetResolver} already
+     * explained exactly why (not bound at all, vs. bound but every class
+     * unresolved), so a second, less specific warning would only duplicate it.
+     */
+    public static Result collectForTargets(Path repoRoot, List<ModuleDefinition> modules,
+                                            Map<String, List<String>> targetGlobsById,
+                                            Map<String, String> perTestClasspathFilesById,
+                                            EvidenceDiagnostics diagnostics) {
+        List<PerTestModuleEvidence> evidence = new ArrayList<>();
+        List<AnalysisReason> warnings = new ArrayList<>();
+
+        for (ModuleDefinition module : modules) {
+            List<String> targetClasses = targetGlobsById.getOrDefault(module.id(), List.of());
+            collectOneModule(repoRoot, module, targetClasses, null, perTestClasspathFilesById, evidence, warnings, diagnostics);
+        }
+
+        return new Result(List.copyOf(evidence), List.copyOf(warnings));
+    }
+
+    /**
+     * One module's collection attempt (SonarQube java:S135 - {@link
+     * #collect} stays continue-free). {@code noTargetsReason} may be
+     * {@code null} when the caller (target mode) already explained an empty
+     * target list itself.
+     */
+    private static void collectOneModule(Path repoRoot, ModuleDefinition module, List<String> targetClasses,
+                                          AnalysisReason noTargetsReason, Map<String, String> perTestClasspathFilesById,
                                           List<PerTestModuleEvidence> evidence, List<AnalysisReason> warnings,
                                           EvidenceDiagnostics diagnostics) {
-        List<String> targetClasses = ChangedClassTargets.globsFor(module, changedFiles);
         if (targetClasses.isEmpty()) {
             // D-64: this used to be a silent return. --per-test-report was
             // explicitly asked for, so "this module contributed nothing"
@@ -58,9 +90,9 @@ public final class PerTestCollector {
             // WTA's first run had every module land here (HEAD == the base
             // ref, so nothing had changed) and the verdict explained none
             // of it.
-            warnings.add(new AnalysisReason("PER_TEST_NO_CHANGED_TARGETS",
-                MODULE_PREFIX + module.id() + "' has no mapped changed production class, so no per-test evidence "
-                    + "was requested from the engine.", null, module.id(), 0));
+            if (noTargetsReason != null) {
+                warnings.add(noTargetsReason);
+            }
             return;
         }
         diagnostics.progress("per-test: module '" + module.id() + "' - " + targetClasses.size() + " target class(es)");

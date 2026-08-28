@@ -126,6 +126,9 @@ class AnalyzeCommand implements Callable<Integer> {
     @Option(names = "--per-test-classpath", description = "Repeatable <id>=<file>, where <file> lists PIT's exact test runtime classpath for that module, one entry per line (module output directories and dependency jars) - distinct from --classpath, which is an optional JavaParser aid.")
     private List<String> perTestClasspathArgs = new ArrayList<>();
 
+    @Option(names = "--per-test-target", description = "Repeatable <id>=<FQCN>, one or more explicit classes to collect L2 per-test line coverage for - independent of the diff (Faz 14a, same pattern as --mutation-target). All-or-nothing: when at least one is given, every module's diff-derived targets are ignored entirely for L2, including modules with none of their own. Requires --per-test-report; lifts the --no-vcs restriction on it.")
+    private List<String> perTestTargetArgs = new ArrayList<>();
+
     @Option(names = "--mutation-report", description = "Collect L3 mutation evidence via PIT (D-56: RETURNS+VOID_METHOD_CALLS gregor mutators). Feeds PSEUDO_TESTED_METHOD and SUBSUMED_TEST (D-61's kill-set subsumption). Requires a diff mode unless --mutation-target is also given; rejected under bare --no-vcs.")
     private boolean mutationReport;
 
@@ -172,6 +175,7 @@ class AnalyzeCommand implements Callable<Integer> {
     private record Invocation(Path repoRoot, String diffMode, CoverdictConfig config, List<String> exclusions,
                                List<ModuleDefinition> modules, Map<String, List<String>> reportPathsById,
                                Map<String, String> classpathFilesById, Map<String, String> perTestClasspathFilesById,
+                               Map<String, List<String>> perTestTargetFqcnsById,
                                Map<String, String> mutationClasspathFilesById,
                                Map<String, List<String>> mutationTargetFqcnsById) {
     }
@@ -183,7 +187,6 @@ class AnalyzeCommand implements Callable<Integer> {
         CoverdictConfig config = ConfigLoader.load(repoRoot, configOption);
         applyConfigPrecedence(config);
         validateFindingsScope(diffMode);
-        validatePerTestReport(diffMode);
 
         List<String> exclusions = exclusionsArg == null || exclusionsArg.isBlank()
             ? List.of()
@@ -197,13 +200,15 @@ class AnalyzeCommand implements Callable<Integer> {
         Map<String, String> classpathFilesById = parseClasspathArgs(modules);
         Map<String, String> perTestClasspathFilesById = mergeConfigThenCli(
             moduleSource.perTestClasspathFilesById(), parsePerTestClasspathArgs(modules));
+        Map<String, List<String>> perTestTargetFqcnsById = parsePerTestTargetArgs(modules);
+        validatePerTestReport(diffMode, perTestTargetFqcnsById);
         Map<String, String> mutationClasspathFilesById = mergeConfigThenCli(
             moduleSource.mutationClasspathFilesById(), parseMutationClasspathArgs(modules));
         Map<String, List<String>> mutationTargetFqcnsById = parseMutationTargetArgs(modules);
         validateMutationReport(diffMode, mutationTargetFqcnsById);
 
         return new Invocation(repoRoot, diffMode, config, exclusions, modules, reportPathsById, classpathFilesById,
-            perTestClasspathFilesById, mutationClasspathFilesById, mutationTargetFqcnsById);
+            perTestClasspathFilesById, perTestTargetFqcnsById, mutationClasspathFilesById, mutationTargetFqcnsById);
     }
 
     /** @throws CliUsageException unless exactly one of --no-vcs/--uncommitted/--base is set. */
@@ -227,10 +232,22 @@ class AnalyzeCommand implements Callable<Integer> {
         }
     }
 
-    /** @throws CliUsageException when --per-test-report is combined with --no-vcs (undefined without a diff, same pattern as --findings-scope changed). */
-    private void validatePerTestReport(String diffMode) {
-        if (perTestReport && DIFF_MODE_NO_VCS.equals(diffMode)) {
-            throw new CliUsageException("--per-test-report requires a diff mode (--uncommitted or --base <ref>), not --no-vcs.");
+    /**
+     * @throws CliUsageException when --per-test-target is given without
+     *         --per-test-report (nothing would ever consume it), or when
+     *         --per-test-report is combined with --no-vcs and no
+     *         --per-test-target was given (undefined without a diff, same
+     *         pattern as --findings-scope changed) - --per-test-target lifts
+     *         that restriction (Faz 14a: it names its own targets, no diff
+     *         needed, mirrors --mutation-target's validateMutationReport).
+     */
+    private void validatePerTestReport(String diffMode, Map<String, List<String>> perTestTargetFqcnsById) {
+        if (!perTestTargetFqcnsById.isEmpty() && !perTestReport) {
+            throw new CliUsageException("--per-test-target requires --per-test-report.");
+        }
+        if (perTestReport && DIFF_MODE_NO_VCS.equals(diffMode) && perTestTargetFqcnsById.isEmpty()) {
+            throw new CliUsageException("--per-test-report requires a diff mode (--uncommitted or --base <ref>) "
+                + "unless --per-test-target is also given, not --no-vcs.");
         }
     }
 
@@ -481,6 +498,35 @@ class AnalyzeCommand implements Callable<Integer> {
     }
 
     /**
+     * @throws CliUsageException on malformed {@code --per-test-target} syntax
+     *         (must be {@code <id>=<FQCN>}, no bare form), or an id that names
+     *         no declared module (same pattern as {@link #parseMutationTargetArgs}).
+     *         Unlike those id-keyed options, an id may repeat here - naming
+     *         several classes in one module is the normal case, not a mistake.
+     */
+    private Map<String, List<String>> parsePerTestTargetArgs(List<ModuleDefinition> modules) {
+        Map<String, List<String>> byId = new LinkedHashMap<>();
+        for (String arg : perTestTargetArgs) {
+            int eq = arg.indexOf('=');
+            if (eq < 0) {
+                throw new CliUsageException("Expected --per-test-target <id>=<FQCN>, got: " + arg);
+            }
+            byId.computeIfAbsent(arg.substring(0, eq), k -> new ArrayList<>()).add(arg.substring(eq + 1));
+        }
+        if (byId.isEmpty()) {
+            return byId;
+        }
+        java.util.Set<String> declaredIds = modules.stream().map(ModuleDefinition::id).collect(Collectors.toSet());
+        for (String id : byId.keySet()) {
+            if (!declaredIds.contains(id)) {
+                throw new CliUsageException("--per-test-target id '" + id + "' does not match any declared --module id "
+                    + declaredIds + ".");
+            }
+        }
+        return byId;
+    }
+
+    /**
      * @throws CliUsageException on malformed {@code --mutation-target} syntax
      *         (must be {@code <id>=<FQCN>}, no bare form), or an id that names
      *         no declared module (same pattern as {@link #parseClasspathArgs}).
@@ -584,6 +630,20 @@ class AnalyzeCommand implements Callable<Integer> {
             noVcsWarnings.addAll(scan.warnings());
             List<Finding> noVcsFindings = new ArrayList<>(scan.findings());
 
+            // --per-test-target is the only way --per-test-report reaches this
+            // branch (validatePerTestReport rejects bare --no-vcs + --per-test-report) - it names its own
+            // targets, so no diff is needed (Faz 14a, mirrors --mutation-target).
+            List<dev.coverdict.analysis.pertest.PerTestModuleEvidence> perTest = null;
+            if (perTestReport) {
+                dev.coverdict.analysis.pertest.PerTestTargetResolver.Result targets =
+                    dev.coverdict.analysis.pertest.PerTestTargetResolver.resolve(repoRoot, evidencedModules, inv.perTestTargetFqcnsById());
+                noVcsWarnings.addAll(targets.warnings());
+                PerTestCollector.Result perTestResult = PerTestCollector.collectForTargets(repoRoot, evidencedModules,
+                    targets.targetGlobsById(), inv.perTestClasspathFilesById(), buildDiagnostics());
+                perTest = perTestResult.modules();
+                noVcsWarnings.addAll(perTestResult.warnings());
+            }
+
             // --mutation-target is the only way --mutation-report reaches this
             // branch (validateMutationReport rejects bare --no-vcs + --mutation-report) - it names its own
             // targets, so no diff is needed (Plan.md Faz 2).
@@ -599,7 +659,7 @@ class AnalyzeCommand implements Callable<Integer> {
             return new VerdictDocument(version.schemaVersion(), version.version(), allReasons.isEmpty(), allReasons,
                 languageLevel, encoding, exclusions, moduleInputs, diffMode, findingsScopeOption, null, overall,
                 NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), noVcsFindings, noVcsWarnings,
-                null, mutation, fileCoverageBlock);
+                perTest, mutation, fileCoverageBlock);
         }
 
         // Diff-mode phase: a failure here does NOT discard the overall data
@@ -630,10 +690,23 @@ class AnalyzeCommand implements Callable<Integer> {
 
             List<dev.coverdict.analysis.pertest.PerTestModuleEvidence> perTest = null;
             if (perTestReport) {
-                PerTestCollector.Result perTestResult = PerTestCollector.collect(repoRoot, evidencedModules,
-                    classification.changedFiles(), inv.perTestClasspathFilesById(), diagnostics);
-                perTest = perTestResult.modules();
-                allWarnings.addAll(perTestResult.warnings());
+                // --per-test-target takes priority over diff-derived targets,
+                // all-or-nothing across every module in this run (Faz 14a,
+                // mirrors --mutation-target's collectMutationEvidence).
+                if (!inv.perTestTargetFqcnsById().isEmpty()) {
+                    dev.coverdict.analysis.pertest.PerTestTargetResolver.Result targets =
+                        dev.coverdict.analysis.pertest.PerTestTargetResolver.resolve(repoRoot, evidencedModules, inv.perTestTargetFqcnsById());
+                    allWarnings.addAll(targets.warnings());
+                    PerTestCollector.Result perTestResult = PerTestCollector.collectForTargets(repoRoot, evidencedModules,
+                        targets.targetGlobsById(), inv.perTestClasspathFilesById(), diagnostics);
+                    perTest = perTestResult.modules();
+                    allWarnings.addAll(perTestResult.warnings());
+                } else {
+                    PerTestCollector.Result perTestResult = PerTestCollector.collect(repoRoot, evidencedModules,
+                        classification.changedFiles(), inv.perTestClasspathFilesById(), diagnostics);
+                    perTest = perTestResult.modules();
+                    allWarnings.addAll(perTestResult.warnings());
+                }
             }
 
             List<Finding> allFindings = new ArrayList<>(scan.findings());

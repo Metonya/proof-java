@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import dev.coverdict.analysis.binding.SourceRootClassIndex;
 import dev.coverdict.analysis.model.AnalysisReason;
 import dev.coverdict.analysis.model.ModuleDefinition;
 

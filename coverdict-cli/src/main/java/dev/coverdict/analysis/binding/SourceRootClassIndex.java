@@ -1,4 +1,4 @@
-package dev.coverdict.analysis.mutation;
+package dev.coverdict.analysis.binding;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -8,28 +8,30 @@ import dev.coverdict.analysis.model.ModuleDefinition;
 import dev.coverdict.analysis.model.RepoPaths;
 
 /**
- * FQCN to repo-relative source path, for {@code --mutation-target} (Plan.md
- * Faz 2): unlike {@link dev.coverdict.analysis.binding.ChangedClassTargets},
- * which reads the path straight out of an already-classified {@code
- * ChangedFile}, this resolves a user-supplied class name against a module's
- * {@code sourceRoots()} directly - there is no diff involved. Applies the
- * same repo-escape guard {@code ModuleBinder.resolvePath} applies to a
- * JaCoCo XML path, since a {@code --mutation-target} value is equally
- * capable of naming a class outside the repo. Never throws: an unresolved
- * target is reported by the caller as {@code MUTATION_TARGET_UNRESOLVED}
- * (hard rule 3a), not rejected as an invalid invocation - the id itself was
- * already validated against a declared module.
+ * FQCN to repo-relative source path, for an explicitly-named class target
+ * ({@code --mutation-target}/{@code --per-test-target}, Plan.md Faz 2 /
+ * Faz 14): unlike {@link ChangedClassTargets}, which reads the path
+ * straight out of an already-classified {@code ChangedFile}, this resolves
+ * a user-supplied class name against a module's {@code sourceRoots()}
+ * directly - there is no diff involved. Applies the same repo-escape guard
+ * {@code ModuleBinder.resolvePath} applies to a JaCoCo XML path, since a
+ * target value is equally capable of naming a class outside the repo.
+ * Never throws: an unresolved target is reported by the caller (hard rule
+ * 3a), not rejected as an invalid invocation - the id itself was already
+ * validated against a declared module. Public (moved out of {@code
+ * analysis.mutation}, Faz 14a) so both the mutation and per-test explicit-
+ * target resolvers can share it without duplicating the path math.
  */
-final class SourceRootClassIndex {
+public final class SourceRootClassIndex {
 
     private SourceRootClassIndex() {
     }
 
-    record Resolution(String path, boolean foundOnDisk) {
-        static final Resolution UNRESOLVED = new Resolution(null, false);
+    public record Resolution(String path, boolean foundOnDisk) {
+        public static final Resolution UNRESOLVED = new Resolution(null, false);
     }
 
-    static Resolution resolve(Path repoRoot, ModuleDefinition module, String fqcn) {
+    public static Resolution resolve(Path repoRoot, ModuleDefinition module, String fqcn) {
         String outer = stripNestedSuffix(fqcn);
         String relative = outer.replace('.', '/') + ".java";
         if (RepoPaths.isEscapingRepoRoot(relative)) {

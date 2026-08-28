@@ -73,4 +73,28 @@ class PerTestCollectorTest {
         assertEquals(1, result.warnings().size());
         assertEquals("PER_TEST_CLASSPATH_MISSING", result.warnings().get(0).code());
     }
+
+    // --- collectForTargets (Faz 14a, --per-test-target) ---
+
+    @Test
+    void aModuleAbsentFromTargetGlobsIsSkippedWithNoWarningOfItsOwn() {
+        // PerTestTargetResolver already explains an empty target list
+        // (PER_TEST_TARGET_NOT_BOUND / PER_TEST_TARGET_UNRESOLVED) - collectForTargets must not add a second, less specific one.
+        PerTestCollector.Result result = PerTestCollector.collectForTargets(repoRoot, List.of(MODULE),
+            Map.of(), Map.of(), dev.coverdict.analysis.subprocess.EvidenceDiagnostics.none());
+
+        assertTrue(result.modules().isEmpty());
+        assertTrue(result.warnings().isEmpty());
+    }
+
+    @Test
+    void aTargetedModuleWithNoBoundClasspathWarnsTheSameWayAChangedModuleWould() {
+        PerTestCollector.Result result = PerTestCollector.collectForTargets(repoRoot, List.of(MODULE),
+            Map.of("app", List.of("com.example.Calc*")), Map.of(),
+            dev.coverdict.analysis.subprocess.EvidenceDiagnostics.none());
+
+        assertTrue(result.modules().isEmpty());
+        assertEquals(1, result.warnings().size());
+        assertEquals("PER_TEST_CLASSPATH_MISSING", result.warnings().get(0).code());
+    }
 }
