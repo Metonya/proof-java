@@ -35,18 +35,17 @@ public final class PerTestCollector {
 
     public static Result collect(Path repoRoot, List<ModuleDefinition> modules, List<ChangedFile> changedFiles,
                                   Map<String, String> perTestClasspathFilesById, EvidenceDiagnostics diagnostics) {
-        List<PerTestModuleEvidence> evidence = new ArrayList<>();
-        List<AnalysisReason> warnings = new ArrayList<>();
+        Accumulator acc = new Accumulator();
 
         for (ModuleDefinition module : modules) {
             List<String> targetClasses = ChangedClassTargets.globsFor(module, changedFiles);
             AnalysisReason noTargetsReason = new AnalysisReason("PER_TEST_NO_CHANGED_TARGETS",
                 MODULE_PREFIX + module.id() + "' has no mapped changed production class, so no per-test evidence "
                     + "was requested from the engine.", null, module.id(), 0);
-            collectOneModule(repoRoot, module, targetClasses, noTargetsReason, perTestClasspathFilesById, evidence, warnings, diagnostics);
+            collectOneModule(repoRoot, module, targetClasses, noTargetsReason, perTestClasspathFilesById, acc, diagnostics);
         }
 
-        return new Result(List.copyOf(evidence), List.copyOf(warnings));
+        return acc.toResult();
     }
 
     /**
@@ -62,27 +61,28 @@ public final class PerTestCollector {
                                             Map<String, List<String>> targetGlobsById,
                                             Map<String, String> perTestClasspathFilesById,
                                             EvidenceDiagnostics diagnostics) {
-        List<PerTestModuleEvidence> evidence = new ArrayList<>();
-        List<AnalysisReason> warnings = new ArrayList<>();
+        Accumulator acc = new Accumulator();
 
         for (ModuleDefinition module : modules) {
             List<String> targetClasses = targetGlobsById.getOrDefault(module.id(), List.of());
-            collectOneModule(repoRoot, module, targetClasses, null, perTestClasspathFilesById, evidence, warnings, diagnostics);
+            collectOneModule(repoRoot, module, targetClasses, null, perTestClasspathFilesById, acc, diagnostics);
         }
 
-        return new Result(List.copyOf(evidence), List.copyOf(warnings));
+        return acc.toResult();
     }
 
     /**
      * One module's collection attempt (SonarQube java:S135 - {@link
      * #collect} stays continue-free). {@code noTargetsReason} may be
      * {@code null} when the caller (target mode) already explained an empty
-     * target list itself.
+     * target list itself. {@code acc} bundles the two accumulator lists
+     * (SonarQube java:S107 - collect/collectForTargets/collectOneModule
+     * always mutate evidence and warnings together, so one parameter object
+     * is both the fix and the more accurate shape).
      */
     private static void collectOneModule(Path repoRoot, ModuleDefinition module, List<String> targetClasses,
                                           AnalysisReason noTargetsReason, Map<String, String> perTestClasspathFilesById,
-                                          List<PerTestModuleEvidence> evidence, List<AnalysisReason> warnings,
-                                          EvidenceDiagnostics diagnostics) {
+                                          Accumulator acc, EvidenceDiagnostics diagnostics) {
         if (targetClasses.isEmpty()) {
             // D-64: this used to be a silent return. --per-test-report was
             // explicitly asked for, so "this module contributed nothing"
@@ -91,14 +91,14 @@ public final class PerTestCollector {
             // ref, so nothing had changed) and the verdict explained none
             // of it.
             if (noTargetsReason != null) {
-                warnings.add(noTargetsReason);
+                acc.warnings.add(noTargetsReason);
             }
             return;
         }
         diagnostics.progress("per-test: module '" + module.id() + "' - " + targetClasses.size() + " target class(es)");
         String classpathFile = perTestClasspathFilesById.get(module.id());
         if (classpathFile == null) {
-            warnings.add(new AnalysisReason("PER_TEST_CLASSPATH_MISSING",
+            acc.warnings.add(new AnalysisReason("PER_TEST_CLASSPATH_MISSING",
                 MODULE_PREFIX + module.id() + "' has changed production classes but no --per-test-classpath "
                     + "bound to it; per-test evidence skipped for this module.", null, module.id()));
             return;
@@ -106,16 +106,16 @@ public final class PerTestCollector {
 
         PerTestClasspathLoader.Result classpath = PerTestClasspathLoader.load(repoRoot, module.id(), classpathFile);
         if (!classpath.warnings().isEmpty()) {
-            warnings.addAll(classpath.warnings());
+            acc.warnings.addAll(classpath.warnings());
             return;
         }
 
         try {
             Optional<PerTestModuleEvidence> result = PerTestRunner.run(module.id(), repoRoot,
                 classpath.classPathElements(), classpath.codePaths(), targetClasses, diagnostics);
-            result.ifPresent(one -> recordEvidence(module, one, evidence, warnings));
+            result.ifPresent(one -> recordEvidence(module, one, acc));
         } catch (PerTestCollectionException e) {
-            warnings.add(new AnalysisReason("PER_TEST_COLLECTION_FAILED",
+            acc.warnings.add(new AnalysisReason("PER_TEST_COLLECTION_FAILED",
                 MODULE_PREFIX + module.id() + "' per-test coverage collection failed (" + e.getMessage()
                     + "); per-test evidence skipped for this module.", null, module.id()));
         }
@@ -128,13 +128,21 @@ public final class PerTestCollector {
      * which read as success; the module is still published so the shape of
      * the run stays visible, but the emptiness is now named.
      */
-    private static void recordEvidence(ModuleDefinition module, PerTestModuleEvidence one,
-                                        List<PerTestModuleEvidence> evidence, List<AnalysisReason> warnings) {
-        evidence.add(one);
+    private static void recordEvidence(ModuleDefinition module, PerTestModuleEvidence one, Accumulator acc) {
+        acc.evidence.add(one);
         if (one.entries().isEmpty() && one.ambient().isEmpty()) {
-            warnings.add(new AnalysisReason("PER_TEST_EMPTY_EVIDENCE",
+            acc.warnings.add(new AnalysisReason("PER_TEST_EMPTY_EVIDENCE",
                 MODULE_PREFIX + module.id() + "' per-test coverage ran but resolved no test-to-line record; "
                     + "no per-test evidence is available for it despite being requested.", null, module.id(), 0));
+        }
+    }
+
+    private static final class Accumulator {
+        private final List<PerTestModuleEvidence> evidence = new ArrayList<>();
+        private final List<AnalysisReason> warnings = new ArrayList<>();
+
+        Result toResult() {
+            return new Result(List.copyOf(evidence), List.copyOf(warnings));
         }
     }
 

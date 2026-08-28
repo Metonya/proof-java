@@ -635,13 +635,10 @@ class AnalyzeCommand implements Callable<Integer> {
             // targets, so no diff is needed (Faz 14a, mirrors --mutation-target).
             List<dev.coverdict.analysis.pertest.PerTestModuleEvidence> perTest = null;
             if (perTestReport) {
-                dev.coverdict.analysis.pertest.PerTestTargetResolver.Result targets =
-                    dev.coverdict.analysis.pertest.PerTestTargetResolver.resolve(repoRoot, evidencedModules, inv.perTestTargetFqcnsById());
-                noVcsWarnings.addAll(targets.warnings());
-                PerTestCollector.Result perTestResult = PerTestCollector.collectForTargets(repoRoot, evidencedModules,
-                    targets.targetGlobsById(), inv.perTestClasspathFilesById(), buildDiagnostics());
-                perTest = perTestResult.modules();
-                noVcsWarnings.addAll(perTestResult.warnings());
+                PerTestOutcome outcome = collectPerTestEvidence(repoRoot, evidencedModules, List.of(),
+                    inv.perTestClasspathFilesById(), inv.perTestTargetFqcnsById(), buildDiagnostics());
+                perTest = outcome.perTest();
+                noVcsWarnings.addAll(outcome.warnings());
             }
 
             // --mutation-target is the only way --mutation-report reaches this
@@ -693,20 +690,10 @@ class AnalyzeCommand implements Callable<Integer> {
                 // --per-test-target takes priority over diff-derived targets,
                 // all-or-nothing across every module in this run (Faz 14a,
                 // mirrors --mutation-target's collectMutationEvidence).
-                if (!inv.perTestTargetFqcnsById().isEmpty()) {
-                    dev.coverdict.analysis.pertest.PerTestTargetResolver.Result targets =
-                        dev.coverdict.analysis.pertest.PerTestTargetResolver.resolve(repoRoot, evidencedModules, inv.perTestTargetFqcnsById());
-                    allWarnings.addAll(targets.warnings());
-                    PerTestCollector.Result perTestResult = PerTestCollector.collectForTargets(repoRoot, evidencedModules,
-                        targets.targetGlobsById(), inv.perTestClasspathFilesById(), diagnostics);
-                    perTest = perTestResult.modules();
-                    allWarnings.addAll(perTestResult.warnings());
-                } else {
-                    PerTestCollector.Result perTestResult = PerTestCollector.collect(repoRoot, evidencedModules,
-                        classification.changedFiles(), inv.perTestClasspathFilesById(), diagnostics);
-                    perTest = perTestResult.modules();
-                    allWarnings.addAll(perTestResult.warnings());
-                }
+                PerTestOutcome outcome = collectPerTestEvidence(repoRoot, evidencedModules, classification.changedFiles(),
+                    inv.perTestClasspathFilesById(), inv.perTestTargetFqcnsById(), diagnostics);
+                perTest = outcome.perTest();
+                allWarnings.addAll(outcome.warnings());
             }
 
             List<Finding> allFindings = new ArrayList<>(scan.findings());
@@ -742,6 +729,38 @@ class AnalyzeCommand implements Callable<Integer> {
     }
 
     private record MutationOutcome(List<MutationModuleEvidence> mutation, List<Finding> findings, List<AnalysisReason> warnings) {
+    }
+
+    private record PerTestOutcome(List<dev.coverdict.analysis.pertest.PerTestModuleEvidence> perTest, List<AnalysisReason> warnings) {
+    }
+
+    /**
+     * Shared by both {@code analyze} branches that can run {@code
+     * --per-test-report} (SonarQube java:S6541 - keeping this branching out
+     * of {@code analyze} itself is what keeps that method under the
+     * complexity/LOC thresholds, same reason {@link #collectMutationEvidence}
+     * was already extracted). {@code --per-test-target} takes priority over
+     * {@code changedFiles}, all-or-nothing, mirroring {@link
+     * #collectMutationEvidence}'s target-vs-diff precedence (Faz 14a).
+     */
+    private PerTestOutcome collectPerTestEvidence(Path repoRoot, List<ModuleDefinition> evidencedModules,
+                                                    List<ChangedFile> changedFiles,
+                                                    Map<String, String> perTestClasspathFilesById,
+                                                    Map<String, List<String>> perTestTargetFqcnsById,
+                                                    EvidenceDiagnostics diagnostics) {
+        List<AnalysisReason> warnings = new ArrayList<>();
+        PerTestCollector.Result result;
+        if (!perTestTargetFqcnsById.isEmpty()) {
+            dev.coverdict.analysis.pertest.PerTestTargetResolver.Result targets =
+                dev.coverdict.analysis.pertest.PerTestTargetResolver.resolve(repoRoot, evidencedModules, perTestTargetFqcnsById);
+            warnings.addAll(targets.warnings());
+            result = PerTestCollector.collectForTargets(repoRoot, evidencedModules, targets.targetGlobsById(),
+                perTestClasspathFilesById, diagnostics);
+        } else {
+            result = PerTestCollector.collect(repoRoot, evidencedModules, changedFiles, perTestClasspathFilesById, diagnostics);
+        }
+        warnings.addAll(result.warnings());
+        return new PerTestOutcome(result.modules(), warnings);
     }
 
     /**
