@@ -1,0 +1,1 @@
+coverdict: exactly one diff mode is required: --no-vcs, --uncommitted, or --base <ref> (docs/M0-CLI-INPUT.md).

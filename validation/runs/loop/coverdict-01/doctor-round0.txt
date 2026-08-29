@@ -1,0 +1,14 @@
+coverdict doctor: 1 module(s) found
+
+coverdict-cli (coverdict-cli)
+  [ok]   src/main/java found
+  [ok]   src/test/java found
+  [ok]   target/classes has compiled output
+  [FAIL] target/site/jacoco/jacoco.xml not found - run the build with coverage enabled before analyze
+  [warn] target/coverdict-per-test-classpath.txt not found - only needed for --per-test-classpath (L2/L3), run 'doctor --fix' to generate it
+  [warn] target/coverdict-mutation-classpath.txt not found - only needed for --mutation-classpath (L2/L3), run 'doctor --fix' to generate it
+
+1 module(s) have at least one BLOCKER - fix those first, or run 'doctor --fix' to resolve what it can.
+
+No module has a usable JaCoCo report yet - nothing to suggest a command for.
+EXIT=3
