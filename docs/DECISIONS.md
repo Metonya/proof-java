@@ -1630,6 +1630,26 @@ changed-files dependency at all (`SubsumedTestRule`'s test-path resolution
 already reads a module's declared test roots straight off disk) - nothing
 to fix there.
 
+**D-72 · The agent skill lives in `skills/`, renders JSON, and never authors a
+finding** (2026-08-29)
+Hard rule 7 already names **skill** as a rendering surface of the same JSON, and
+ROADMAP's backlog carried the one-liner - this promotes that item, it is not new
+scope. The skill ships at `skills/coverdict/` (repo root), **not** under
+`.claude/`: hard rule 7 makes it a product surface that versions with the schema,
+the same reasoning that puts `schema/` and `docs/rules/` at the root, whereas
+`.claude/` holds config for agents working *on* coverdict - the `AGENTS.md`
+audience. Conflating the two would auto-load a consumer skill into maintainer
+sessions. Installation is a copy into the host tool's own skills directory; a
+`coverdict skill install` subcommand is backlog, not this pass (hard rule 8).
+The skill is bound by the same hard rules as every other surface: it renders
+verdict JSON and **may never generate, infer, or store a finding of its own**
+(hard rule 1), never suggests deletion at any confidence (hard rule 3), and never
+reports an exit-3 run as success (hard rule 3a). It also owns the loop's evidence
+capture (`reference/loop-log-template.md`), so the ROADMAP kill criterion becomes
+measurable on every future run rather than only when someone remembers to record
+one - six WTA dogfood rounds produced zero such evidence precisely because
+nothing required it.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not
