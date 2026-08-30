@@ -1630,6 +1630,39 @@ changed-files dependency at all (`SubsumedTestRule`'s test-path resolution
 already reads a module's declared test roots straight off disk) - nothing
 to fix there.
 
+**D-72 · `coverdict-cli` bundles `junit-vintage-engine` (compile scope,
+shaded into `coverdict.jar`)** (2026-08-30)
+Real gson dogfooding: L2 (`--per-test-report`) always failed on gson - a
+plain JUnit4 module, no JUnit5/Platform dependency of its own - with PIT's
+minion crashing `UNKNOWN_ERROR`. Root-caused via `--diagnostics-dir`: PIT's
+coverage minion always launches through the JUnit Platform Launcher, even
+for a JUnit4 target, and `LauncherFactory` throws
+`PreconditionViolationException: Cannot create Launcher without at least
+one TestEngine` when nothing on the classpath supplies one -
+`junit-vintage-engine` is that bridge, and neither the target module (gson
+declares only `junit:junit`) nor `coverdict.jar` (only `junit-jupiter` at
+`test` scope, never shaded) had it. Adding it externally via
+`--per-test-classpath` isn't enough either: a version resolved outside
+`junit-bom` risks a `junit-platform-commons` release older/newer than the
+one `pitest-junit5-plugin`'s own `junit-platform-launcher` transitively
+pulls in - confirmed the hard way, a mismatched `junit-vintage-engine`
+5.11.3 against the bundled platform-commons 1.12.2 threw
+`ClassNotFoundException: org.junit.platform.commons.util.ClassFilter`, a
+real internal API moved between 1.11.x and 1.12.x. Declaring
+`junit-vintage-engine` as a normal dependency in `coverdict-cli/pom.xml`
+(no explicit version) lets the existing `junit-bom` import resolve it to
+the same Platform line as `junit-jupiter`, guaranteeing alignment, and
+bundles it into every target repo's classpath for free - no per-repo
+`doctor --fix` classpath guessing needed. Verified against real gson:
+single-target collection now returns real method entries (previously
+crashed in ~1.3s regardless of `--per-test-timeout`, proving the earlier
+120s-budget hypothesis wrong); `coverdict-cli`'s own suite stayed
+370/370 (1 pre-existing skip). A full ~85-class "scan whole module" run
+gets past the minion entirely (`Coverage generator Minion exited ok`) but
+hits a separate, later failure reading the result file back
+(`PerTestRunner`'s "produced an unreadable per-test result file") -
+distinct bug, not yet root-caused, left for its own investigation.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not
