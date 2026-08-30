@@ -102,7 +102,7 @@ never a false green. M1a is now feature-complete; M1c will still need to
 measure `sonar-compatible` new-code parity against the real SonarQube UI
 (criterion 2) once the validation corpus work starts.
 
-- Standalone HTML is deferred until dogfood proves a need.
+- ~~Standalone HTML is deferred until dogfood proves a need.~~ Done, D-75: `analyze --html-report <path>` renders the same verdict document as `--out`/stdout (hard rule 7) as a self-contained, offline HTML file.
 - coverdict's own codebase is scanned by a local, self-hosted SonarQube
   (Docker, `localhost:9001`; token via `SONAR_TOKEN` env var, never
   committed) as coverdict's own quality gate — run via
@@ -830,7 +830,7 @@ repeat is still unmeasured and needs run 02 on a corpus repo.
     `noChangedTargets` panel state with the actual fix spelled out, instead
     of reading identically to "this class is out of L2's scope".
 - **Backlog:** Faz 12 (F5/F6 mutation view + single-target mutation UI,
-  planned next) · standalone HTML &#x2713; ~~AI-assistant skill (agent reads
+  planned next) · ~~standalone HTML~~ done, D-75 &#x2713; ~~AI-assistant skill (agent reads
   verdict JSON, writes tests for gaps it names, reruns, interprets the result
   through coverdict again)~~ done, D-72 - `skills/coverdict/`; the loop it
   drives is recorded under `validation/runs/loop/` · `coverdict skill install`

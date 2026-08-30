@@ -1711,6 +1711,155 @@ repro: the same ~85-class gson run that previously failed now returns
 1879 real method entries in ~12s; `coverdict-cli`'s own suite stayed
 370/370.
 
+**D-75 · Standalone HTML report ships as a third renderer, closing D-15's
+deferral** (2026-08-30)
+D-15 shipped v0.1 with JSON and text only ("HTML is later"); `coverdict-vscode/docs/PLAN.md`'s
+2026-08-29 entry recorded the first concrete request - a Cucumber/SonarQube-style,
+exportable, human-readable report - as an idea deliberately left "not designed,
+not scoped." This closes it: `analyze --html-report <path>` (opt-in, off by
+default) writes a self-contained HTML file rendered by a new `HtmlRenderer`,
+consuming the exact same `VerdictDocument` `VerdictJsonWriter` and
+`TextRenderer` already do (hard rule 7: one document, now three readers) -
+no schema change, `perTest`/`mutation`/`fileCoverage` stay opt-in exactly as
+today. `HtmlRenderer` HTML-escapes (`&`/`<`/`>`/`"`/`'`) every input-derived
+string in addition to `TextRenderer`'s existing control-character escape
+(SECURITY-POLICY.md #4) - a path or message can originate from parsed repo
+content and must never be trusted to land in a browser raw. The emitted CSS
+declares the same IBM Plex font stacks `coverdict-playground/docs/report.html`
+uses for visual reference, but drops that file's `fonts.googleapis.com`
+`<link>`s: the CLI makes zero network calls (SECURITY-POLICY.md #5) and a
+report must render identically offline.
+
+`coverdict-vscode`'s `coverdict.exportReport` command always triggers one
+fresh `analyze` run rather than compositing the extension's three
+independently-timestamped in-memory states (`CoverageState`/`PerTestState`/
+`MutationState` in `model/store.ts`) into a synthetic "current view" export.
+Reading `model/store.ts` found only `MutationState` carries a timestamp
+(`ranAt`) at all - `CoverageState` and `PerTestState` carry none, by design,
+because the CLI's own JSON never carries one (byte-determinism) and a file
+mtime cannot honestly stand in for "when this ran" (hard rule 3a). The three
+states are kept in separate storage files specifically because a Mutasyon
+Testi run once silently erased a Derin Tarama's `perTest` data when they
+shared one file (`MUTATION_STORAGE_FILE`/`PERTEST_STORAGE_FILE`,
+`ui/commands.ts`) - compositing them for export would reintroduce the same
+class of silent mixing, this time inside a document meant to be read as a
+single coherent snapshot. A single fresh `analyze` call sidesteps this by
+construction (`--per-test-report`/`--mutation-report` can both be set on one
+invocation already) at the cost of a re-scan, which the export command's
+QuickPick makes an explicit, opt-in choice - mirroring the opt-in shape
+every other evidence-collecting command already has.
+
+**D-76 · HTML report gains a Sonar-style file-coverage tree and a
+per-class, filterable mutation detail view** (2026-08-30)
+Follow-on from D-75, same day: the flat file list and per-method summary
+table were not enough - two concrete asks: (1) mutation results need real
+detail (per-mutant mutator/line/status/killing-tests), organized under
+separate per-class headers rather than one long flat table, filterable so
+that detail doesn't become an unusable infinite scroll; (2) file coverage
+needs a folder-tree drill-down like SonarQube's, accepting a larger HTML
+file as the tradeoff. Both land as native `<details>`/`<summary>` trees
+(collapsed by default past the top level, no JS required for the
+expand/collapse itself) plus one small, entirely static `<script>`
+(`HtmlRenderer.SCRIPT` - fixed source text, no template interpolation,
+ever) that filters by toggling `style.display`/`open` off already-escaped
+`data-*` attributes. This is the first `<script>` `HtmlRenderer` emits;
+the no-injection guarantee from D-75 still holds because the script never
+uses `innerHTML`/`eval` on anything request-derived - it only reads
+`data-*` values `esc()` already HTML-escaped when writing them, the exact
+same escaping every other attribute/text node in the report goes through.
+
+The folder tree's per-folder aggregate percentage is a plain sum of each
+descendant file's already-computed `sonar-compatible` numerator/denominator
+(both carry one fixed name per metric mode across every file), re-run
+through the same `BigDecimal` half-up rounding `Metric`/`MetricsEngine`
+use - not a new metric definition, so hard rule 4 still holds: it is
+exactly the number `MetricsEngine` would have produced had it been asked to
+aggregate that folder's file set directly.
+
+**D-77 · HTML report: bounded table-wrap scrolling replaces page-wide
+overflow, plus a manual light/dark toggle** (2026-08-30)
+Two real bugs found from a screenshot of a live gson-corpus report: (1) a
+long unbroken value (a deep test class name, a long English finding
+message, a joined killing-tests list) forced the whole page to scroll
+horizontally rather than just the offending table, making the report look
+"yamuk" (skewed) - fixed by wrapping every `<table>` in a `.table-wrap`
+(`overflow-x: auto`, its own bordered box) via new `openTable`/`closeTable`
+helpers, with `table { width: max-content; min-width: 100% }` so a table
+still fills the page when its content fits but only that table's own box
+scrolls when it doesn't; `td`/`th` also cap at `max-width: 28rem` with
+`overflow-wrap: anywhere` so one absurdly long token wraps before forcing
+the table wider still. (2) the report only ever followed the OS/browser's
+`prefers-color-scheme` with no manual override - added a fixed-position
+"Koyu Mod"/"Açık Mod" toggle button (`#theme-toggle`) in the header,
+following the artifact-design three-tier token pattern: light values on
+bare `:root`, the existing dark `@media` block now guarded by
+`:root:not([data-theme="light"])` so an explicit choice can still win, and
+a new `:root[data-theme="dark"]` block that always wins regardless of
+system preference. The toggle is plain, static script (same D-76
+no-injection guarantee: no `innerHTML`/`eval`) that flips `data-theme` and
+best-effort persists the choice to `localStorage` inside a `try`/`catch` -
+verified live that a `file://`-restricted origin (storage disabled) throws
+there without breaking the toggle itself, it just doesn't survive a reopen.
+
+**D-78 · `coverdict render-html`: a fourth CLI command that renders an
+existing verdict JSON, no fresh analysis** (2026-08-30)
+Real user report against the D-75/D-76 "always fresh diff-derived rescan"
+design: `coverdict.exportReport`'s optional per-test/mutation re-run could
+come back with `PER_TEST_NO_CHANGED_TARGETS`/`MUTATION_NO_CHANGED_TARGETS`
+(no class currently in the diff) even though the extension's own sidebar
+had real, current-looking per-class evidence a moment earlier from an
+explicitly-targeted Derin Tarama/Mutasyon Testi run - and the export command
+then unconditionally overwrote that good in-memory state with the empty
+rescan's result, exactly the class of silent-clobber bug D-73/D-74 already
+fixed once for `PERTEST_STORAGE_FILE`/`MUTATION_STORAGE_FILE`. Separately:
+"kapa aç yapıyorum bunlar kayboluyor, en güncel taramayla gelmesi gerekmez
+mi" - the user's real expectation is that export reflects what the
+extension already knows, not a brand-new, possibly narrower-scoped
+analysis.
+
+Fix: `coverdict-vscode` no longer calls `analyze` to build the export's
+document. It composes a verdict JSON directly from whatever it currently
+holds - `verdict-current.json` (coverage/findings/changedFiles, always
+present after any scan) with `perTest`/`mutation` spliced in from
+`pertest-current.json`/`mutation-current.json` when those exist - and hands
+the composed file to `coverdict render-html --in <path> --out <path>`
+(new `RenderHtmlCommand`), which only reads and renders, never
+re-collects evidence. Zero re-analysis cost, and the exported report is
+provably exactly what the sidebar already showed, not a fresh guess at it.
+
+This needed a JSON reader: `VerdictJsonReader` (jackson-core streaming
+`JsonParser`, no `jackson-databind` - hard rule 9's dependency-minimalism
+still applies) is the read-side counterpart of `VerdictJsonWriter`, tested
+by round-tripping every field through both (`VerdictJsonReaderTest`).
+`HtmlRenderer` itself is untouched - `render-html` is a fourth caller of
+the same one render implementation (hard rule 7), reading from disk
+instead of building a `VerdictDocument` in-process.
+
+**D-79 · HTML report: collapsible sections everywhere, filters on every
+table, header redone as a what/when/settings summary** (2026-08-30)
+Three more real complaints against the same live report: (1) the header
+was a raw git-identity dump (`baseRef`/`base`/`mergeBase`/`head` as
+unlabeled 40-char hashes, often three identical ones stacked) with no
+render timestamp, no module identity, no settings - replaced with a
+labeled summary (module list, human-phrased diff mode, deduplicated short
+commit hash with the full SHA in a tooltip, language level, encoding,
+findings scope, exclusions) plus a "Rapor oluşturulma zamanı" line -
+honestly the HTML's own render time (`Instant.now()`), not an "evidence
+collected at" claim the byte-deterministic JSON schema has no field for.
+(2) Only the mutation/file-coverage sections were collapsible - every
+top-level section is now a `<details open class="report-section">`
+(`openSection`/`closeSection`), so Uyarılar (or any section) can be closed
+exactly like those two already could. (3) Only mutation/file-coverage were
+filterable - Değişen Dosyalar, Bulgular, Uyarılar/Eksik nedenler, and Test
+bazlı kanıt now carry a text filter too, via one new generic script
+function (`coverdictFilterRows`, `input.closest('.filterable')` +
+`[data-search]`) instead of a bespoke function per section. A related fix
+found while widening the findings table with real long content: `<code>`
+cells (paths, method signatures) now get `white-space: nowrap` and scroll
+within their own `.table-wrap` instead of `overflow-wrap: anywhere`
+breaking a filename mid-extension - prose cells (message/suggestedAction)
+still wrap normally at word boundaries.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

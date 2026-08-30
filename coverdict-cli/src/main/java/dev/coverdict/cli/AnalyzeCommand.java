@@ -50,6 +50,7 @@ import dev.coverdict.config.ConfigLoader;
 import dev.coverdict.config.CoverdictConfig;
 import dev.coverdict.analysis.report.FileCoverageBlock;
 import dev.coverdict.analysis.report.FileCoverageEntry;
+import dev.coverdict.analysis.report.HtmlRenderer;
 import dev.coverdict.analysis.report.ModuleInput;
 import dev.coverdict.analysis.report.NewCodeCoverage;
 import dev.coverdict.analysis.report.ReportInput;
@@ -165,6 +166,9 @@ class AnalyzeCommand implements Callable<Integer> {
 
     @Option(names = "--out", defaultValue = "coverdict-verdict.json", description = "Verdict JSON output path.")
     private String outOption;
+
+    @Option(names = "--html-report", description = "Optional human-readable HTML report path, rendered from the same verdict document as --out (hard rule 7). Off by default.")
+    private String htmlReportOption;
 
     /**
      * Setup and validation, everything that can invalidate the invocation
@@ -296,6 +300,16 @@ class AnalyzeCommand implements Callable<Integer> {
             spec.commandLine().getErr().println("coverdict: could not write " + outOption + ": " + e.getMessage());
             return ExitCode.INTERNAL_ERROR.value();
         }
+
+        if (htmlReportOption != null && !htmlReportOption.isBlank()) {
+            try (OutputStream htmlOut = Files.newOutputStream(Path.of(htmlReportOption))) {
+                htmlOut.write(HtmlRenderer.render(doc).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            } catch (IOException e) {
+                spec.commandLine().getErr().println("coverdict: could not write " + htmlReportOption + ": " + e.getMessage());
+                return ExitCode.INTERNAL_ERROR.value();
+            }
+        }
+
         spec.commandLine().getOut().print(TextRenderer.render(doc));
         spec.commandLine().getOut().println("verdict written to " + outOption);
 

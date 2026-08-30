@@ -46,6 +46,7 @@ Zero or more than one of these is rejected with exit `2` before any JSON is writ
 | `--encoding` | Charset for reading test sources | `UTF-8` |
 | `--coverage-exclusions` | Comma-separated `sonar.coverage.exclusions` globs — one filter layer | — |
 | `--out` | Verdict JSON output path | `coverdict-verdict.json` |
+| `--html-report` | Optional human-readable HTML report path, rendered from the same verdict document as `--out`/stdout (hard rule 7, D-75) | off |
 
 A repeated id in `--module`/`--source-roots`/`--test-roots` is a rejected
 invocation, never a silent last-one-wins.
@@ -141,6 +142,37 @@ from a mutation phase that is merely slow (D-64).
   `mutation`/`fileCoverage` blocks when those are enabled.
 - **Text** (stdout): the same document rendered for humans, followed by
   `verdict written to <out>`.
+- **HTML** (`--html-report`, opt-in, D-75/D-76/D-77/D-79): the same document rendered as a
+  single self-contained, offline HTML file — same sections as the JSON/text
+  renderers, plus HTML-entity escaping of every input-derived string. Mutation
+  evidence renders as a per-class, filterable detail view (mutator/line/status/
+  killing tests, not just counts) and file coverage as a collapsible,
+  Sonar-style folder tree — both via native `<details>` plus one small static
+  `<script>` (no template interpolation, never touches `innerHTML`/`eval`).
+  Every table scrolls inside its own bounded box instead of the whole page
+  (D-77), a manual light/dark toggle sits in the header alongside the
+  default `prefers-color-scheme` behavior, every top-level section is
+  independently collapsible, and every table/list section carries its own
+  text filter (D-79). The header itself is a what/when/settings summary
+  (modules, diff mode, deduplicated short commit hash, language level,
+  encoding, findings scope, exclusions, render timestamp) rather than a raw
+  git-identity dump.
+
+## `render-html` — render an existing verdict JSON, no fresh analysis
+
+```bash
+java -jar coverdict-cli/target/coverdict.jar render-html --in coverdict-verdict.json --out report.html
+```
+
+D-78: the read-side counterpart of `analyze --html-report` — takes any file
+matching `schema/coverdict-verdict.schema.json` (`--in`, required) and
+renders it with the exact same `HtmlRenderer` (`--out`, required), doing no
+evidence collection at all. Built for callers that already have a verdict
+document on disk (or composed one from several) and want the HTML without
+paying for a re-scan — see D-78 for why `coverdict-vscode`'s "Raporu Dışa
+Aktar" uses this instead of re-running `analyze`. Exits `2` on a missing or
+malformed `--in` file (`VerdictJsonReader` never guesses at a partial
+document), `4` if `--out` can't be written, `0` on success.
 - Every percentage names its metric mode: `jacoco-line`, `strict-line`,
   `sonar-compatible` — never bare `sonar`. `jacoco-line` matches JaCoCo's own
   LINE counter exactly; `sonar-compatible` matches the same-scope SonarQube

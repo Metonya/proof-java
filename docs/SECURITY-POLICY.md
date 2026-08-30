@@ -54,6 +54,10 @@ hang unboundedly, or inject content into coverdict's own output.
 - JSON output is produced only by a serializer, never string concatenation.
 - Terminal output escapes control characters from any input-derived string
   (file names, module ids), preventing terminal escape-sequence injection.
+- HTML output (`--html-report`, D-75) escapes `&`/`<`/`>`/`"`/`'` from any
+  input-derived string, in addition to the same control-character escape,
+  preventing HTML/script injection into a report a human may open in a
+  browser.
 
 ## 5. No network, no telemetry
 
@@ -80,4 +84,6 @@ criterion 7; a clause without a failing-input test is treated as unimplemented.
 | §4 path-escape rejection (`..`, absolute, symlink) | `ModuleBinderTest.rejectsAPackagePathThatEscapesTheRepoRoot`, `TestSourceScannerTest.aSymlinkedTestFileEscapingTheRepoRootIsNotScanned`, `RepoPathsTest.isEscapingRepoRootDetects*` |
 | §4 JSON via serializer only | enforced by construction (`VerdictJsonWriter` uses Jackson's streaming `JsonGenerator` exclusively) |
 | §4 terminal control-character escaping | `TextRendererTest.controlCharactersInAFindingPathAndMessageAreEscapedNotRenderedRaw`, `TextRendererTest.controlCharactersInAnIncompleteReasonAreEscaped` |
+| §4 HTML/script-injection escaping | `HtmlRendererTest.controlCharactersAndHtmlMetacharactersInAFindingAreEscapedNotRenderedRaw` |
+| §4 D-76 filter script is static, never echoes request-derived content via `innerHTML`/`eval` | `HtmlRendererTest.theEmittedScriptIsStaticAndNeverEchoesInputDerivedContentVerbatim` |
 | §5 no network calls | enforced by construction (no HTTP/socket client anywhere in the dependency graph); no dedicated negative test - there is no network call to fail |
