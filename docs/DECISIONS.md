@@ -1630,6 +1630,87 @@ changed-files dependency at all (`SubsumedTestRule`'s test-path resolution
 already reads a module's declared test roots straight off disk) - nothing
 to fix there.
 
+**D-72 · The agent skill lives in `skills/`, renders JSON, and never authors a
+finding** (2026-08-29)
+Hard rule 7 already names **skill** as a rendering surface of the same JSON, and
+ROADMAP's backlog carried the one-liner - this promotes that item, it is not new
+scope. The skill ships at `skills/coverdict/` (repo root), **not** under
+`.claude/`: hard rule 7 makes it a product surface that versions with the schema,
+the same reasoning that puts `schema/` and `docs/rules/` at the root, whereas
+`.claude/` holds config for agents working *on* coverdict - the `AGENTS.md`
+audience. Conflating the two would auto-load a consumer skill into maintainer
+sessions. Installation is a copy into the host tool's own skills directory; a
+`coverdict skill install` subcommand is backlog, not this pass (hard rule 8).
+The skill is bound by the same hard rules as every other surface: it renders
+verdict JSON and **may never generate, infer, or store a finding of its own**
+(hard rule 1), never suggests deletion at any confidence (hard rule 3), and never
+reports an exit-3 run as success (hard rule 3a). It also owns the loop's evidence
+capture (`reference/loop-log-template.md`), so the ROADMAP kill criterion becomes
+measurable on every future run rather than only when someone remembers to record
+one - six WTA dogfood rounds produced zero such evidence precisely because
+nothing required it.
+
+**D-73 · `coverdict-cli` bundles `junit-vintage-engine` (compile scope,
+shaded into `coverdict.jar`)** (2026-08-30)
+Real gson dogfooding: L2 (`--per-test-report`) always failed on gson - a
+plain JUnit4 module, no JUnit5/Platform dependency of its own - with PIT's
+minion crashing `UNKNOWN_ERROR`. Root-caused via `--diagnostics-dir`: PIT's
+coverage minion always launches through the JUnit Platform Launcher, even
+for a JUnit4 target, and `LauncherFactory` throws
+`PreconditionViolationException: Cannot create Launcher without at least
+one TestEngine` when nothing on the classpath supplies one -
+`junit-vintage-engine` is that bridge, and neither the target module (gson
+declares only `junit:junit`) nor `coverdict.jar` (only `junit-jupiter` at
+`test` scope, never shaded) had it. Adding it externally via
+`--per-test-classpath` isn't enough either: a version resolved outside
+`junit-bom` risks a `junit-platform-commons` release older/newer than the
+one `pitest-junit5-plugin`'s own `junit-platform-launcher` transitively
+pulls in - confirmed the hard way, a mismatched `junit-vintage-engine`
+5.11.3 against the bundled platform-commons 1.12.2 threw
+`ClassNotFoundException: org.junit.platform.commons.util.ClassFilter`, a
+real internal API moved between 1.11.x and 1.12.x. Declaring
+`junit-vintage-engine` as a normal dependency in `coverdict-cli/pom.xml`
+(no explicit version) lets the existing `junit-bom` import resolve it to
+the same Platform line as `junit-jupiter`, guaranteeing alignment, and
+bundles it into every target repo's classpath for free - no per-repo
+`doctor --fix` classpath guessing needed. Verified against real gson:
+single-target collection now returns real method entries (previously
+crashed in ~1.3s regardless of `--per-test-timeout`, proving the earlier
+120s-budget hypothesis wrong); `coverdict-cli`'s own suite stayed
+370/370 (1 pre-existing skip). A full ~85-class "scan whole module" run
+gets past the minion entirely (`Coverage generator Minion exited ok`) but
+hits a separate, later failure reading the result file back
+(`PerTestRunner`'s "produced an unreadable per-test result file") - see D-74.
+
+**D-74 · `CoverdictLineExporter` writes its export to a `.tmp` name and
+atomically renames it into place** (2026-08-30)
+Follow-on from D-73's dogfooding: fixed there, L2 still failed at real
+scale (gson's full ~85-class "scan whole module" run) with `PerTestRunner`
+reporting "produced an unreadable per-test result file" - a genuinely
+different bug. Root-caused by decompiling PIT 1.15.8's own
+`DirectoryResultOutputStrategy.createWriterForFile` (bytecode, no source
+jar available): it opens the file via a plain `new FileWriter(path)`,
+which creates the (empty) file on disk before a single byte of content is
+written. `PerTestRunner.waitForOutputOrTimeout` polls for that exact
+file's existence every 200ms and kills the child process the moment it
+appears (`PerTestRunner`'s own class javadoc already documented this
+design, D-51) - for one target class the write is fast enough to always
+finish first, but for ~85 classes' worth of entries it is not: the poll
+loop was observing the freshly-created-but-still-being-written file,
+killing the process mid-write, and `PerTestJsonReader` correctly rejected
+the truncated JSON as unreadable (hard rule 3a - it did not guess at the
+partial content). Fix, confirmed via a real gson run: `CoverdictLineExporter`
+now writes to `coverdict-line-tests.json.tmp` and, only after that writer
+is fully closed, atomically `Files.move`s it onto the real name
+(`ATOMIC_MOVE` - the poll loop can now only ever observe the file absent
+or completely written, never partial). `PerTestDriver` passes its own
+`reportDir` through a third system property (`REPORT_DIR_PROPERTY`,
+alongside the two D-68 already established) since that is still the only
+channel reaching an SPI-instantiated exporter. Verified against the exact
+repro: the same ~85-class gson run that previously failed now returns
+1879 real method entries in ~12s; `coverdict-cli`'s own suite stayed
+370/370.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

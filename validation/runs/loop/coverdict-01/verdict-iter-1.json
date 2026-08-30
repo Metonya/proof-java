@@ -1,0 +1,143 @@
+{
+  "schemaVersion" : "0.1.0",
+  "tool" : {
+    "name" : "coverdict",
+    "version" : "0.1.0-SNAPSHOT"
+  },
+  "analysis" : {
+    "status" : "complete",
+    "exitCode" : 0,
+    "incompleteReasons" : [ ]
+  },
+  "inputs" : {
+    "diffMode" : "working-tree",
+    "findingsScope" : "changed",
+    "resolved" : {
+      "head" : "7ca107504e2762fc2b28b9f7f5090d451f85560e",
+      "dirty" : true
+    },
+    "languageLevel" : 17,
+    "encoding" : "UTF-8",
+    "exclusions" : [ ],
+    "modules" : [
+      {
+        "id" : "coverdict-cli",
+        "root" : "coverdict-cli",
+        "sourceRoots" : [
+          "coverdict-cli/src/main/java"
+        ],
+        "testRoots" : [
+          "coverdict-cli/src/test/java"
+        ],
+        "reports" : [
+          {
+            "path" : "coverdict-cli/target/site/jacoco/jacoco.xml",
+            "freshness" : "unverified"
+          }
+        ]
+      }
+    ]
+  },
+  "coverage" : {
+    "overall" : {
+      "jacoco-line" : {
+        "numeratorName" : "coveredLines",
+        "numerator" : 3144,
+        "denominatorName" : "executableLines",
+        "denominator" : 3754,
+        "percent" : 83.8
+      },
+      "strict-line" : {
+        "numeratorName" : "fullyCoveredLines",
+        "numerator" : 3088,
+        "denominatorName" : "executableLines",
+        "denominator" : 3754,
+        "percent" : 82.3
+      },
+      "sonar-compatible" : {
+        "numeratorName" : "coveredBranchesPlusCoveredLines",
+        "numerator" : 4587,
+        "denominatorName" : "branchesPlusExecutableLines",
+        "denominator" : 5566,
+        "percent" : 82.4
+      }
+    },
+    "newCode" : {
+      "jacoco-line" : {
+        "numeratorName" : "coveredLines",
+        "numerator" : 0,
+        "denominatorName" : "executableLines",
+        "denominator" : 0,
+        "percent" : null
+      },
+      "strict-line" : {
+        "numeratorName" : "fullyCoveredLines",
+        "numerator" : 0,
+        "denominatorName" : "executableLines",
+        "denominator" : 0,
+        "percent" : null
+      },
+      "sonar-compatible" : {
+        "numeratorName" : "coveredBranchesPlusCoveredLines",
+        "numerator" : 0,
+        "denominatorName" : "branchesPlusExecutableLines",
+        "denominator" : 0,
+        "percent" : null
+      }
+    }
+  },
+  "changedFiles" : [
+    {
+      "path" : "coverdict-cli/src/test/java/dev/coverdict/analysis/subprocess/SubprocessWorkspaceTest.java",
+      "module" : "coverdict-cli",
+      "classification" : "excluded"
+    }
+  ],
+  "findings" : [ ],
+  "warnings" : [
+    {
+      "code" : "CHANGED_FILES_EXCLUDED",
+      "message" : "1 changed file(s) excluded from new-code coverage by --coverage-exclusions or a test root."
+    },
+    {
+      "code" : "UNTRACKED_NON_JAVA_FILE",
+      "message" : "Untracked file ignored by diff analysis.",
+      "path" : "coverdict.config.json"
+    },
+    {
+      "code" : "UNTRACKED_NON_JAVA_FILE",
+      "message" : "Untracked file ignored by diff analysis.",
+      "path" : "validation-work/analyze-iter1.txt"
+    },
+    {
+      "code" : "UNTRACKED_NON_JAVA_FILE",
+      "message" : "Untracked file ignored by diff analysis.",
+      "path" : "validation-work/build-iter1.log"
+    },
+    {
+      "code" : "UNTRACKED_NON_JAVA_FILE",
+      "message" : "Untracked file ignored by diff analysis.",
+      "path" : "validation-work/doctor-round0.txt"
+    },
+    {
+      "code" : "UNTRACKED_NON_JAVA_FILE",
+      "message" : "Untracked file ignored by diff analysis.",
+      "path" : "validation-work/negative/c1.txt"
+    },
+    {
+      "code" : "UNTRACKED_NON_JAVA_FILE",
+      "message" : "Untracked file ignored by diff analysis.",
+      "path" : "validation-work/negative/c2.txt"
+    },
+    {
+      "code" : "UNTRACKED_NON_JAVA_FILE",
+      "message" : "Untracked file ignored by diff analysis.",
+      "path" : "validation-work/negative/c3.txt"
+    },
+    {
+      "code" : "UNTRACKED_NON_JAVA_FILE",
+      "message" : "Untracked file ignored by diff analysis.",
+      "path" : "validation-work/negative/exit3.json"
+    }
+  ]
+}

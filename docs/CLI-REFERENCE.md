@@ -100,11 +100,12 @@ with `--diagnostics-dir`, D-64) rather than a coverdict-side failure. This
 is a generic Maven multi-module property, not specific to any one repo -
 `doctor` cannot detect it today (see ROADMAP.md backlog).
 
-| Flag | Purpose |
-|---|---|
-| `--per-test-report` | Collects per-test line-coverage evidence via PIT for changed production classes. Never a finding by itself — optional message enrichment for `SUBSUMED_TEST`. Requires a diff mode, unless `--per-test-target` is also given |
-| `--per-test-classpath <id>=<file>` | PIT's exact test runtime classpath, one entry per line. Distinct from `--classpath` |
-| `--per-test-target <id>=<FQCN>` | Repeatable: explicit classes to collect L2 evidence for, independent of the diff (`--mutation-target`'s sibling, D-71/Faz 14a). Requires `--per-test-report`; lifts its `--no-vcs` restriction. **All-or-nothing**, same semantics as `--mutation-target`: any target given makes every module's diff-derived L2 targets ignored entirely, including modules with none of their own |
+| Flag | Purpose | Default |
+|---|---|---|
+| `--per-test-report` | Collects per-test line-coverage evidence via PIT for changed production classes. Never a finding by itself — optional message enrichment for `SUBSUMED_TEST`. Requires a diff mode, unless `--per-test-target` is also given | — |
+| `--per-test-classpath <id>=<file>` | PIT's exact test runtime classpath, one entry per line. Distinct from `--classpath` | — |
+| `--per-test-target <id>=<FQCN>` | Repeatable: explicit classes to collect L2 evidence for, independent of the diff (`--mutation-target`'s sibling, D-71/Faz 14a). Requires `--per-test-report`; lifts its `--no-vcs` restriction. **All-or-nothing**, same semantics as `--mutation-target`: any target given makes every module's diff-derived L2 targets ignored entirely, including modules with none of their own | — |
+| `--per-test-timeout` | Wall-clock budget in seconds for one module's per-test coverage run before it is force-killed. 120s is generous for a diff-scoped target (D-52's measured scale), but a large explicit `--per-test-target` list spanning many classes at once can need more | `120` |
 
 ## L3 — mutation evidence (optional, via PIT)
 

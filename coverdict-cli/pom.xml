@@ -39,6 +39,24 @@
       <groupId>org.pitest</groupId>
       <artifactId>pitest-junit5-plugin</artifactId>
     </dependency>
+    <!-- Compile scope (shaded into coverdict.jar), not test-only: PIT's
+         coverage minion always launches through the JUnit Platform
+         Launcher, even for a plain JUnit4 target module, and fails with
+         "Cannot create Launcher without at least one TestEngine" if none
+         is on its classpath. A JUnit4-only module (no junit-jupiter/
+         platform dependency of its own, e.g. real-world gson) has nothing
+         to supply one - junit-vintage-engine is the bridge. Left off
+         junit-bom's version management here would risk resolving a
+         junit-platform-commons release older/newer than the one
+         pitest-junit5-plugin's own junit-platform-launcher transitively
+         pulls in, which breaks with a ClassNotFoundException inside the
+         minion (a real internal API, e.g. ClassFilter, moved between
+         1.11.x and 1.12.x) - relying on the same junit-bom import as
+         junit-jupiter below keeps both on the identical Platform line. -->
+    <dependency>
+      <groupId>org.junit.vintage</groupId>
+      <artifactId>junit-vintage-engine</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>

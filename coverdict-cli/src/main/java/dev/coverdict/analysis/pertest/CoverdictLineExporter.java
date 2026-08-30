@@ -7,6 +7,7 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -67,6 +68,14 @@ public final class CoverdictLineExporter implements CoverageExporterFactory {
     /** Set by {@link PerTestDriver}: path to the classpath list file (one entry per line) - the real target-module classpath, distinct from this driver JVM's own launch {@code -cp} (D-68). */
     static final String CLASSPATH_FILE_PROPERTY = "coverdict.pertest.classpathFile";
 
+    /**
+     * Set by {@link PerTestDriver}: the same {@code reportDir} it gave
+     * {@code ReportOptions} - needed here only to atomically rename the
+     * temp export into place (D-74), same "system property is the only
+     * channel" reasoning as the two above.
+     */
+    static final String REPORT_DIR_PROPERTY = "coverdict.pertest.reportDir";
+
     @Override
     public CoverageExporter create(ResultOutputStrategy outputStrategy) {
         return new LineResolvingExporter(outputStrategy);
@@ -96,8 +105,45 @@ public final class CoverdictLineExporter implements CoverageExporterFactory {
             LineMap lineMap = new LineMapper(source);
             String moduleId = System.getProperty(MODULE_ID_PROPERTY, "");
             BlockLineResolver.Result resolved = BlockLineResolver.resolve(moduleId, List.copyOf(coverage), lineMap);
-            try (Writer w = outputStrategy.createWriterForFile(OUTPUT_FILE_NAME)) {
+            String tempFileName = OUTPUT_FILE_NAME + ".tmp";
+            try (Writer w = outputStrategy.createWriterForFile(tempFileName)) {
                 PerTestJsonWriter.write(w, resolved.evidence());
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+            renameIntoPlace(tempFileName);
+        }
+
+        /**
+         * D-74: {@link PerTestRunner} polls for {@link #OUTPUT_FILE_NAME}'s
+         * existence and kills this process the moment it appears - but PIT's
+         * own {@code DirectoryResultOutputStrategy} opens the file via a
+         * plain {@code new FileWriter(path)}, which creates the (empty) file
+         * on disk before a single byte of the actual JSON is written.
+         * Verified the hard way against real gson: a one-class run's write
+         * is fast enough to always finish first, but an ~85-class "scan
+         * whole module" write is not - the poll loop was seeing the file
+         * the instant it was created, killing this process mid-write, and
+         * {@link PerTestJsonReader} correctly rejected the truncated result
+         * as unreadable. Writing to a {@code .tmp} name instead and only
+         * now, after the writer above is fully closed, atomically moving it
+         * onto the real name means the poll loop can only ever observe
+         * {@link #OUTPUT_FILE_NAME} in one of two states: absent, or
+         * completely written - never partial.
+         */
+        private static void renameIntoPlace(String tempFileName) {
+            String reportDir = System.getProperty(REPORT_DIR_PROPERTY);
+            if (reportDir == null) {
+                // No PerTestDriver in the loop (e.g. a test instantiating
+                // this SPI directly) - nothing to rename onto, and nothing
+                // is polling this process to death either, so leaving the
+                // temp file under its own name would just orphan it.
+                return;
+            }
+            Path dir = Path.of(reportDir);
+            try {
+                Files.move(dir.resolve(tempFileName), dir.resolve(OUTPUT_FILE_NAME),
+                    StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
