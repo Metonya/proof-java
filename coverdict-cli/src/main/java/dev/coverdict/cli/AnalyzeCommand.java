@@ -129,6 +129,9 @@ class AnalyzeCommand implements Callable<Integer> {
     @Option(names = "--per-test-target", description = "Repeatable <id>=<FQCN>, one or more explicit classes to collect L2 per-test line coverage for - independent of the diff (Faz 14a, same pattern as --mutation-target). All-or-nothing: when at least one is given, every module's diff-derived targets are ignored entirely for L2, including modules with none of their own. Requires --per-test-report; lifts the --no-vcs restriction on it.")
     private List<String> perTestTargetArgs = new ArrayList<>();
 
+    @Option(names = "--per-test-timeout", defaultValue = "120", description = "Wall-clock budget in seconds for one module's per-test coverage run before it is force-killed (default 120s - generous for a diff-scoped target, per D-52's measured scale; raise it for a large explicit --per-test-target list spanning many classes at once).")
+    private long perTestTimeoutSeconds;
+
     @Option(names = "--mutation-report", description = "Collect L3 mutation evidence via PIT (D-56: RETURNS+VOID_METHOD_CALLS gregor mutators). Feeds PSEUDO_TESTED_METHOD and SUBSUMED_TEST (D-61's kill-set subsumption). Requires a diff mode unless --mutation-target is also given; rejected under bare --no-vcs.")
     private boolean mutationReport;
 
@@ -750,14 +753,15 @@ class AnalyzeCommand implements Callable<Integer> {
                                                     EvidenceDiagnostics diagnostics) {
         List<AnalysisReason> warnings = new ArrayList<>();
         PerTestCollector.Result result;
+        Duration timeout = Duration.ofSeconds(perTestTimeoutSeconds);
         if (!perTestTargetFqcnsById.isEmpty()) {
             dev.coverdict.analysis.pertest.PerTestTargetResolver.Result targets =
                 dev.coverdict.analysis.pertest.PerTestTargetResolver.resolve(repoRoot, evidencedModules, perTestTargetFqcnsById);
             warnings.addAll(targets.warnings());
             result = PerTestCollector.collectForTargets(repoRoot, evidencedModules, targets.targetGlobsById(),
-                perTestClasspathFilesById, diagnostics);
+                perTestClasspathFilesById, timeout, diagnostics);
         } else {
-            result = PerTestCollector.collect(repoRoot, evidencedModules, changedFiles, perTestClasspathFilesById, diagnostics);
+            result = PerTestCollector.collect(repoRoot, evidencedModules, changedFiles, perTestClasspathFilesById, timeout, diagnostics);
         }
         warnings.addAll(result.warnings());
         return new PerTestOutcome(result.modules(), warnings);

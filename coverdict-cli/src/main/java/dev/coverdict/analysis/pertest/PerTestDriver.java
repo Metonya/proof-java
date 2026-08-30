@@ -63,7 +63,7 @@ public final class PerTestDriver {
         // PerTestRunner), never the target repo's classes, so
         // CoverdictLineExporter cannot rely on the JVM's ambient classpath.
         System.setProperty(CoverdictLineExporter.CLASSPATH_FILE_PROPERTY, args[2]);
-        // D-73: lets the exporter atomically rename its temp export onto
+        // D-74: lets the exporter atomically rename its temp export onto
         // OUTPUT_FILE_NAME instead of writing that name directly - see
         // CoverdictLineExporter.renameIntoPlace's own javadoc for why.
         System.setProperty(CoverdictLineExporter.REPORT_DIR_PROPERTY, reportDir);

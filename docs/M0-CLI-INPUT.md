@@ -107,6 +107,12 @@ partially merged with it.
   no bound `--per-test-classpath` gets a `PER_TEST_CLASSPATH_MISSING`
   warning, not an error - L2 evidence is always optional (hard rule 3a still
   applies: absent evidence is visible, never silently green).
+- `--per-test-timeout <seconds>` — wall-clock budget per module before the
+  per-test coverage subprocess is force-killed. Default 120s - generous for
+  a diff-scoped target relative to D-52's measured scale, but a large
+  explicit `--per-test-target` list spanning many classes at once (a VS
+  Code "scan the whole module, not just the diff" gesture) can genuinely
+  need more.
 - A module whose bytecode PIT's bundled ASM cannot read (D-53), whose
   process times out, or whose classpath is otherwise unusable: warned as
   `PER_TEST_COLLECTION_FAILED`, that module's `perTest` entry is simply

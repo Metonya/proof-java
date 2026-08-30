@@ -1,6 +1,7 @@
 package dev.coverdict.analysis.pertest;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -29,12 +30,13 @@ public final class PerTestCollector {
     }
 
     public static Result collect(Path repoRoot, List<ModuleDefinition> modules, List<ChangedFile> changedFiles,
-                                  Map<String, String> perTestClasspathFilesById) {
-        return collect(repoRoot, modules, changedFiles, perTestClasspathFilesById, EvidenceDiagnostics.none());
+                                  Map<String, String> perTestClasspathFilesById, Duration timeout) {
+        return collect(repoRoot, modules, changedFiles, perTestClasspathFilesById, timeout, EvidenceDiagnostics.none());
     }
 
     public static Result collect(Path repoRoot, List<ModuleDefinition> modules, List<ChangedFile> changedFiles,
-                                  Map<String, String> perTestClasspathFilesById, EvidenceDiagnostics diagnostics) {
+                                  Map<String, String> perTestClasspathFilesById, Duration timeout,
+                                  EvidenceDiagnostics diagnostics) {
         Accumulator acc = new Accumulator();
 
         for (ModuleDefinition module : modules) {
@@ -42,7 +44,7 @@ public final class PerTestCollector {
             AnalysisReason noTargetsReason = new AnalysisReason("PER_TEST_NO_CHANGED_TARGETS",
                 MODULE_PREFIX + module.id() + "' has no mapped changed production class, so no per-test evidence "
                     + "was requested from the engine.", null, module.id(), 0);
-            collectOneModule(repoRoot, module, targetClasses, noTargetsReason, perTestClasspathFilesById, acc, diagnostics);
+            collectOneModule(repoRoot, module, targetClasses, noTargetsReason, perTestClasspathFilesById, timeout, acc, diagnostics);
         }
 
         return acc.toResult();
@@ -60,12 +62,13 @@ public final class PerTestCollector {
     public static Result collectForTargets(Path repoRoot, List<ModuleDefinition> modules,
                                             Map<String, List<String>> targetGlobsById,
                                             Map<String, String> perTestClasspathFilesById,
+                                            Duration timeout,
                                             EvidenceDiagnostics diagnostics) {
         Accumulator acc = new Accumulator();
 
         for (ModuleDefinition module : modules) {
             List<String> targetClasses = targetGlobsById.getOrDefault(module.id(), List.of());
-            collectOneModule(repoRoot, module, targetClasses, null, perTestClasspathFilesById, acc, diagnostics);
+            collectOneModule(repoRoot, module, targetClasses, null, perTestClasspathFilesById, timeout, acc, diagnostics);
         }
 
         return acc.toResult();
@@ -82,7 +85,7 @@ public final class PerTestCollector {
      */
     private static void collectOneModule(Path repoRoot, ModuleDefinition module, List<String> targetClasses,
                                           AnalysisReason noTargetsReason, Map<String, String> perTestClasspathFilesById,
-                                          Accumulator acc, EvidenceDiagnostics diagnostics) {
+                                          Duration timeout, Accumulator acc, EvidenceDiagnostics diagnostics) {
         if (targetClasses.isEmpty()) {
             // D-64: this used to be a silent return. --per-test-report was
             // explicitly asked for, so "this module contributed nothing"
@@ -95,7 +98,8 @@ public final class PerTestCollector {
             }
             return;
         }
-        diagnostics.progress("per-test: module '" + module.id() + "' - " + targetClasses.size() + " target class(es)");
+        diagnostics.progress("per-test: module '" + module.id() + "' - " + targetClasses.size()
+            + " target class(es), budget " + timeout.toSeconds() + "s");
         String classpathFile = perTestClasspathFilesById.get(module.id());
         if (classpathFile == null) {
             acc.warnings.add(new AnalysisReason("PER_TEST_CLASSPATH_MISSING",
@@ -112,7 +116,7 @@ public final class PerTestCollector {
 
         try {
             Optional<PerTestModuleEvidence> result = PerTestRunner.run(module.id(), repoRoot,
-                classpath.classPathElements(), classpath.codePaths(), targetClasses, diagnostics);
+                classpath.classPathElements(), classpath.codePaths(), targetClasses, timeout, diagnostics);
             result.ifPresent(one -> recordEvidence(module, one, acc));
         } catch (PerTestCollectionException e) {
             acc.warnings.add(new AnalysisReason("PER_TEST_COLLECTION_FAILED",

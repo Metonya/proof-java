@@ -1,0 +1,5 @@
+iteration,layer,command_ref,exit_code,wall_clock_sec,findings_total,findings_new,findings_resolved,findings_carried,newcode_jacoco_line,newcode_strict_line,newcode_sonar_compatible,overall_jacoco_line
+1,L0L1,C6,0,1,0,0,0,0,,,,83.8
+2,L3-jdk25,C7,0,11,0,0,0,0,,,,83.8
+3,L3-jdk17,C8,0,13,5,5,0,0,,,,83.8
+4,L0L1+L3-jdk17,C9,0,39,5,1,1,4,,,,83.8

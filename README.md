@@ -64,6 +64,7 @@ gate (SonarQube) answers too late and only partially. Full argument:
 | `validation/` | checksums pinning fixtures and schema files |
 | `docs/research-raw/` | full deep-research source reports (~120 KB) — reference only, not for routine reading; see AGENTS.md |
 | `coverdict-cli/` | CLI entry point and exit-code contract (M1a, in progress) |
+| `skills/coverdict/` | agent skill: drives the M0-PERSONA loop against a target repo (D-72) |
 | `prototype/` | validated proof of concept (reference only, not the foundation) |
 
 ## Building
@@ -91,6 +92,19 @@ and `SONAR_TOKEN` exported:
 
 ```bash
 mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.host.url=http://localhost:9001 -Dsonar.token=$SONAR_TOKEN
+```
+
+## Agent skill
+
+`skills/coverdict/` is the surface for coverdict's primary persona (D-72,
+`docs/M0-PERSONA.md`): an AI coding agent that writes tests, runs coverdict, and
+acts on the findings in a loop. It renders verdict JSON and never authors a
+finding of its own.
+
+Install it by copying it into the host tool's skills directory, e.g.:
+
+```bash
+cp -r skills/coverdict ~/.claude/skills/coverdict
 ```
 
 ## Running the prototype

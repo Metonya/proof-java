@@ -1,0 +1,7 @@
+coverdict: analysis incomplete (base-ref)
+  jacoco-line        83.3% (3127/3754)
+  strict-line        81.8% (3072/3754)
+  sonar-compatible   82.1% (4567/5566)
+  new code: unavailable_incomplete
+  UNRESOLVABLE_REF: --base ref 'origin/yok-boyle-bir-branch' does not resolve to a commit: fatal: Needed a single revision
+verdict written to validation-work/negative/exit3.json

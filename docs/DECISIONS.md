@@ -1630,7 +1630,27 @@ changed-files dependency at all (`SubsumedTestRule`'s test-path resolution
 already reads a module's declared test roots straight off disk) - nothing
 to fix there.
 
-**D-72 · `coverdict-cli` bundles `junit-vintage-engine` (compile scope,
+**D-72 · The agent skill lives in `skills/`, renders JSON, and never authors a
+finding** (2026-08-29)
+Hard rule 7 already names **skill** as a rendering surface of the same JSON, and
+ROADMAP's backlog carried the one-liner - this promotes that item, it is not new
+scope. The skill ships at `skills/coverdict/` (repo root), **not** under
+`.claude/`: hard rule 7 makes it a product surface that versions with the schema,
+the same reasoning that puts `schema/` and `docs/rules/` at the root, whereas
+`.claude/` holds config for agents working *on* coverdict - the `AGENTS.md`
+audience. Conflating the two would auto-load a consumer skill into maintainer
+sessions. Installation is a copy into the host tool's own skills directory; a
+`coverdict skill install` subcommand is backlog, not this pass (hard rule 8).
+The skill is bound by the same hard rules as every other surface: it renders
+verdict JSON and **may never generate, infer, or store a finding of its own**
+(hard rule 1), never suggests deletion at any confidence (hard rule 3), and never
+reports an exit-3 run as success (hard rule 3a). It also owns the loop's evidence
+capture (`reference/loop-log-template.md`), so the ROADMAP kill criterion becomes
+measurable on every future run rather than only when someone remembers to record
+one - six WTA dogfood rounds produced zero such evidence precisely because
+nothing required it.
+
+**D-73 · `coverdict-cli` bundles `junit-vintage-engine` (compile scope,
 shaded into `coverdict.jar`)** (2026-08-30)
 Real gson dogfooding: L2 (`--per-test-report`) always failed on gson - a
 plain JUnit4 module, no JUnit5/Platform dependency of its own - with PIT's
@@ -1660,11 +1680,11 @@ crashed in ~1.3s regardless of `--per-test-timeout`, proving the earlier
 370/370 (1 pre-existing skip). A full ~85-class "scan whole module" run
 gets past the minion entirely (`Coverage generator Minion exited ok`) but
 hits a separate, later failure reading the result file back
-(`PerTestRunner`'s "produced an unreadable per-test result file") - see D-73.
+(`PerTestRunner`'s "produced an unreadable per-test result file") - see D-74.
 
-**D-73 · `CoverdictLineExporter` writes its export to a `.tmp` name and
+**D-74 · `CoverdictLineExporter` writes its export to a `.tmp` name and
 atomically renames it into place** (2026-08-30)
-Follow-on from D-72's dogfooding: fixed there, L2 still failed at real
+Follow-on from D-73's dogfooding: fixed there, L2 still failed at real
 scale (gson's full ~85-class "scan whole module" run) with `PerTestRunner`
 reporting "produced an unreadable per-test result file" - a genuinely
 different bug. Root-caused by decompiling PIT 1.15.8's own

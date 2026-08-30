@@ -1,0 +1,765 @@
+{
+  "schemaVersion" : "0.1.0",
+  "tool" : {
+    "name" : "coverdict",
+    "version" : "0.1.0-SNAPSHOT"
+  },
+  "analysis" : {
+    "status" : "complete",
+    "exitCode" : 0,
+    "incompleteReasons" : [ ]
+  },
+  "inputs" : {
+    "diffMode" : "working-tree",
+    "findingsScope" : "all",
+    "resolved" : {
+      "head" : "7ca107504e2762fc2b28b9f7f5090d451f85560e",
+      "dirty" : true
+    },
+    "languageLevel" : 17,
+    "encoding" : "UTF-8",
+    "exclusions" : [ ],
+    "modules" : [
+      {
+        "id" : "coverdict-cli",
+        "root" : "coverdict-cli",
+        "sourceRoots" : [
+          "coverdict-cli/src/main/java"
+        ],
+        "testRoots" : [
+          "coverdict-cli/src/test/java"
+        ],
+        "reports" : [
+          {
+            "path" : "coverdict-cli/target/site/jacoco/jacoco.xml",
+            "freshness" : "unverified"
+          }
+        ]
+      }
+    ]
+  },
+  "coverage" : {
+    "overall" : {
+      "jacoco-line" : {
+        "numeratorName" : "coveredLines",
+        "numerator" : 3144,
+        "denominatorName" : "executableLines",
+        "denominator" : 3754,
+        "percent" : 83.8
+      },
+      "strict-line" : {
+        "numeratorName" : "fullyCoveredLines",
+        "numerator" : 3088,
+        "denominatorName" : "executableLines",
+        "denominator" : 3754,
+        "percent" : 82.3
+      },
+      "sonar-compatible" : {
+        "numeratorName" : "coveredBranchesPlusCoveredLines",
+        "numerator" : 4587,
+        "denominatorName" : "branchesPlusExecutableLines",
+        "denominator" : 5566,
+        "percent" : 82.4
+      }
+    },
+    "newCode" : {
+      "jacoco-line" : {
+        "numeratorName" : "coveredLines",
+        "numerator" : 0,
+        "denominatorName" : "executableLines",
+        "denominator" : 0,
+        "percent" : null
+      },
+      "strict-line" : {
+        "numeratorName" : "fullyCoveredLines",
+        "numerator" : 0,
+        "denominatorName" : "executableLines",
+        "denominator" : 0,
+        "percent" : null
+      },
+      "sonar-compatible" : {
+        "numeratorName" : "coveredBranchesPlusCoveredLines",
+        "numerator" : 0,
+        "denominatorName" : "branchesPlusExecutableLines",
+        "denominator" : 0,
+        "percent" : null
+      }
+    }
+  },
+  "changedFiles" : [
+    {
+      "path" : "coverdict-cli/src/test/java/dev/coverdict/analysis/subprocess/SubprocessWorkspaceTest.java",
+      "module" : "coverdict-cli",
+      "classification" : "excluded"
+    }
+  ],
+  "findings" : [ ],
+  "warnings" : [
+    {
+      "code" : "CHANGED_FILES_EXCLUDED",
+      "message" : "1 changed file(s) excluded from new-code coverage by --coverage-exclusions or a test root."
+    },
+    {
+      "code" : "MUTATION_INCONCLUSIVE_STATUS",
+      "message" : "Module 'coverdict-cli' method 'dev.coverdict.analysis.subprocess.SubprocessWorkspaceTest#destroyProcessTreeKillsALiveChildJvm()V' has mutants in a non-final status (timed out, memory error, run error, non-viable, or not started); pseudo-tested evaluation skipped for this method.",
+      "module" : "coverdict-cli"
+    },
+    {
+      "code" : "UNTRACKED_NON_JAVA_FILE",
+      "message" : "Untracked file ignored by diff analysis.",
+      "path" : "coverdict.config.json"
+    },
+    {
+      "code" : "UNTRACKED_NON_JAVA_FILE",
+      "message" : "Untracked file ignored by diff analysis.",
+      "path" : "validation-work/analyze-iter1.txt"
+    },
+    {
+      "code" : "UNTRACKED_NON_JAVA_FILE",
+      "message" : "Untracked file ignored by diff analysis.",
+      "path" : "validation-work/analyze-iter2-l3.txt"
+    },
+    {
+      "code" : "UNTRACKED_NON_JAVA_FILE",
+      "message" : "Untracked file ignored by diff analysis.",
+      "path" : "validation-work/build-iter1.log"
+    },
+    {
+      "code" : "UNTRACKED_NON_JAVA_FILE",
+      "message" : "Untracked file ignored by diff analysis.",
+      "path" : "validation-work/doctor-round0.txt"
+    },
+    {
+      "code" : "UNTRACKED_NON_JAVA_FILE",
+      "message" : "Untracked file ignored by diff analysis.",
+      "path" : "validation-work/negative/c1.txt"
+    },
+    {
+      "code" : "UNTRACKED_NON_JAVA_FILE",
+      "message" : "Untracked file ignored by diff analysis.",
+      "path" : "validation-work/negative/c2.txt"
+    },
+    {
+      "code" : "UNTRACKED_NON_JAVA_FILE",
+      "message" : "Untracked file ignored by diff analysis.",
+      "path" : "validation-work/negative/c3.txt"
+    },
+    {
+      "code" : "UNTRACKED_NON_JAVA_FILE",
+      "message" : "Untracked file ignored by diff analysis.",
+      "path" : "validation-work/negative/exit3.json"
+    },
+    {
+      "code" : "UNTRACKED_NON_JAVA_FILE",
+      "message" : "Untracked file ignored by diff analysis.",
+      "path" : "validation-work/verdict-iter-1.json"
+    }
+  ],
+  "mutation" : {
+    "engine" : "pitest",
+    "engineVersion" : "1.15.8",
+    "modules" : [
+      {
+        "id" : "coverdict-cli",
+        "methods" : [
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspace",
+            "methodName" : "createPrivateTempDirectory",
+            "methodDescription" : "(Ljava/lang/String;Ljava/lang/String;)Ljava/nio/file/Path;",
+            "firstLine" : 63,
+            "lastLine" : 63,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.returns.NullReturnValsMutator",
+                "line" : 63,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspace",
+            "methodName" : "deleteQuietly",
+            "methodDescription" : "(Ljava/nio/file/Path;)V",
+            "firstLine" : 186,
+            "lastLine" : 186,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 186,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspace",
+            "methodName" : "destroyProcessTree",
+            "methodDescription" : "(Ljava/lang/Process;)V",
+            "firstLine" : 157,
+            "lastLine" : 157,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 157,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspace",
+            "methodName" : "isWindows",
+            "methodDescription" : "()Z",
+            "firstLine" : 181,
+            "lastLine" : 181,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.returns.BooleanFalseReturnValsMutator",
+                "line" : 181,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.returns.BooleanTrueReturnValsMutator",
+                "line" : 181,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspace",
+            "methodName" : "javaExecutable",
+            "methodDescription" : "()Ljava/lang/String;",
+            "firstLine" : 109,
+            "lastLine" : 109,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.returns.EmptyObjectReturnValsMutator",
+                "line" : 109,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspace",
+            "methodName" : "ownRuntimeClasspathEntries",
+            "methodDescription" : "()Ljava/util/List;",
+            "firstLine" : 130,
+            "lastLine" : 130,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.returns.EmptyObjectReturnValsMutator",
+                "line" : 130,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspace",
+            "methodName" : "sanitize",
+            "methodDescription" : "(Ljava/lang/String;)Ljava/lang/String;",
+            "firstLine" : 67,
+            "lastLine" : 67,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.returns.EmptyObjectReturnValsMutator",
+                "line" : 67,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspace",
+            "methodName" : "taskkillExecutable",
+            "methodDescription" : "()Ljava/lang/String;",
+            "firstLine" : 175,
+            "lastLine" : 177,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.returns.EmptyObjectReturnValsMutator",
+                "line" : 175,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.returns.EmptyObjectReturnValsMutator",
+                "line" : 177,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspace",
+            "methodName" : "writeClasspathArgFile",
+            "methodDescription" : "(Ljava/nio/file/Path;Ljava/lang/String;Ljava/util/List;)Ljava/nio/file/Path;",
+            "firstLine" : 102,
+            "lastLine" : 102,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.returns.NullReturnValsMutator",
+                "line" : 102,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspace",
+            "methodName" : "writeLines",
+            "methodDescription" : "(Ljava/nio/file/Path;Ljava/lang/String;Ljava/util/List;)Ljava/nio/file/Path;",
+            "firstLine" : 73,
+            "lastLine" : 73,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.returns.NullReturnValsMutator",
+                "line" : 73,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspaceTest",
+            "methodName" : "createPrivateTempDirectoryCreatesAUniqueDirectoryPerModule",
+            "methodDescription" : "()V",
+            "firstLine" : 47,
+            "lastLine" : 52,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 47,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 48,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 49,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 51,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 51,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 52,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 52,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspaceTest",
+            "methodName" : "createPrivateTempDirectoryKeepsAnAlreadySafeModuleIdVerbatim",
+            "methodDescription" : "()V",
+            "firstLine" : 137,
+            "lastLine" : 140,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 137,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 140,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 140,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspaceTest",
+            "methodName" : "createPrivateTempDirectoryReplacesEveryUnsafeCharacterWithAnUnderscore",
+            "methodDescription" : "()V",
+            "firstLine" : 150,
+            "lastLine" : 153,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 150,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 153,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 153,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspaceTest",
+            "methodName" : "createPrivateTempDirectorySanitizesPathSeparatorsInAnUnsafeModuleId",
+            "methodDescription" : "()V",
+            "firstLine" : 60,
+            "lastLine" : 67,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 60,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 64,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 65,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 67,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 67,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspaceTest",
+            "methodName" : "deleteQuietlyOnAMissingDirectoryDoesNotThrow",
+            "methodDescription" : "()V",
+            "firstLine" : 128,
+            "lastLine" : 128,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 128,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspaceTest",
+            "methodName" : "deleteQuietlyRemovesADirectoryTreeWithoutThrowing",
+            "methodDescription" : "()V",
+            "firstLine" : 119,
+            "lastLine" : 121,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 119,
+                "status" : "KILLED",
+                "killingTests" : [
+                  "dev.coverdict.analysis.subprocess.SubprocessWorkspaceTest.[engine:junit-jupiter]/[class:dev.coverdict.analysis.subprocess.SubprocessWorkspaceTest]/[method:deleteQuietlyRemovesADirectoryTreeWithoutThrowing()]"
+                ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 121,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspaceTest",
+            "methodName" : "destroyProcessTreeKillsALiveChildJvm",
+            "methodDescription" : "()V",
+            "firstLine" : 222,
+            "lastLine" : 232,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 222,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 224,
+                "status" : "TIMED_OUT",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 226,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 227,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 232,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 232,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspaceTest",
+            "methodName" : "destroyProcessTreeOnAnAlreadyExitedProcessDoesNotThrow",
+            "methodDescription" : "()V",
+            "firstLine" : 246,
+            "lastLine" : 247,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 246,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 247,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspaceTest",
+            "methodName" : "javaExecutableIsUnderTheRunningJdksHome",
+            "methodDescription" : "()V",
+            "firstLine" : 102,
+            "lastLine" : 103,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 102,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 103,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspaceTest",
+            "methodName" : "lambda$deleteQuietlyOnAMissingDirectoryDoesNotThrow$0",
+            "methodDescription" : "(Ljava/nio/file/Path;)V",
+            "firstLine" : 128,
+            "lastLine" : 128,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 128,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspaceTest",
+            "methodName" : "lambda$destroyProcessTreeOnAnAlreadyExitedProcessDoesNotThrow$0",
+            "methodDescription" : "(Ljava/lang/Process;)V",
+            "firstLine" : 246,
+            "lastLine" : 246,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 246,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspaceTest",
+            "methodName" : "ownRuntimeClasspathEntriesMatchesTheCurrentJvmsClasspath",
+            "methodDescription" : "()V",
+            "firstLine" : 110,
+            "lastLine" : 111,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 110,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 111,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspaceTest",
+            "methodName" : "writeClasspathArgFileQuotesASingleEntryWithoutASeparator",
+            "methodDescription" : "()V",
+            "firstLine" : 198,
+            "lastLine" : 200,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 198,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 200,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 200,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspaceTest",
+            "methodName" : "writeClasspathArgFileQuotesAndNormalizesBackslashes",
+            "methodDescription" : "()V",
+            "firstLine" : 92,
+            "lastLine" : 94,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 92,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 94,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 94,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspaceTest",
+            "methodName" : "writeLinesWithNoEntriesWritesAnEmptyFile",
+            "methodDescription" : "()V",
+            "firstLine" : 173,
+            "lastLine" : 176,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 173,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 174,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 176,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 176,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              }
+            ]
+          },
+          {
+            "className" : "dev.coverdict.analysis.subprocess.SubprocessWorkspaceTest",
+            "methodName" : "writeLinesWritesOneEntryPerLine",
+            "methodDescription" : "()V",
+            "firstLine" : 78,
+            "lastLine" : 80,
+            "mutants" : [
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 78,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 80,
+                "status" : "NO_COVERAGE",
+                "killingTests" : [ ]
+              },
+              {
+                "mutator" : "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "line" : 80,
+                "status" : "SURVIVED",
+                "killingTests" : [ ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

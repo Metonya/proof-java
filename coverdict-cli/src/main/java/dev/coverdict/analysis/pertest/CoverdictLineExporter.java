@@ -71,7 +71,7 @@ public final class CoverdictLineExporter implements CoverageExporterFactory {
     /**
      * Set by {@link PerTestDriver}: the same {@code reportDir} it gave
      * {@code ReportOptions} - needed here only to atomically rename the
-     * temp export into place (D-73), same "system property is the only
+     * temp export into place (D-74), same "system property is the only
      * channel" reasoning as the two above.
      */
     static final String REPORT_DIR_PROPERTY = "coverdict.pertest.reportDir";
@@ -115,7 +115,7 @@ public final class CoverdictLineExporter implements CoverageExporterFactory {
         }
 
         /**
-         * D-73: {@link PerTestRunner} polls for {@link #OUTPUT_FILE_NAME}'s
+         * D-74: {@link PerTestRunner} polls for {@link #OUTPUT_FILE_NAME}'s
          * existence and kills this process the moment it appears - but PIT's
          * own {@code DirectoryResultOutputStrategy} opens the file via a
          * plain {@code new FileWriter(path)}, which creates the (empty) file

@@ -414,6 +414,78 @@ automated test - next step, alongside `MutationRunnerIT`'s existing
 `-Pmutation-it` profile. See that repo's README for the full scenario map
 and the bug-repro workflow (shrink a real finding into a new scenario there).
 
+## Agent skill — the primary persona finally has a surface (2026-08-29)
+
+`docs/M0-PERSONA.md` names the primary persona as **an AI coding agent in a
+developer's local session**, and its canonical workflow as a loop: write tests →
+build with JaCoCo → `analyze` → **act on findings** → repeat until clean or the
+human accepts the residue. Every surface built until now (the VS Code extension,
+Faz 4-28) serves the *secondary* persona - the human developer in an IDE. The
+primary persona had no surface at all, and **that loop had never been run end to
+end, once**.
+
+`skills/coverdict/` (D-72) is that surface: `SKILL.md` plus three reference files
+(`rules.md`, `invocations.md`, `loop-log-template.md`), bound by the same hard
+rules as every other surface - it renders verdict JSON and never authors a
+finding.
+
+The gap this closes is not only a missing surface. Six WTA dogfood rounds
+(2026-08-27, see below) each ended as a coverdict bug-fix or a setup diagnosis:
+productive for the tool (they produced D-64 through D-69 and the whole `doctor`
+subcommand) but they recorded **zero** test-quality findings, zero accept/waive
+decisions, and no `validation/runs/wta/` directory at all. The kill criterion
+below - "findings are predominantly ignored/waived" - is therefore currently
+**unfalsifiable**: the evidence that would settle it was never produced, because
+nothing required producing it. The skill now owns that capture
+(`reference/loop-log-template.md` → `validation/runs/loop/<repo>-NN/`), so every
+future loop run yields the numbers, not just the one someone remembers to record.
+
+`validation/runs/loop/` is deliberately separate from `validation/runs/<repo>/`:
+the latter labels whether a finding was **true** (precision), the former whether
+it was **useful** (response). Different question, different denominator.
+
+### Loop run 01 (2026-08-29) — the workflow works, and one false green found
+
+First end-to-end run: `validation/runs/loop/coverdict-01/`. An agent was asked,
+with no test-quality coaching, to raise `SubprocessWorkspace`'s coverage (39.1%
+LINE). It wrote 8 tests, reaching 76.1%; L0 found nothing (a true negative - the
+tests carry real oracles). L3 then found `PSEUDO_TESTED_METHOD` HIGH on
+`isWindows()`: `destroyProcessTree` ends with an unconditional
+`destroyForcibly()`, so a test asserting only that the immediate child died
+passes on both sides of the branch - leaving the `taskkill /F /T` descendant-kill
+path, the method's entire reason for existing (D-58/D-59), unverified. Handed the
+finding back, the agent diagnosed it unaided, added a grandchild-kill test, and
+probed empirically that `destroyForcibly()` alone leaves the grandchild alive
+before trusting the fix.
+
+**LINE coverage after that fix: 76.1%, unchanged.** A coverage gate scores the
+improvement at zero. That is the product thesis, measured on agent-written code
+for the first time.
+
+**Two product findings, recorded and deliberately not fixed** (fixing mid-loop is
+what turned all six WTA rounds into debugging sessions with no workflow
+evidence):
+
+1. **A silent false green under JDK 25.** The identical L3 run under JDK 25 vs
+   JDK 17 gives 0 findings vs 5. PIT 1.15.8's ASM cannot read the **JDK's own**
+   class files at major 69 (`ComputeClassWriter.getCommonSuperClass`), so every
+   production mutant comes back `NO_COVERAGE` - while `analysis.status` stays
+   `complete`, exit `0`, with **no warning naming the problem**. The target's own
+   bytecode is major 61 and reads fine, so this sharpens D-53/D-54: the ceiling is
+   a property of the **runtime JDK**, not the target repo. `MUTATION_EMPTY_EVIDENCE`
+   (D-64) does not fire - the evidence was not empty, it was present and worthless.
+2. **`newCode` is inert when an agent only writes tests** - the changed file is a
+   test file, correctly `excluded` (D-27), so `newCode` is `0/0`/`null` in all
+   three modes. Not a defect, but the whole L1 half is silent in that branch of
+   `M0-PERSONA.md` step 1, which matters for any M3 gate built on `newCode`.
+
+**Kill criterion, first time it is answerable rather than unfalsifiable:** 0 of 6
+findings waived or false-positive; the one HIGH finding was acted on and produced
+a real improvement; the loop was voluntarily repeated once within the run. **It
+does not trigger.** Caveat kept in the summary, not buried: one run, on the
+maintainer's own repo - this measures the mechanism, never demand. Cross-session
+repeat is still unmeasured and needs run 02 on a corpus repo.
+
 ## Later (sketches)
 
 - **M2 — L2 feasibility and attribution spike.** Faz 0 (kill-switch) is
@@ -758,9 +830,12 @@ and the bug-repro workflow (shrink a real finding into a new scenario there).
     `noChangedTargets` panel state with the actual fix spelled out, instead
     of reading identically to "this class is out of L2's scope".
 - **Backlog:** Faz 12 (F5/F6 mutation view + single-target mutation UI,
-  planned next) · standalone HTML · AI-assistant skill (agent reads verdict JSON,
-  writes tests for gaps it names, reruns, interprets the result through
-  coverdict again) · VS Code extension (inline per-line coverage gutter
+  planned next) · standalone HTML &#x2713; ~~AI-assistant skill (agent reads
+  verdict JSON, writes tests for gaps it names, reruns, interprets the result
+  through coverdict again)~~ done, D-72 - `skills/coverdict/`; the loop it
+  drives is recorded under `validation/runs/loop/` · `coverdict skill install`
+  subcommand (installation is a manual copy today) · VS Code extension (inline
+  per-line coverage gutter
   annotations, toggleable) · IntelliJ plugin (same gutter/panel concept as the
   VS Code extension) · one-click "send this verdict to the AI assistant"
   action from either IDE extension, aimed at popular in-IDE AI tools
@@ -826,6 +901,21 @@ and the bug-repro workflow (shrink a real finding into a new scenario there).
   ahead of time needs comparing a classpath jar's contents (or mtime)
   against the owning sibling module's own `target/classes` - real design
   work, not a quick addition to the existing per-module checks.
+  · **warn when an L3/L2 target class resolves only `NO_COVERAGE` mutants**
+  (loop run 01): `MUTATION_EMPTY_EVIDENCE` covers zero records, and
+  `MUTATION_INCONCLUSIVE_STATUS` covers a non-final status, but nothing covers
+  "records present, every mutant on every targeted production class
+  `NO_COVERAGE`" - the shape that produced a silent false green under JDK 25.
+  Highest-value item from that run.
+  · `doctor` check for a runtime-JDK / PIT-ASM version mismatch (loop run 01) -
+  comparing the running JVM's feature version against PIT's ASM ceiling is a
+  cheap preflight, and `doctor` is already where the WTA rounds' setup lessons
+  live.
+  · D-67 is cited in three places (ROADMAP, CLI-REFERENCE, this backlog) but has
+  no `DECISIONS.md` entry - the content lives only as prose in
+  `docs/CLI-REFERENCE.md` §L2.
+  · loop run 02 on a corpus repo (gson / commons-lang) - the cross-session
+  repeat signal the kill criterion needs, and outside the maintainer's own code.
   Each remaining item gets its own design pass at its milestone, not now.
 
 ## Kill and pivot criteria
