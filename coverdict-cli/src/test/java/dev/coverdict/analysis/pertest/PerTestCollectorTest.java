@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -41,7 +42,8 @@ class PerTestCollectorTest {
         ChangedFile unrelated = new ChangedFile("app/src/main/java/com/example/Other.java", "app",
             Classification.EXCLUDED, null, null, null);
 
-        PerTestCollector.Result result = PerTestCollector.collect(repoRoot, List.of(MODULE), List.of(unrelated), Map.of());
+        PerTestCollector.Result result = PerTestCollector.collect(repoRoot, List.of(MODULE), List.of(unrelated), Map.of(),
+            Duration.ofMinutes(1));
 
         assertTrue(result.modules().isEmpty());
         assertEquals(1, result.warnings().size());
@@ -54,7 +56,8 @@ class PerTestCollectorTest {
         ChangedFile changed = new ChangedFile("app/src/main/java/com/example/Calc.java", "app",
             Classification.MAPPED, 5, 3, List.of());
 
-        PerTestCollector.Result result = PerTestCollector.collect(repoRoot, List.of(MODULE), List.of(changed), Map.of());
+        PerTestCollector.Result result = PerTestCollector.collect(repoRoot, List.of(MODULE), List.of(changed), Map.of(),
+            Duration.ofMinutes(1));
 
         assertTrue(result.modules().isEmpty());
         assertEquals(1, result.warnings().size());
@@ -67,7 +70,7 @@ class PerTestCollectorTest {
             Classification.MAPPED, 5, 3, List.of());
 
         PerTestCollector.Result result = PerTestCollector.collect(repoRoot, List.of(MODULE), List.of(changed),
-            Map.of("app", "missing-classpath.txt"));
+            Map.of("app", "missing-classpath.txt"), Duration.ofMinutes(1));
 
         assertTrue(result.modules().isEmpty());
         assertEquals(1, result.warnings().size());
@@ -81,7 +84,7 @@ class PerTestCollectorTest {
         // PerTestTargetResolver already explains an empty target list
         // (PER_TEST_TARGET_NOT_BOUND / PER_TEST_TARGET_UNRESOLVED) - collectForTargets must not add a second, less specific one.
         PerTestCollector.Result result = PerTestCollector.collectForTargets(repoRoot, List.of(MODULE),
-            Map.of(), Map.of(), dev.coverdict.analysis.subprocess.EvidenceDiagnostics.none());
+            Map.of(), Map.of(), Duration.ofMinutes(1), dev.coverdict.analysis.subprocess.EvidenceDiagnostics.none());
 
         assertTrue(result.modules().isEmpty());
         assertTrue(result.warnings().isEmpty());
@@ -90,7 +93,7 @@ class PerTestCollectorTest {
     @Test
     void aTargetedModuleWithNoBoundClasspathWarnsTheSameWayAChangedModuleWould() {
         PerTestCollector.Result result = PerTestCollector.collectForTargets(repoRoot, List.of(MODULE),
-            Map.of("app", List.of("com.example.Calc*")), Map.of(),
+            Map.of("app", List.of("com.example.Calc*")), Map.of(), Duration.ofMinutes(1),
             dev.coverdict.analysis.subprocess.EvidenceDiagnostics.none());
 
         assertTrue(result.modules().isEmpty());

@@ -63,6 +63,10 @@ lifts the `--no-vcs` restriction):
   --per-test-target root=com.example.Service
 ```
 
+`--per-test-timeout` is a per-module wall-clock budget in seconds, default `120`
+- generous for a diff-scoped target, but a large explicit `--per-test-target`
+list spanning many classes at once can need raising.
+
 ## L3 — mutation evidence
 
 ```bash

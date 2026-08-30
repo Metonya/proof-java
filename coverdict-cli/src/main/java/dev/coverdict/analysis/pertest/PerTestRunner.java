@@ -43,9 +43,14 @@ public final class PerTestRunner {
      * Generous relative to D-52's measured scale (dropwizard: 2-3s;
      * assertj's 215-class slice: 20-30s) - a diff-scoped target is smaller
      * than either, but a cold JVM start and a large dependency classpath
-     * both add fixed overhead this budget must absorb.
+     * both add fixed overhead this budget must absorb. {@code
+     * --per-test-timeout} lets a caller raise it further - a real VS Code
+     * dogfood against gson's 80-class production surface (deliberately
+     * unscoped by a diff-free "scan the whole module anyway" request) blew
+     * past 120s even with this budget already being generous for the
+     * diff-scoped case it was measured against.
      */
-    private static final Duration TIMEOUT = Duration.ofSeconds(120);
+    public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(120);
 
     private static final Duration HEARTBEAT = Duration.ofSeconds(30);
     private static final Duration POLL = Duration.ofMillis(200);
@@ -65,6 +70,7 @@ public final class PerTestRunner {
      *                          directories (never a dependency jar).
      * @param targetClasses     FQCN globs for the changed production classes
      *                          this run should collect evidence for.
+     * @param timeout           wall-clock budget before the process is force-killed.
      * @param diagnostics       where progress and subprocess logs go.
      * @return evidence if the exporter wrote its file before the timeout;
      *         empty if the run produced no output file at all.
@@ -74,6 +80,7 @@ public final class PerTestRunner {
                                                         List<String> classPathElements,
                                                         List<String> codePaths,
                                                         List<String> targetClasses,
+                                                        Duration timeout,
                                                         EvidenceDiagnostics diagnostics) {
         Path workDir = createWorkDir(moduleId);
         try (Writer log = diagnostics.openLog(moduleId, "pertest")) {
@@ -111,13 +118,13 @@ public final class PerTestRunner {
             ProcessOutputTail output = ProcessOutputTail.of(process.getInputStream(), log, null);
             Thread outputThread = output.start("coverdict-pertest-output");
             try {
-                waitForOutputOrTimeout(process, outputFile, moduleId, diagnostics);
+                waitForOutputOrTimeout(process, outputFile, moduleId, timeout, diagnostics);
             } finally {
                 SubprocessWorkspace.destroyProcessTree(process);
                 ProcessOutputTail.joinQuietly(outputThread);
             }
 
-            return readEvidence(moduleId, outputFile, output, diagnostics);
+            return readEvidence(moduleId, outputFile, output, timeout, diagnostics);
         } catch (IOException e) {
             throw new PerTestCollectionException("Could not write the diagnostics log for module '" + moduleId + "'", e);
         } finally {
@@ -128,8 +135,16 @@ public final class PerTestRunner {
     public static Optional<PerTestModuleEvidence> run(String moduleId, Path repoRoot,
                                                         List<String> classPathElements,
                                                         List<String> codePaths,
+                                                        List<String> targetClasses,
+                                                        Duration timeout) {
+        return run(moduleId, repoRoot, classPathElements, codePaths, targetClasses, timeout, EvidenceDiagnostics.none());
+    }
+
+    public static Optional<PerTestModuleEvidence> run(String moduleId, Path repoRoot,
+                                                        List<String> classPathElements,
+                                                        List<String> codePaths,
                                                         List<String> targetClasses) {
-        return run(moduleId, repoRoot, classPathElements, codePaths, targetClasses, EvidenceDiagnostics.none());
+        return run(moduleId, repoRoot, classPathElements, codePaths, targetClasses, DEFAULT_TIMEOUT, EvidenceDiagnostics.none());
     }
 
     /**
@@ -140,11 +155,12 @@ public final class PerTestRunner {
      */
     private static Optional<PerTestModuleEvidence> readEvidence(String moduleId, Path outputFile,
                                                                   ProcessOutputTail output,
+                                                                  Duration timeout,
                                                                   EvidenceDiagnostics diagnostics) {
         if (!Files.exists(outputFile)) {
             diagnostics.progress(PROGRESS_PREFIX + moduleId + "' - FAILED, no coverage export produced");
             throw new PerTestCollectionException("Module '" + moduleId
-                + "' produced no per-test coverage export before its " + TIMEOUT.toSeconds() + "s timeout"
+                + "' produced no per-test coverage export before its " + timeout.toSeconds() + "s timeout"
                 + output.tailMessage());
         }
         try (InputStream in = Files.newInputStream(outputFile)) {
@@ -158,11 +174,11 @@ public final class PerTestRunner {
         }
     }
 
-    /** Returns as soon as {@code outputFile} exists or the process exits; otherwise blocks up to {@link #TIMEOUT}, reporting progress along the way. */
+    /** Returns as soon as {@code outputFile} exists or the process exits; otherwise blocks up to {@code timeout}, reporting progress along the way. */
     private static void waitForOutputOrTimeout(Process process, Path outputFile, String moduleId,
-                                                EvidenceDiagnostics diagnostics) {
+                                                Duration timeout, EvidenceDiagnostics diagnostics) {
         long start = System.nanoTime();
-        long deadline = start + TIMEOUT.toNanos();
+        long deadline = start + timeout.toNanos();
         long nextHeartbeat = start + HEARTBEAT.toNanos();
         while (System.nanoTime() < deadline) {
             if (Files.exists(outputFile) || !process.isAlive()) {
