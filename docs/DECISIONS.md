@@ -1660,8 +1660,36 @@ crashed in ~1.3s regardless of `--per-test-timeout`, proving the earlier
 370/370 (1 pre-existing skip). A full ~85-class "scan whole module" run
 gets past the minion entirely (`Coverage generator Minion exited ok`) but
 hits a separate, later failure reading the result file back
-(`PerTestRunner`'s "produced an unreadable per-test result file") -
-distinct bug, not yet root-caused, left for its own investigation.
+(`PerTestRunner`'s "produced an unreadable per-test result file") - see D-73.
+
+**D-73 · `CoverdictLineExporter` writes its export to a `.tmp` name and
+atomically renames it into place** (2026-08-30)
+Follow-on from D-72's dogfooding: fixed there, L2 still failed at real
+scale (gson's full ~85-class "scan whole module" run) with `PerTestRunner`
+reporting "produced an unreadable per-test result file" - a genuinely
+different bug. Root-caused by decompiling PIT 1.15.8's own
+`DirectoryResultOutputStrategy.createWriterForFile` (bytecode, no source
+jar available): it opens the file via a plain `new FileWriter(path)`,
+which creates the (empty) file on disk before a single byte of content is
+written. `PerTestRunner.waitForOutputOrTimeout` polls for that exact
+file's existence every 200ms and kills the child process the moment it
+appears (`PerTestRunner`'s own class javadoc already documented this
+design, D-51) - for one target class the write is fast enough to always
+finish first, but for ~85 classes' worth of entries it is not: the poll
+loop was observing the freshly-created-but-still-being-written file,
+killing the process mid-write, and `PerTestJsonReader` correctly rejected
+the truncated JSON as unreadable (hard rule 3a - it did not guess at the
+partial content). Fix, confirmed via a real gson run: `CoverdictLineExporter`
+now writes to `coverdict-line-tests.json.tmp` and, only after that writer
+is fully closed, atomically `Files.move`s it onto the real name
+(`ATOMIC_MOVE` - the poll loop can now only ever observe the file absent
+or completely written, never partial). `PerTestDriver` passes its own
+`reportDir` through a third system property (`REPORT_DIR_PROPERTY`,
+alongside the two D-68 already established) since that is still the only
+channel reaching an SPI-instantiated exporter. Verified against the exact
+repro: the same ~85-class gson run that previously failed now returns
+1879 real method entries in ~12s; `coverdict-cli`'s own suite stayed
+370/370.
 
 ## Rejected
 
