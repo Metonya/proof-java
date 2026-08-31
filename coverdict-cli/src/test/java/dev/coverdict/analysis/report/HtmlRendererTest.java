@@ -213,10 +213,10 @@ class HtmlRendererTest {
         assertNotNull(data.get("mutation"));
         assertNotNull(data.get("fileCoverage"));
         assertEquals("root", obj(arr(data.get("perTest")).get(0)).get("moduleId"));
-        // path-compressed: "src/main/java/com/example/Calculator.java" has no branching, so it's one file leaf.
-        Map<String, Object> tree0 = obj(arr(obj(data.get("fileCoverage")).get("tree")).get(0));
-        assertEquals(Boolean.TRUE, tree0.get("isFile"));
-        assertEquals("src/main/java/com/example/Calculator.java", tree0.get("name"));
+        Map<String, Object> file0 = obj(arr(obj(data.get("fileCoverage")).get("files")).get(0));
+        assertEquals("src/main/java/com/example/Calculator.java", file0.get("path"));
+        // module "root" declares sourceRoots=["src/main/java"] with root="." - displayPath strips that prefix.
+        assertEquals("com/example/Calculator.java", file0.get("displayPath"));
     }
 
     @Test
@@ -266,14 +266,14 @@ class HtmlRendererTest {
     }
 
     @Test
-    void fileCoverageCompressesSingleChildChainsIntoOneRow() throws IOException {
+    void fileCoverageIsAFlatSourceRootRelativeListNotANestedTree() throws IOException {
         FileCoverageEntry a = new FileCoverageEntry("root", "src/main/java/com/example/pkg/A.java",
             MetricsEngine.compute(List.of()), List.of());
         FileCoverageEntry b = new FileCoverageEntry("root", "src/main/java/com/example/pkg/B.java",
             MetricsEngine.compute(List.of()), List.of());
-        FileCoverageEntry root = new FileCoverageEntry("root", "src/main/java/Root.java",
+        FileCoverageEntry rootFile = new FileCoverageEntry("root", "src/main/java/Root.java",
             MetricsEngine.compute(List.of()), List.of());
-        FileCoverageBlock fileCoverage = new FileCoverageBlock(List.of(a, b, root), List.of("excluded/Gen.java"));
+        FileCoverageBlock fileCoverage = new FileCoverageBlock(List.of(a, b, rootFile), List.of("excluded/Gen.java"));
 
         VerdictDocument doc = new VerdictDocument("0.1.0", "0.1.0-TEST", true, List.of(),
             17, "UTF-8", List.of(), List.of(module()), "no-vcs", "all", null, MetricsEngine.compute(List.of()),
@@ -285,20 +285,19 @@ class HtmlRendererTest {
         assertEquals(3, ((Number) fc.get("totalFiles")).intValue());
         assertEquals(List.of("excluded/Gen.java"), arr(fc.get("excluded")));
 
-        // "src/main/java" has two entries directly under it (pkg/ folder, Root.java file) so it does NOT collapse
-        // further than that single-child chain from the module root - unlike the old renderer's 8-click chain,
-        // there is exactly one compressed row down to the real branch point.
-        Map<String, Object> topRow = obj(arr(fc.get("tree")).get(0));
-        assertEquals("src/main/java", topRow.get("name"));
-        assertEquals(Boolean.FALSE, topRow.get("isFile"));
-        List<Object> children = arr(topRow.get("children"));
-        assertEquals(2, children.size());
-        Map<String, Object> pkgFolder = obj(children.get(0));
-        assertEquals("com/example/pkg", pkgFolder.get("name"));
-        assertEquals(2, arr(pkgFolder.get("children")).size());
-        Map<String, Object> rootFile = obj(children.get(1));
-        assertEquals("Root.java", rootFile.get("name"));
-        assertEquals(Boolean.TRUE, rootFile.get("isFile"));
+        // D-81 (dashboard rewrite): no more nested/compressed folder tree - a flat list, sorted by the full
+        // repo-relative path ("Root.java" sorts before "com/..." - uppercase 'R' < lowercase 'c' in ASCII),
+        // each entry carrying displayPath/packagePath/fileName stripped of its module's own source-root prefix.
+        List<Object> files = arr(fc.get("files"));
+        assertEquals(3, files.size());
+        Map<String, Object> root0 = obj(files.get(0));
+        assertEquals("Root.java", root0.get("displayPath"));
+        assertEquals("", root0.get("packagePath"));
+        assertEquals("Root.java", root0.get("fileName"));
+        Map<String, Object> fileA = obj(files.get(1));
+        assertEquals("com/example/pkg/A.java", fileA.get("displayPath"));
+        assertEquals("com/example/pkg", fileA.get("packagePath"));
+        assertEquals("A.java", fileA.get("fileName"));
     }
 
     @Test
@@ -315,15 +314,17 @@ class HtmlRendererTest {
     }
 
     @Test
-    void themeAndDensityControlsArePresentInTheStaticScript() {
+    void themeControlIsPresentAndOpensLightByDefault() {
         String rendered = HtmlRenderer.render(baseDoc(true, List.of(), List.of()));
 
         assertTrue(rendered.contains("'theme-toggle'"), rendered);
         assertTrue(rendered.contains("function toggleTheme"), rendered);
         assertTrue(rendered.contains(":root[data-theme=\"dark\"]"), rendered);
-        assertTrue(rendered.contains(":root[data-theme=\"light\"]"), rendered);
         assertTrue(rendered.contains("coverdict-report-theme"), rendered);
-        assertTrue(rendered.contains("coverdict-report-density"), rendered);
+        // D-81: the user asked the report to open in light mode first - bare :root carries the light
+        // token values directly and there is no media query auto-switching to dark on system preference,
+        // so a first-time reader (no stored preference) always opens light regardless of OS theme.
+        assertFalse(rendered.contains("@media (prefers-color-scheme"), rendered);
     }
 
     @Test

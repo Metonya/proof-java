@@ -8,12 +8,16 @@ package dev.coverdict.analysis.report;
  * <p>D-80 replaced the earlier "every row printed as HTML server-side"
  * renderer with a data-embedded one: {@link ReportDataWriter} turns {@code
  * doc} into one presentation-shaped JSON object (Turkish-formatted numbers,
- * a path-compressed file tree, a friendly-name lookup for only the codes
- * this exact report uses - hard rule 5 keeps every raw code alongside its
- * name, never in place of it), and this class embeds that JSON in a
- * {@code <script type="application/json">} for {@link #SCRIPT} - static,
+ * a friendly-name lookup for only the codes this exact report uses - hard
+ * rule 5 keeps every raw code alongside its name, never in place of it),
+ * and this class embeds that JSON in a {@code <script
+ * type="application/json">} for {@link #SCRIPT} - static,
  * interpolation-free client-side JavaScript shipped alongside it - to read
- * and render into the DOM.
+ * and render into the DOM. D-81 replaced the earlier collapsible-sections
+ * page with a fixed sidebar + scroll-spy + dashboard card grid (opens in
+ * light mode by default - no {@code prefers-color-scheme} auto-dark on
+ * first load); every card is built strictly from computed numbers, never a
+ * generated judgment sentence (see D-81 for why).
  *
  * <p><b>Security.</b> Every byte of {@code doc}-derived text reaches the
  * browser through exactly one path: JSON-encoded (Jackson escapes {@code "}
@@ -75,8 +79,8 @@ public final class HtmlRenderer {
                 case '<' -> out.append("\\u003c");
                 case '>' -> out.append("\\u003e");
                 case '&' -> out.append("\\u0026");
-                case ' ' -> out.append("\\u2028");
-                case ' ' -> out.append("\\u2029");
+                case '\u2028' -> out.append("\\u2028");
+                case '\u2029' -> out.append("\\u2029");
                 default -> out.append(c);
             }
         }
@@ -85,181 +89,251 @@ public final class HtmlRenderer {
 
     private static final String CSS = """
         :root {
-          --paper: #f7f4ee; --paper-raised: #fffdf9; --ink: #1c1f26; --ink-soft: #565b64; --ink-faint: #8b8f78;
-          --line: #ddd7c9; --accent: #1f3a5f; --accent-soft: #e4ecf3;
-          --warn: #93400f; --warn-soft: #f4e3d1; --info: #2f5f45; --info-soft: #dcece2;
-          --kill: #2f5f45; --kill-soft: #dcece2; --survive: #93301c; --survive-soft: #f4e0da;
-          --other: #7a7264; --other-soft: #ece7d8;
-          --shadow: 0 1px 2px rgba(28, 31, 38, 0.08);
-          --row-pad: 0.5rem 0.7rem; --row-fs: 0.92em;
+          --bg: #f4f4f2; --surf: #ffffff; --surf2: #faf9f7; --surf3: #eeece8;
+          --ink: #191b1e; --ink2: #585d64; --ink3: #84888f;
+          --line: #e0ded8; --line2: #cbc8c1;
+          --good: #12855a; --good-dim: #dcf0e6;
+          --bad: #bb4028; --bad-dim: #f8e3dd;
+          --warn: #8e6410; --warn-dim: #f7ecd5;
+          --info: #2f5f9e; --info-dim: #e4ecf7;
+          --na: #8b8f96;
+          --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+          --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+          --serif: "IBM Plex Serif", Georgia, serif;
           color-scheme: light;
         }
-        @media (prefers-color-scheme: dark) {
-          :root:not([data-theme="light"]) {
-            --paper: #14161b; --paper-raised: #1b1e25; --ink: #eae6db; --ink-soft: #a19c8f; --ink-faint: #6f7566;
-            --line: #2c2f37; --accent: #86aed6; --accent-soft: #1d2a3a;
-            --warn: #e0a06a; --warn-soft: #3a2a1a; --info: #8fc4a6; --info-soft: #1c2f24;
-            --kill: #8fc4a6; --kill-soft: #1c2f24; --survive: #e08a76; --survive-soft: #3a2018;
-            --other: #8c8577; --other-soft: #2a271c;
-            --shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-            color-scheme: dark;
-          }
-        }
         :root[data-theme="dark"] {
-          --paper: #14161b; --paper-raised: #1b1e25; --ink: #eae6db; --ink-soft: #a19c8f; --ink-faint: #6f7566;
-          --line: #2c2f37; --accent: #86aed6; --accent-soft: #1d2a3a;
-          --warn: #e0a06a; --warn-soft: #3a2a1a; --info: #8fc4a6; --info-soft: #1c2f24;
-          --kill: #8fc4a6; --kill-soft: #1c2f24; --survive: #e08a76; --survive-soft: #3a2018;
-          --other: #8c8577; --other-soft: #2a271c;
-          --shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+          --bg: #111214; --surf: #191a1e; --surf2: #202227; --surf3: #292c33;
+          --ink: #e6e5e3; --ink2: #9ea3ab; --ink3: #6e737b;
+          --line: #282b32; --line2: #363a43;
+          --good: #35d98a; --good-dim: #1c3a2b;
+          --bad: #e8614a; --bad-dim: #3a1e18;
+          --warn: #dfae3d; --warn-dim: #332811;
+          --info: #7fa9e6; --info-dim: #1a2635;
+          --na: #7c8189;
           color-scheme: dark;
         }
-        :root[data-theme="light"] { color-scheme: light; }
-        :root[data-density="compact"] { --row-pad: 0.25rem 0.6rem; --row-fs: 0.82em; }
         * { box-sizing: border-box; }
-        body { margin: 0; background: var(--paper); color: var(--ink);
-          font-family: "IBM Plex Sans", system-ui, sans-serif; line-height: 1.5; }
-        code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.9em; }
-        h1, h2, h3 { font-family: "IBM Plex Serif", Georgia, serif; }
+        body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans);
+          line-height: 1.55; -webkit-font-smoothing: antialiased; }
+        h1, h2, h3 { font-family: var(--serif); }
+        code { font-family: var(--mono); font-size: 0.92em; }
+        a { color: var(--good); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        input, button { font-family: inherit; }
+        ::selection { background: var(--good-dim); }
+        ::-webkit-scrollbar { width: 9px; height: 9px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--surf3); border-radius: 5px; }
 
-        .noscript-warning { background: var(--warn-soft); color: var(--warn); padding: 1rem 1.25rem;
+        .noscript-warning { background: var(--warn-dim); color: var(--warn); padding: 1rem 1.25rem;
           text-align: center; font-weight: 600; }
 
-        .topbar { position: sticky; top: 0; z-index: 30; background: var(--paper); border-bottom: 1px solid var(--line); }
-        .topbar-inner { max-width: 1200px; margin: 0 auto; padding: 0.6rem 1.25rem; display: flex;
-          align-items: center; gap: 1rem; flex-wrap: wrap; }
-        .brand { display: flex; flex-direction: column; line-height: 1.2; margin-right: 0.5rem; }
-        .brand-title { font-weight: 700; font-size: 0.95em; }
-        .brand-sub { color: var(--ink-soft); font-size: 0.78em; font-family: "IBM Plex Mono", ui-monospace, monospace;
-          max-width: 22rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .global-search { flex: 1 1 16rem; min-width: 10rem; padding: 0.4rem 0.7rem; border: 1px solid var(--line);
-          border-radius: 6px; background: var(--paper-raised); color: var(--ink); font-family: inherit; }
-        .section-nav { display: flex; gap: 0.15rem; flex-wrap: wrap; }
-        .section-nav a { padding: 0.3rem 0.55rem; border-radius: 6px; font-size: 0.8em; color: var(--ink-soft); }
-        .section-nav a:hover { background: var(--accent-soft); color: var(--ink); }
-        .topbar-actions { display: flex; gap: 0.35rem; align-items: center; }
-        .ghost-btn { padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid var(--line);
-          background: var(--paper-raised); color: var(--ink-soft); font-size: 0.8em; cursor: pointer;
-          font-family: inherit; }
-        .ghost-btn:hover { border-color: var(--accent); color: var(--ink); }
-        .theme-toggle { padding: 0.3rem 0.6rem; border-radius: 999px; border: 1px solid var(--line);
-          background: var(--paper-raised); color: var(--ink-soft); cursor: pointer; font-size: 0.8em;
-          font-family: inherit; }
-        .theme-toggle:hover { border-color: var(--accent); }
+        .side { position: fixed; left: 0; top: 0; bottom: 0; width: 236px; z-index: 40; background: var(--surf);
+          border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+        .side-head { padding: 20px 20px 18px; border-bottom: 1px solid var(--line); display: flex;
+          align-items: center; gap: 10px; }
+        .side-mark { width: 9px; height: 22px; border-radius: 2px; background: var(--good); flex: none; }
+        .side-brand { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+        .side-brand-name { font-size: 15px; font-weight: 680; letter-spacing: -0.01em; }
+        .side-brand-sub { font-size: 11px; color: var(--ink3); font-family: var(--mono); white-space: nowrap;
+          overflow: hidden; text-overflow: ellipsis; }
+        .side-nav { flex: 1; padding: 12px 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
+        .side-nav a { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 11px; align-items: center;
+          padding: 9px 18px; border-left: 3px solid transparent; color: var(--ink2); font-size: 13px; }
+        .side-nav a:hover { background: var(--surf2); color: var(--ink); text-decoration: none; }
+        .side-nav a.active { border-left-color: var(--good); background: var(--surf2); color: var(--ink); }
+        .side-nav-dot { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid currentColor; opacity: 0.6; }
+        .side-nav-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .side-nav-count { font-family: var(--mono); font-size: 10.5px; color: var(--ink3); background: var(--surf2);
+          padding: 1px 6px; border-radius: 99px; white-space: nowrap; }
+        .side-nav a.active .side-nav-count { color: var(--good); background: var(--good-dim); }
+        .side-foot { padding: 14px 18px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 9px; }
+        .side-foot-btn { width: 100%; padding: 8px 12px; border-radius: 7px; border: 1px solid var(--line2);
+          background: var(--surf2); color: var(--ink2); font-size: 12px; cursor: pointer; text-align: left; }
+        .side-foot-btn:hover { border-color: var(--good); color: var(--ink); }
+        .side-foot-meta { font-family: var(--mono); font-size: 10.5px; color: var(--ink3); line-height: 1.6; }
 
-        main { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
-        details.report-section { margin-bottom: 1.25rem; scroll-margin-top: 4.5rem; }
-        details.report-section > summary { cursor: pointer; list-style: revert; display: flex;
-          align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
-        details.report-section > summary h2 { display: inline; margin: 0; font-size: 1.3em; }
-        .section-count { color: var(--ink-soft); font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.8em; }
-        .match-badge { color: var(--accent); font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.8em;
-          font-weight: 600; }
-        .report-section-body { margin-top: 0.75rem; }
-        .report-section.search-hidden { display: none; }
+        .main { margin-left: 236px; min-height: 100vh; }
+        .wrap { max-width: 1420px; width: 100%; margin: 0 auto; padding: 34px 40px 40px; }
 
-        .status { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-weight: 600; font-size: 0.85em; }
-        .status-complete { background: var(--info-soft); color: var(--info); }
-        .status-incomplete { background: var(--warn-soft); color: var(--warn); }
-        .unavailable { color: var(--ink-soft); font-style: italic; }
-        .empty { color: var(--ink-soft); font-style: italic; }
-        .section-note { color: var(--ink-soft); font-size: 0.9em; max-width: 68ch; }
+        #ozet .eyebrow { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; font-weight: 700;
+          color: var(--ink3); }
+        #ozet .ozet-time { font-family: var(--mono); font-size: 11.5px; color: var(--ink3); margin-left: 14px; }
+        .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-top: 18px; }
+        .stat-tile { background: var(--surf); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; }
+        .stat-tile-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink3); font-weight: 600; }
+        .stat-tile-value { font-family: var(--mono); font-size: 22px; letter-spacing: -0.02em; margin-top: 6px; }
+        .stat-tile-sub { font-size: 11.5px; color: var(--ink2); margin-top: 2px; }
 
-        .identity { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 0.9rem; color: var(--ink-soft); }
-        .identity dt { font-weight: 600; }
-        .identity code { color: var(--ink); }
+        .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 18px; margin-top: 26px; }
+        .card { min-width: 0; background: var(--surf); border: 1px solid var(--line); border-radius: 12px;
+          padding: 22px 26px; scroll-margin-top: 24px; }
+        .card-accent-good { border-top: 2px solid var(--good); }
+        .card-accent-bad { border-top: 2px solid var(--bad); }
+        .card-accent-warn { border-top: 2px solid var(--warn); }
+        .card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+        .card-title { font-size: 17px; font-weight: 640; letter-spacing: -0.01em; margin: 0; }
+        .card-count { font-family: var(--mono); font-size: 13px; color: var(--ink3); }
+        .card-sub { margin: 5px 0 0; font-size: 13px; color: var(--ink2); max-width: 74ch; }
 
-        .code-badge { display: inline-flex; align-items: baseline; gap: 0.35rem; }
-        .code-badge code { color: var(--ink-soft); }
+        .col-4 { grid-column: span 4; } .col-5 { grid-column: span 5; } .col-7 { grid-column: span 7; }
+        .col-8 { grid-column: span 8; } .col-12 { grid-column: span 12; }
 
-        table { width: max-content; min-width: 100%; border-collapse: collapse; margin: 0; background: var(--paper-raised); }
-        th, td { text-align: left; padding: var(--row-pad); border-bottom: 1px solid var(--line);
-          overflow-wrap: break-word; font-size: var(--row-fs); }
+        .kapsama-body { display: flex; gap: 30px; align-items: center; flex-wrap: wrap; }
+        .donut-wrap { position: relative; width: 154px; height: 154px; flex: none; }
+        .donut { width: 100%; height: 100%; transform: rotate(-90deg); }
+        .donut-track { fill: none; stroke: var(--surf3); stroke-width: 7; }
+        .donut-fill { fill: none; stroke: var(--good); stroke-width: 7; stroke-linecap: round; }
+        .donut-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+          justify-content: center; gap: 1px; }
+        .donut-pct { font-family: var(--mono); font-size: 29px; letter-spacing: -0.03em; line-height: 1; }
+        .donut-mode { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; color: var(--ink3); }
+
+        .metric-list { margin-top: 16px; display: flex; flex-direction: column; gap: 1px; }
+        .metric-row { display: grid; grid-template-columns: 132px 56px minmax(60px, 1fr) auto; gap: 14px;
+          align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
+        .metric-row code { font-size: 12px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .metric-row-pct { font-family: var(--mono); font-size: 14px; text-align: right; font-variant-numeric: tabular-nums; }
+        .metric-row-bar { height: 5px; border-radius: 3px; background: var(--surf3); overflow: hidden; display: block; }
+        .metric-row-bar-fill { display: block; height: 5px; background: var(--good); opacity: 0.8; }
+        .metric-row-ratio { font-family: var(--mono); font-size: 11px; color: var(--ink3); white-space: nowrap; text-align: right; }
+        .newcode-row { display: flex; gap: 12px; align-items: baseline; padding: 10px 0 0; }
+        .newcode-row code { font-family: var(--mono); font-size: 12px; color: var(--ink2); }
+        .unavailable { color: var(--na); font-style: italic; }
+
+        .mut-summary { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+        .mut-badge { width: 38px; height: 38px; border-radius: 99px; display: flex; align-items: center;
+          justify-content: center; font-family: var(--mono); font-size: 17px; flex: none; }
+        .mut-badge-bad { background: var(--bad-dim); border: 1px solid var(--bad); color: var(--bad); }
+        .mut-badge-good { background: var(--good-dim); border: 1px solid var(--good); color: var(--good); }
+        .mut-badge-none { background: var(--surf3); border: 1px solid var(--line2); color: var(--na); }
+        .mut-flag { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.07em;
+          padding: 4px 8px; border-radius: 5px; white-space: nowrap; }
+        .mut-flag-bad { background: var(--bad-dim); border: 1px solid var(--bad); color: var(--bad); }
+        .mut-flag-good { background: var(--good-dim); border: 1px solid var(--good); color: var(--good); }
+        .mut-flag-none { background: var(--surf3); border: 1px solid var(--line2); color: var(--na); }
+        .mut-score { font-family: var(--mono); font-size: 34px; letter-spacing: -0.03em; line-height: 1; margin-top: 22px; }
+        .mut-score-of { font-size: 19px; color: var(--ink3); }
+        .mut-headline { font-size: 16px; font-weight: 640; margin: 8px 0 0; }
+        .mut-headline-bad { color: var(--bad); } .mut-headline-good { color: var(--good); }
+        .mut-note { margin: 6px 0 0; font-size: 13px; color: var(--ink2); }
+        .mut-callout { margin-top: 18px; padding: 11px 13px; border-radius: 8px; background: var(--surf2);
+          border: 1px solid var(--line); font-family: var(--mono); font-size: 11.5px; display: flex;
+          flex-direction: column; gap: 5px; }
+        .mut-callout-code { color: var(--ink); overflow-wrap: anywhere; }
+        .mut-callout-meta { color: var(--ink3); }
+        .mut-more-link { margin-top: 14px; font-size: 12.5px; color: var(--ink2); display: inline-block; }
+        .mut-toolbar { display: flex; gap: 10px; align-items: center; margin: 14px 0 0; flex-wrap: wrap; }
+        .mut-toolbar input[type=text] { flex: 1 1 220px; padding: 7px 11px; border: 1px solid var(--line2);
+          border-radius: 8px; background: var(--surf2); color: var(--ink); font-size: 12.5px; }
+        .mut-toolbar label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink2); }
+        details.mutation-class { background: var(--surf2); border: 1px solid var(--line); border-radius: 8px;
+          padding: 0.5rem 0.8rem; margin: 10px 0 0; }
+        details.mutation-class > summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+        table.mutants { width: max-content; min-width: 100%; }
+        table.mutants td:nth-child(3) { font-weight: 600; }
+        tr.status-KILLED td:nth-child(3) { color: var(--good); }
+        tr.status-SURVIVED td:nth-child(3) { color: var(--bad); }
+
+        table { width: max-content; min-width: 100%; border-collapse: collapse; margin: 0; background: var(--surf); }
+        th, td { text-align: left; padding: 0.45rem 0.65rem; border-bottom: 1px solid var(--line); font-size: 0.86em; }
+        th { color: var(--ink3); font-weight: 600; font-size: 0.75em; text-transform: uppercase; white-space: nowrap; }
         td code, th code { white-space: nowrap; }
-        th { color: var(--ink-soft); font-weight: 600; font-size: 0.78em; text-transform: uppercase; white-space: nowrap; }
-        .table-wrap { overflow-x: auto; margin: 0.5rem 0 1rem; border: 1px solid var(--line); border-radius: 8px;
-          padding: 0.4rem; }
+        .table-wrap { overflow-x: auto; margin: 10px 0 0; border: 1px solid var(--line); border-radius: 8px; padding: 0.4rem; }
         .table-wrap table { margin: 0; }
 
-        .metric-list { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.5rem 0 1.25rem; }
-        .metric-row { border: 1px solid var(--line); border-radius: 8px; padding: 0.6rem 0.8rem; background: var(--paper-raised); }
-        .metric-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.6rem; }
-        .metric-pct { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 1.1em; }
-        .metric-bar { height: 5px; border-radius: 3px; background: var(--line); margin: 0.5rem 0 0.4rem; overflow: hidden; }
-        .metric-bar-fill { height: 5px; background: var(--accent); }
-        .metric-ratio { color: var(--ink-soft); font-size: 0.82em; font-family: "IBM Plex Mono", ui-monospace, monospace; }
+        .pill-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+        .pill { display: inline-flex; align-items: center; gap: 9px; padding: 7px 13px; border-radius: 99px;
+          border: 1px dashed var(--line2); background: var(--surf2); font-size: 12px; color: var(--ink2); cursor: default; }
+        .pill code { font-family: var(--mono); font-size: 10.5px; color: var(--ink3); }
+        .pill-n { font-family: var(--mono); font-size: 11.5px; color: var(--good); font-weight: 600; }
+        .pill-n-nonzero { color: var(--warn); }
+        button.pill { cursor: pointer; border-style: solid; }
+        button.pill[data-on="1"] { border-color: var(--good); background: var(--good-dim); color: var(--good); }
 
-        .rule-summary-row { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0.5rem 0; }
-        .rule-chip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.6rem; border-radius: 999px;
-          border: 1px solid var(--line); background: var(--paper-raised); font-size: 0.78em; }
-        .rule-chip code { color: var(--ink-soft); }
-        .rule-chip-zero { opacity: 0.55; border-style: dashed; }
-        .shown-count { color: var(--ink-soft); font-size: 0.82em; font-family: "IBM Plex Mono", ui-monospace, monospace; }
-
-        details.finding-group { border: 1px solid var(--line); border-radius: 8px; background: var(--paper-raised);
-          padding: 0.6rem 0.8rem; margin-bottom: 0.6rem; }
-        details.finding-group > summary { cursor: pointer; display: flex; align-items: baseline; gap: 0.5rem;
-          flex-wrap: wrap; font-weight: 600; }
-        .finding-group-count { color: var(--ink-soft); font-weight: 400; font-size: 0.85em; margin-left: auto; }
-        .finding-group-desc { color: var(--ink-soft); font-size: 0.88em; margin: 0.5rem 0 0.25rem; }
+        .finding-group { border: 1px solid var(--line); border-radius: 8px; background: var(--surf2);
+          padding: 0.6rem 0.8rem; margin: 12px 0 0; }
+        .finding-group > summary { cursor: pointer; display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap;
+          font-weight: 600; font-size: 13.5px; }
+        .finding-group-count { color: var(--ink3); font-weight: 400; font-size: 0.85em; margin-left: auto; }
+        .finding-group-desc { color: var(--ink2); font-size: 0.88em; margin: 0.5rem 0 0.25rem; }
         .finding-group-action { font-size: 0.88em; margin: 0 0 0.5rem; }
         .finding-rows { border-top: 1px solid var(--line); margin-top: 0.4rem; }
         .finding-row { display: grid; grid-template-columns: auto minmax(0, auto) minmax(0, auto) 1fr; gap: 0.6rem;
-          align-items: baseline; padding: 0.4rem 0; border-bottom: 1px dotted var(--line); font-size: 0.88em; }
+          align-items: baseline; padding: 0.4rem 0; border-bottom: 1px dotted var(--line); font-size: 0.85em; }
         .finding-row:last-child { border-bottom: none; }
-        .finding-row.search-hidden { display: none; }
         .finding-loc, .finding-method { white-space: nowrap; }
-        .finding-message { color: var(--ink-soft); }
+        .finding-message { color: var(--ink2); }
+        .sev-badge, .conf-badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.72em; font-weight: 600; }
+        .sev-WARNING { background: var(--warn-dim); color: var(--warn); }
+        .sev-INFO { background: var(--info-dim); color: var(--info); }
+        .conf-HIGH { background: var(--bad-dim); color: var(--bad); }
+        .conf-MEDIUM { background: var(--warn-dim); color: var(--warn); }
+        .conf-LOW, .conf-INCONCLUSIVE { background: var(--surf3); color: var(--ink3); }
 
-        .sev-badge, .conf-badge, .status-chip { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px;
-          font-size: 0.75em; font-weight: 600; }
-        .sev-WARNING { background: var(--warn-soft); color: var(--warn); }
-        .sev-INFO { background: var(--info-soft); color: var(--info); }
-        .conf-HIGH { background: var(--survive-soft); color: var(--survive); }
-        .conf-MEDIUM { background: var(--warn-soft); color: var(--warn); }
-        .conf-LOW, .conf-INCONCLUSIVE { background: var(--other-soft); color: var(--other); }
+        .file-toolbar { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+        .file-toggle { display: inline-flex; border: 1px solid var(--line2); border-radius: 8px; overflow: hidden; }
+        .file-toggle button { padding: 7px 13px; font-size: 12px; border: 0; cursor: pointer; background: var(--surf2);
+          color: var(--ink2); }
+        .file-toggle button + button { border-left: 1px solid var(--line2); }
+        .file-toggle button[data-on="1"] { background: var(--good-dim); color: var(--good); }
+        .file-toolbar input[type=text] { width: 180px; padding: 7px 11px; border: 1px solid var(--line2); border-radius: 8px;
+          background: var(--surf2); color: var(--ink); font-size: 12px; }
+        .file-band-row { padding: 12px 0; margin-top: 8px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+          display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+        .file-band-eyebrow { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; color: var(--ink3); font-weight: 700; }
+        .file-band-actions { display: flex; gap: 10px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+        .file-sort-btn, .file-reset-btn { padding: 5px 11px; border-radius: 7px; border: 1px solid var(--line2);
+          background: var(--surf); color: var(--ink2); font-size: 12px; cursor: pointer; white-space: nowrap; }
+        .file-sort-btn:hover { border-color: var(--good); color: var(--ink); }
+        .file-reset-btn { border-color: transparent; background: transparent; }
+        .file-reset-btn:hover { color: var(--ink); }
+        .file-count { font-family: var(--mono); font-size: 11px; color: var(--ink3); white-space: nowrap; }
+        .file-rows { margin-top: 4px; }
+        .file-row { display: grid; grid-template-columns: minmax(0, 1fr) 150px 58px; gap: 16px; align-items: center;
+          padding: 8px 0; border-bottom: 1px solid var(--line); }
+        .file-row-zero { background: var(--bad-dim); margin: 0 -10px; padding: 8px 10px; border-radius: 6px; }
+        .file-row-name-wrap { min-width: 0; display: flex; gap: 10px; align-items: baseline; overflow: hidden; }
+        .file-row-name { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-row-sub { font-family: var(--mono); font-size: 10.5px; color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-row-bar { height: 5px; border-radius: 3px; background: var(--surf3); overflow: hidden; display: block; }
+        .file-row-bar-fill { display: block; height: 5px; }
+        .file-row-pct { font-family: var(--mono); font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums; }
+        .file-legend { padding: 12px 0 0; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+          font-size: 11.5px; color: var(--ink3); }
+        .file-legend code { font-family: var(--mono); }
 
-        .status-counts { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.5rem 0 1rem; }
-        .status-chip { border: 1px solid var(--line); background: var(--paper-raised); padding: 0.3rem 0.7rem; }
-        .status-KILLED { color: var(--kill); }
-        .status-SURVIVED { color: var(--survive); }
-        .mutation-survived-label { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85em;
-          color: var(--ink-soft); margin: 0 0 0.75rem; }
+        .kv-grid { margin-top: 14px; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 7px 18px; font-size: 12.5px; }
+        .kv-grid dt { color: var(--ink3); grid-column: 1; }
+        .kv-grid dd { margin: 0; grid-column: 2; }
+        .kv-grid code { font-family: var(--mono); }
+        .empty-block { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+        .empty-block-eyebrow { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; color: var(--ink3); font-weight: 700; }
+        .empty-row { display: flex; gap: 12px; align-items: baseline; padding: 6px 0; border-bottom: 1px dotted var(--line); font-size: 12.5px; }
+        .empty-row-name { color: var(--ink2); }
+        .empty-row-why { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--ink3); white-space: nowrap; }
+        .empty-block-note { margin: 10px 0 0; font-size: 11.5px; color: var(--ink3); }
 
-        details.mutation-class { background: var(--paper-raised); border: 1px solid var(--line); border-radius: 8px;
-          padding: 0.5rem 0.8rem; margin-bottom: 0.5rem; }
-        details.mutation-class > summary { cursor: pointer; font-weight: 600; }
-        table.mutants td:nth-child(3) { font-weight: 600; }
-        tr.status-KILLED td:nth-child(3) { color: var(--kill); }
-        tr.status-SURVIVED td:nth-child(3) { color: var(--survive); }
-        tr.search-hidden { display: none; }
-
-        details.tree-folder { margin-left: 0.2rem; border-left: 1px dashed var(--line); padding-left: 0.7rem; }
-        details.tree-folder > summary { cursor: pointer; display: flex; align-items: center; gap: 0.6rem; }
-        .tree-file { display: flex; align-items: center; gap: 0.8rem; padding: 0.15rem 0 0.15rem 1rem;
-          border-bottom: 1px dotted var(--line); }
-        .tree-file.search-hidden, .tree-folder.search-hidden { display: none; }
-        .tree-pct { color: var(--ink-soft); font-variant-numeric: tabular-nums; font-size: 0.85em; min-width: 3.4em;
-          text-align: right; }
-        .tree-pct.na { font-style: italic; color: var(--ink-faint); }
-        .tree-file-bar-wrap { margin-left: auto; display: flex; align-items: center; gap: 0.5rem; }
-        .tree-file-bar { width: 90px; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden;
-          display: inline-block; }
-        .tree-file-bar-fill { display: block; height: 5px; background: var(--accent); }
-
-        .reason-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
-        .reason-list li { border-left: 2px solid var(--line); padding-left: 0.7rem; font-size: 0.88em; color: var(--ink-soft); }
-        .reason-list li.search-hidden { display: none; }
+        .reason-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+        .reason-list li { border-left: 2px solid var(--line2); padding-left: 11px; font-size: 12.5px; color: var(--ink2); }
         .reason-list code { color: var(--ink); }
 
-        .deep-link-highlight { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
-
-        footer { color: var(--ink-soft); font-size: 0.82em; border-top: 1px solid var(--line); padding-top: 1rem;
-          margin-top: 2rem; display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+        .search-hidden { display: none !important; }
+        .deep-link-highlight { outline: 2px solid var(--good); outline-offset: 2px; border-radius: 4px; }
+        .footer-strip { margin: 30px 0 0; padding: 14px 0 4px; border-top: 1px solid var(--line); display: flex;
+          justify-content: space-between; gap: 16px; flex-wrap: wrap; font-family: var(--mono); font-size: 11px; color: var(--ink3); }
 
         @media print {
-          .topbar, .noscript-warning { display: none; }
-          details.report-section, details.finding-group, details.mutation-class, details.tree-folder { break-inside: avoid; }
+          .side, .noscript-warning, .file-toolbar, .file-band-row, .mut-toolbar { display: none !important; }
+          .main { margin-left: 0 !important; }
+          body { background: #fff; }
+        }
+        @media (max-width: 900px) {
+          .side { display: none !important; }
+          .main { margin-left: 0 !important; }
+          .grid { grid-template-columns: 1fr; }
+          .grid > * { grid-column: auto !important; }
         }
         """;
 
@@ -274,7 +348,6 @@ public final class HtmlRenderer {
         (function () {
           'use strict';
           var DATA = JSON.parse(document.getElementById('coverdict-data').textContent);
-          var FILTER_ACTIVE = false;
           var PRINT_STATE = [];
 
           function el(tag, attrs, children) {
@@ -296,6 +369,11 @@ public final class HtmlRenderer {
             });
             return e;
           }
+          function svgEl(tag, attrs) {
+            var e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+            for (var k in attrs) { e.setAttribute(k, attrs[k]); }
+            return e;
+          }
           function txt(s) { return document.createTextNode(s === null || s === undefined ? '' : String(s)); }
           function fmtInt(n) { try { return n.toLocaleString('tr-TR'); } catch (e) { return String(n); } }
           function debounce(fn, ms) {
@@ -313,89 +391,333 @@ public final class HtmlRenderer {
           }
           function codeBadge(code) {
             var l = label(code);
-            var span = el('span', { class: 'code-badge', title: l.description || null });
+            var span = el('span', { title: l.description || null });
             span.appendChild(txt(l.name + ' '));
             span.appendChild(el('code', { text: code }));
             return span;
           }
-
-          // ---------- Koşu ----------
-          function renderRun() {
-            var m = DATA.meta;
-            var dl = el('dl', { class: 'identity' });
-            function row(k, valueNode) {
-              dl.appendChild(el('dt', { text: k }));
-              var dd = el('dd');
-              dd.appendChild(valueNode);
-              dl.appendChild(dd);
-            }
-            row('Durum', el('span', { class: 'status ' + (m.complete ? 'status-complete' : 'status-incomplete'), text: m.statusLabel }));
-            row('Rapor oluşturulma zamanı', txt(m.generatedAt));
-            row('Modül(ler)', txt(m.modules));
-            row('Fark modu', txt(m.diffMode));
-            if (m.baseRef) { row('Karşılaştırma referansı', txt(m.baseRef)); }
-            m.commitRows.forEach(function (c) {
-              row(c.label, el('code', { title: c.full, text: c.short }));
-            });
-            if ('dirty' in m) { row('Kaydedilmemiş değişiklik', txt(m.dirty ? 'var' : 'yok')); }
-            row('Dil seviyesi', txt(String(m.languageLevel)));
-            row('Encoding', txt(m.encoding));
-            row('Bulgu kapsamı', txt(m.findingsScopeLabel));
-            if (m.exclusions.length) { row('Hariç tutulan desenler', txt(m.exclusions.join(', '))); }
-            row('Sürüm', txt('coverdict ' + m.toolVersion + ' \\u00b7 schema ' + m.schemaVersion));
-            return dl;
+          function tone(pct) {
+            if (pct === null) { return 'var(--na)'; }
+            if (pct < 70) { return 'var(--bad)'; }
+            if (pct < 90) { return 'var(--warn)'; }
+            return 'var(--good)';
           }
 
-          // ---------- Kapsama ----------
-          function metricList(metrics) {
-            var box = el('div', { class: 'metric-list' });
-            metrics.forEach(function (mtr) {
-              var row = el('div', { class: 'metric-row' });
-              var head = el('div', { class: 'metric-head' });
-              head.appendChild(codeBadge(mtr.mode));
-              head.appendChild(el('span', { class: 'metric-pct', text: mtr.pctText }));
-              row.appendChild(head);
-              var bar = el('div', { class: 'metric-bar' });
-              bar.appendChild(el('div', { class: 'metric-bar-fill', style: mtr.pct === null ? 'width:0' : ('width:' + mtr.pct + '%') }));
-              row.appendChild(bar);
-              row.appendChild(el('div', { class: 'metric-ratio', text: mtr.numeratorText + ' / ' + mtr.denominatorText + ' (' + mtr.numeratorName + '/' + mtr.denominatorName + ')' }));
-              box.appendChild(row);
-            });
-            return box;
-          }
-          function renderCoverage() {
-            var wrap = el('div');
-            wrap.appendChild(el('h3', { text: 'Genel' }));
-            wrap.appendChild(metricList(DATA.coverage.overall));
-            wrap.appendChild(el('h3', { text: 'Yeni kod' }));
-            if (DATA.coverage.newCode.available) {
-              wrap.appendChild(metricList(DATA.coverage.newCode.metrics));
-            } else {
-              var p = el('p', { class: 'unavailable' });
-              p.appendChild(txt('hesaplanamadı \\u2014 '));
-              p.appendChild(codeBadge(DATA.coverage.newCode.unavailableStatus));
-              wrap.appendChild(p);
-            }
+          // ---------- Kapsama card ----------
+          function donut(pct) {
+            var r = 42, c = 2 * Math.PI * r;
+            var offset = pct === null ? c : c * (1 - pct / 100);
+            var wrap = el('div', { class: 'donut-wrap' });
+            var svg = svgEl('svg', { viewBox: '0 0 100 100', class: 'donut' });
+            svg.appendChild(svgEl('circle', { cx: 50, cy: 50, r: r, class: 'donut-track' }));
+            svg.appendChild(svgEl('circle', { cx: 50, cy: 50, r: r, class: 'donut-fill',
+              'stroke-dasharray': c.toFixed(1), 'stroke-dashoffset': offset.toFixed(1) }));
+            wrap.appendChild(svg);
+            var overlay = el('div', { class: 'donut-label' });
+            overlay.appendChild(el('span', { class: 'donut-pct', text: pct === null ? 'n/a' : String(pct).replace('.', ',') + '%' }));
+            overlay.appendChild(el('span', { class: 'donut-mode', text: 'JACOCO-LINE' }));
+            wrap.appendChild(overlay);
             return wrap;
           }
-
-          // ---------- Değişen dosyalar ----------
-          function renderChangedFiles() {
-            var files = DATA.changedFiles;
-            var wrap = el('div');
-            if (!files.length) {
-              wrap.appendChild(el('p', { class: 'empty', text: 'Değişen dosya yok.' }));
-              return wrap;
+          function metricRow(m) {
+            var row = el('div', { class: 'metric-row' });
+            row.appendChild(codeBadge(m.mode));
+            row.appendChild(el('span', { class: 'metric-row-pct', text: m.pctText }));
+            var bar = el('span', { class: 'metric-row-bar' });
+            bar.appendChild(el('span', { class: 'metric-row-bar-fill', style: m.pct === null ? 'width:0' : ('width:' + m.pct + '%') }));
+            row.appendChild(bar);
+            row.appendChild(el('span', { class: 'metric-row-ratio', text: m.numeratorText + ' / ' + m.denominatorText }));
+            return row;
+          }
+          function buildKapsamaCard() {
+            var card = el('section', { id: 'kapsama', class: 'card col-8 card-accent-good' });
+            var head = el('div', { class: 'card-head' });
+            head.appendChild(el('h2', { class: 'card-title', text: 'Genel kapsama' }));
+            card.appendChild(head);
+            card.appendChild(el('p', { class: 'card-sub', text: 'Aynı koşunun üç hesabı. Yüzde hiçbir yerde pay/payda olmadan yazılmıyor.' }));
+            var body = el('div', { class: 'kapsama-body' });
+            var jacoco = DATA.coverage.overall.filter(function (m) { return m.mode === 'jacoco-line'; })[0];
+            body.appendChild(donut(jacoco ? jacoco.pct : null));
+            var right = el('div', { style: 'flex:1 1 320px;min-width:0' });
+            var list = el('div', { class: 'metric-list' });
+            DATA.coverage.overall.forEach(function (m) { list.appendChild(metricRow(m)); });
+            right.appendChild(list);
+            var nc = el('div', { class: 'newcode-row' });
+            nc.appendChild(el('code', { text: 'yeni kod' }));
+            if (DATA.coverage.newCode.available) {
+              var m0 = DATA.coverage.newCode.metrics[0];
+              nc.appendChild(el('span', { text: m0.pctText + ' (' + m0.numeratorText + ' / ' + m0.denominatorText + ')' }));
+            } else {
+              var span = el('span');
+              span.appendChild(el('span', { class: 'unavailable', text: 'hesaplanamadı' }));
+              span.appendChild(txt(' \\u2014 '));
+              span.appendChild(codeBadge(DATA.coverage.newCode.unavailableStatus));
+            nc.appendChild(span);
             }
+            right.appendChild(nc);
+            body.appendChild(right);
+            card.appendChild(body);
+            return card;
+          }
+
+          // ---------- Mutasyon + Mutant detayı ----------
+          var CONCERN_RANK = { SURVIVED: 0, TIMED_OUT: 1, RUN_ERROR: 1, MEMORY_ERROR: 1, NON_VIABLE: 1, NOT_STARTED: 1, STARTED: 1, NO_COVERAGE: 2 };
+          function findConcernMutant() {
+            if (!DATA.mutation) { return null; }
+            var best = null;
+            DATA.mutation.modules.forEach(function (mod) {
+              mod.classes.forEach(function (cls) {
+                cls.methods.forEach(function (method) {
+                  method.mutants.forEach(function (m) {
+                    var rank = CONCERN_RANK[m.status];
+                    if (rank === undefined) { return; }
+                    if (!best || rank < best.rank) {
+                      best = { rank: rank, moduleId: mod.moduleId, className: cls.className, methodName: method.methodName,
+                        signatureShort: method.signatureShort, firstLine: method.firstLine, lastLine: method.lastLine,
+                        mutator: m.mutator, line: m.line, status: m.status, killingTests: m.killingTests };
+                    }
+                  });
+                });
+              });
+            });
+            return best;
+          }
+          function mutationTotals() {
+            var killed = DATA.mutation.totalsByStatus.KILLED || 0;
+            var all = 0;
+            Object.keys(DATA.mutation.totalsByStatus).forEach(function (k) { all += DATA.mutation.totalsByStatus[k]; });
+            return { killed: killed, all: all };
+          }
+          function buildMutasyonCard(concern) {
+            var t = mutationTotals();
+            var state = t.all === 0 ? 'none' : (t.killed === t.all ? 'good' : 'bad');
+            var accentClass = state === 'good' ? 'card-accent-good' : (state === 'bad' ? 'card-accent-bad' : '');
+            var card = el('section', { id: 'mutasyon', class: 'card col-4 ' + accentClass });
+            var summary = el('div', { class: 'mut-summary' });
+            var badgeGlyph = state === 'good' ? '\\u2713' : (state === 'bad' ? '!' : '\\u2014');
+            var badgeClass = state === 'good' ? 'mut-badge-good' : (state === 'bad' ? 'mut-badge-bad' : 'mut-badge-none');
+            summary.appendChild(el('span', { class: 'mut-badge ' + badgeClass, text: badgeGlyph }));
+            var flagText = state === 'good' ? 'TEM\\u0130Z' : (state === 'bad' ? 'D\\u0130KKAT' : 'VER\\u0130 YOK');
+            var flagClass = state === 'good' ? 'mut-flag-good' : (state === 'bad' ? 'mut-flag-bad' : 'mut-flag-none');
+            summary.appendChild(el('span', { class: 'mut-flag ' + flagClass, text: flagText }));
+            card.appendChild(summary);
+            var scoreLine = el('div', { class: 'mut-score' });
+            scoreLine.appendChild(txt(t.killed));
+            scoreLine.appendChild(el('span', { class: 'mut-score-of', text: ' / ' + t.all }));
+            card.appendChild(scoreLine);
+            var headlineClass = state === 'good' ? 'mut-headline-good' : (state === 'bad' ? 'mut-headline-bad' : '');
+            card.appendChild(el('h2', { class: 'mut-headline ' + headlineClass,
+              text: state === 'none' ? 'Mutant üretilmedi' : (state === 'bad' ? 'Hayatta kalan mutant var' : 'Tüm mutantlar yakaland\\u0131') }));
+            var noteText = t.all === 0
+              ? 'Bu ko\\u015fuda hi\\u00e7 mutant \\u00fcretilmedi.'
+              : (t.killed + ' / ' + t.all + ' mutant testler taraf\\u0131ndan yakaland\\u0131.');
+            card.appendChild(el('p', { class: 'mut-note', text: noteText }));
+            if (concern) {
+              var callout = el('div', { class: 'mut-callout' });
+              callout.appendChild(el('span', { class: 'mut-callout-code', text: concern.className + '#' + concern.signatureShort }));
+              var killLabel = concern.killingTests.length ? (concern.killingTests.length + ' öldüren test') : 'öldüren test yok';
+              callout.appendChild(el('span', { class: 'mut-callout-meta', text: concern.mutator + ' \\u00b7 sat\\u0131r ' + concern.line + ' \\u00b7 ' + killLabel }));
+              card.appendChild(callout);
+              var more = el('a', { href: '#detay', class: 'mut-more-link', text: 'Mutant detay\\u0131na git \\u2192' });
+              card.appendChild(more);
+            }
+            return card;
+          }
+          function buildDetayCard(concern, otherCount) {
+            var card = el('section', { id: 'detay', class: 'card col-7' });
+            var head = el('div', { style: 'padding:0 0 14px;margin:-22px -26px 18px;padding:18px 26px;background:var(--bad-dim);border-bottom:1px solid var(--line);border-radius:12px 12px 0 0;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap' });
+            head.appendChild(el('span', { class: 'mut-flag mut-flag-bad', text: label(concern.status).name.toUpperCase() }));
+            head.appendChild(el('span', { style: 'font-size:14px;font-weight:600', text: label(concern.status).name + ' mutant' }));
+            head.appendChild(el('span', { style: 'font-size:12px;color:var(--ink2);margin-left:auto', text: 'L3 \\u00b7 ' + concern.moduleId }));
+            card.appendChild(head);
+            var top = el('div', { style: 'display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:baseline' });
+            top.appendChild(el('span', { style: 'font-family:var(--mono);font-size:13px;font-weight:600;overflow-wrap:anywhere',
+              text: concern.className + '#' + concern.signatureShort }));
+            top.appendChild(el('span', { style: 'font-family:var(--mono);font-size:11.5px;color:var(--ink3);white-space:nowrap',
+              text: 'sat\\u0131r ' + concern.firstLine + '-' + concern.lastLine }));
+            card.appendChild(top);
+            var mutRow = el('div', { style: 'margin-top:12px;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;padding:10px 13px;border-radius:8px;background:var(--surf2);border:1px solid var(--line);font-family:var(--mono);font-size:12px' });
+            mutRow.appendChild(el('span', { style: 'color:var(--bad);font-weight:600', text: concern.mutator }));
+            mutRow.appendChild(el('span', { style: 'color:var(--ink3);margin-left:auto',
+              text: concern.killingTests.length ? concern.killingTests.join(', ') : 'öldüren test yok' }));
+            card.appendChild(mutRow);
+            if (otherCount > 0) {
+              card.appendChild(el('p', { style: 'margin:14px 0 0;font-size:12.5px;color:var(--ink2)',
+                text: 'Bu ko\\u015fuda incelenmeye de\\u011fer ' + (otherCount + 1) + ' mutant var; geri kalan\\u0131 i\\u00e7in Mutasyon kart\\u0131na bak\\u0131n.' }));
+            }
+            return card;
+          }
+          function mutantSearchText(className, methodName, m) {
+            return (className + ' ' + methodName + ' ' + m.mutator + ' ' + m.status + ' ' + m.killingTests.join(' ')).toLowerCase();
+          }
+          function buildMutasyonDetailCard() {
+            var card = el('section', { id: 'mutasyon-detay', class: 'card col-12' });
+            var head = el('div', { class: 'card-head' });
+            head.appendChild(el('h2', { class: 'card-title', text: 'Mutasyon kan\\u0131t\\u0131 \\u2014 t\\u00fcm mutantlar' }));
+            var t = mutationTotals();
+            head.appendChild(el('span', { class: 'card-count', text: t.killed + ' / ' + t.all + ' yakaland\\u0131' }));
+            card.appendChild(head);
+            var toolbar = el('div', { class: 'mut-toolbar' });
+            var search = el('input', { type: 'text', id: 'mut-search', placeholder: 's\\u0131n\\u0131f, metot, mutator veya \\u00f6ld\\u00fcren teste g\\u00f6re filtrele' });
+            toolbar.appendChild(search);
+            var survivedOnly = el('input', { type: 'checkbox', id: 'mut-survived-only' });
+            toolbar.appendChild(el('label', {}, [survivedOnly, ' sadece SURVIVED']));
+            card.appendChild(toolbar);
+
+            function applyMutFilter() {
+              var q = search.value.trim().toLowerCase();
+              var only = survivedOnly.checked;
+              card.querySelectorAll('.mutant-row').forEach(function (row) {
+                var textMatch = q === '' || row.dataset.search.indexOf(q) !== -1;
+                var statusMatch = !only || row.dataset.status === 'SURVIVED';
+                row.classList.toggle('search-hidden', !(textMatch && statusMatch));
+              });
+              card.querySelectorAll('details.mutation-class').forEach(function (grp) {
+                var rows = grp.querySelectorAll('.mutant-row');
+                var anyVisible = false;
+                rows.forEach(function (r) { if (!r.classList.contains('search-hidden')) { anyVisible = true; } });
+                grp.style.display = anyVisible ? '' : 'none';
+                if (q !== '' || only) { grp.open = anyVisible; }
+              });
+            }
+            search.addEventListener('input', debounce(applyMutFilter, 60));
+            survivedOnly.addEventListener('change', applyMutFilter);
+
+            DATA.mutation.modules.forEach(function (mod) {
+              mod.classes.forEach(function (cls) {
+                var counts = Object.keys(cls.countsByStatus).sort().map(function (s) { return label(s).name + ' ' + cls.countsByStatus[s]; }).join(' \\u00b7 ');
+                var details = el('details', { class: 'mutation-class' });
+                details.appendChild(el('summary', {}, [el('code', { text: cls.className }), ' \\u00b7 ' + counts]));
+                cls.methods.forEach(function (method) {
+                  details.appendChild(el('h4', { style: 'margin:10px 0 4px;font-size:12.5px' }, [
+                    el('code', { title: method.signatureFull, text: cls.className + '#' + method.signatureShort }),
+                    txt(' (sat\\u0131r ' + method.firstLine + '-' + method.lastLine + ')')
+                  ]));
+                  var tableWrap = el('div', { class: 'table-wrap' });
+                  var table = el('table', { class: 'mutants' });
+                  table.appendChild(el('thead', {}, [el('tr', {}, [
+                    el('th', { text: 'mutator' }), el('th', { text: 'sat\\u0131r' }), el('th', { text: 'durum' }), el('th', { text: '\\u00f6ld\\u00fcren testler' })
+                  ])]));
+                  var tbody = el('tbody');
+                  method.mutants.forEach(function (m) {
+                    var tr = el('tr', { class: 'mutant-row status-' + m.status, 'data-status': m.status,
+                      'data-search': mutantSearchText(cls.className, method.methodName, m) });
+                    tr.appendChild(el('td', { text: m.mutator }));
+                    tr.appendChild(el('td', { text: String(m.line) }));
+                    tr.appendChild(el('td', { text: label(m.status).name }));
+                    tr.appendChild(el('td', { text: m.killingTests.length ? m.killingTests.join(', ') : '\\u2014' }));
+                    tbody.appendChild(tr);
+                  });
+                  table.appendChild(tbody);
+                  tableWrap.appendChild(table);
+                  details.appendChild(tableWrap);
+                });
+                card.appendChild(details);
+              });
+            });
+            return card;
+          }
+
+          // ---------- Bulgular card ----------
+          function buildBulgularCard() {
+            var f = DATA.findings;
+            var groups = {};
+            f.items.forEach(function (it) { (groups[it.rule] = groups[it.rule] || []).push(it); });
+
+            var card = el('section', { id: 'bulgular', class: 'card col-12' });
+            var head = el('div', { class: 'card-head' });
+            head.appendChild(el('h2', { class: 'card-title' }, ['Test bulgular\\u0131 ', el('span', { style: 'font-family:var(--mono);font-size:13px;color:var(--good)', text: String(f.items.length) })]));
+            head.appendChild(el('span', { class: 'card-count', text: 'kapsam: ' + f.scopeLabel + ' \\u00b7 ' + DATA.ruleIds.length + ' kural' }));
+            card.appendChild(head);
+            card.appendChild(el('p', { class: 'card-sub',
+              text: f.items.length === 0
+                ? DATA.ruleIds.length + ' kuraln\\u0131n hi\\u00e7biri tetiklenmedi. Kural listesi s\\u0131f\\u0131rken de g\\u00f6r\\u00fcn\\u00fcr kal\\u0131yor \\u2014 hangi kontrollerin ger\\u00e7ekten \\u00e7al\\u0131\\u015ft\\u0131\\u011f\\u0131, sonu\\u00e7 bo\\u015f oldu\\u011funda daha \\u00f6nemlidir.'
+                : f.items.length + ' bulgu, ' + Object.keys(groups).length + ' kuralda topland\\u0131.' }));
+
+            var pillRow = el('div', { class: 'pill-row' });
+            DATA.ruleIds.forEach(function (rule) {
+              var count = (groups[rule] || []).length;
+              var l = label(rule);
+              var pill = el('span', { class: 'pill', title: l.description });
+              pill.appendChild(txt(l.name + ' '));
+              pill.appendChild(el('code', { text: rule }));
+              pill.appendChild(el('span', { class: 'pill-n' + (count > 0 ? ' pill-n-nonzero' : ''), text: String(count) }));
+              pillRow.appendChild(pill);
+            });
+            card.appendChild(pillRow);
+
+            if (f.items.length > 0) {
+              var toolbar = el('div', { class: 'mut-toolbar' });
+              var search = el('input', { type: 'text', id: 'finding-search', placeholder: 'kural, dosya, test veya mesaja g\\u00f6re filtrele' });
+              toolbar.appendChild(search);
+              card.appendChild(toolbar);
+
+              var list = el('div', { class: 'finding-groups' });
+              Object.keys(groups).sort().forEach(function (rule) {
+                var items = groups[rule];
+                var l = label(rule);
+                var group = el('details', { class: 'finding-group', open: '' });
+                group.open = true;
+                var gsum = el('summary');
+                gsum.appendChild(txt(l.name + ' '));
+                gsum.appendChild(el('code', { text: rule }));
+                gsum.appendChild(el('span', { class: 'sev-badge sev-' + items[0].severity, text: label(items[0].severity).name }));
+                gsum.appendChild(el('span', { class: 'finding-group-count', text: items.length + ' bulgu' }));
+                group.appendChild(gsum);
+                group.appendChild(el('p', { class: 'finding-group-desc', text: l.description }));
+                var action = el('p', { class: 'finding-group-action' });
+                action.appendChild(el('strong', { text: '\\u00d6neri: ' }));
+                action.appendChild(txt(items[0].suggestedAction));
+                group.appendChild(action);
+                var rows = el('div', { class: 'finding-rows' });
+                items.forEach(function (it) {
+                  var row = el('div', { class: 'finding-row', 'data-search': it.search, id: it.fingerprint ? ('f-' + it.fingerprint) : null });
+                  row.appendChild(el('span', { class: 'conf-badge conf-' + it.confidence, text: label(it.confidence).name }));
+                  var loc = el('code', { class: 'finding-loc' });
+                  loc.appendChild(txt(it.path + ':' + it.startLine + (it.endLine !== it.startLine ? ('-' + it.endLine) : '')));
+                  row.appendChild(loc);
+                  row.appendChild(el('code', { class: 'finding-method', text: it.anchorMethod || '\\u2014' }));
+                  row.appendChild(el('span', { class: 'finding-message', text: it.message }));
+                  rows.appendChild(row);
+                });
+                group.appendChild(rows);
+                list.appendChild(group);
+              });
+              card.appendChild(list);
+
+              search.addEventListener('input', debounce(function () {
+                var q = search.value.trim().toLowerCase();
+                card.querySelectorAll('.finding-row').forEach(function (row) {
+                  row.classList.toggle('search-hidden', !(q === '' || row.dataset.search.indexOf(q) !== -1));
+                });
+                card.querySelectorAll('details.finding-group').forEach(function (grp) {
+                  var rows2 = grp.querySelectorAll('.finding-row');
+                  var anyVisible = false;
+                  rows2.forEach(function (r) { if (!r.classList.contains('search-hidden')) { anyVisible = true; } });
+                  grp.style.display = anyVisible ? '' : 'none';
+                  if (q !== '') { grp.open = anyVisible; }
+                });
+              }, 60));
+            }
+            return card;
+          }
+
+          // ---------- Değişen dosyalar card ----------
+          function buildChangedFilesCard() {
+            var card = el('section', { id: 'degisen-dosyalar', class: 'card col-12' });
+            var head = el('div', { class: 'card-head' });
+            head.appendChild(el('h2', { class: 'card-title', text: 'De\\u011fi\\u015fen dosyalar' }));
+            head.appendChild(el('span', { class: 'card-count', text: DATA.changedFiles.length + ' dosya' }));
+            card.appendChild(head);
             var tableWrap = el('div', { class: 'table-wrap' });
             var table = el('table');
             var headRow = el('tr');
-            ['modül', 'yol', 'sınıflandırma', 'yeni satır', 'kapsanan', 'kapsanmayan aralıklar'].forEach(function (h) {
+            ['mod\\u00fcl', 'yol', 's\\u0131n\\u0131fland\\u0131rma', 'yeni sat\\u0131r', 'kapsanan', 'kapsanmayan aral\\u0131klar'].forEach(function (h) {
               headRow.appendChild(el('th', { text: h }));
             });
             table.appendChild(el('thead', {}, [headRow]));
             var tbody = el('tbody');
-            files.forEach(function (f) {
+            DATA.changedFiles.forEach(function (f) {
               var tr = el('tr', { 'data-search': f.search });
               tr.appendChild(el('td', { text: f.module }));
               tr.appendChild(el('td', {}, [el('code', { text: f.path })]));
@@ -405,411 +727,292 @@ public final class HtmlRenderer {
                 tr.appendChild(el('td', { text: String(f.coveredNewLines) }));
                 tr.appendChild(el('td', { text: f.uncoveredRanges }));
               } else {
-                tr.appendChild(el('td', { text: '-' }));
-                tr.appendChild(el('td', { text: '-' }));
-                tr.appendChild(el('td', { text: '-' }));
+                tr.appendChild(el('td', { text: '-' })); tr.appendChild(el('td', { text: '-' })); tr.appendChild(el('td', { text: '-' }));
               }
               tbody.appendChild(tr);
             });
             table.appendChild(tbody);
             tableWrap.appendChild(table);
-            wrap.appendChild(tableWrap);
-            return wrap;
+            card.appendChild(tableWrap);
+            return card;
           }
 
-          // ---------- Bulgular ----------
-          function renderFindings() {
-            var f = DATA.findings;
-            var wrap = el('div');
-            wrap.appendChild(el('p', { class: 'section-note', text: 'Kapsam: ' + f.scopeLabel + '.' }));
-
-            var groups = {};
-            f.items.forEach(function (it) { (groups[it.rule] = groups[it.rule] || []).push(it); });
-
-            var summaryRow = el('div', { class: 'rule-summary-row' });
-            DATA.ruleIds.forEach(function (rule) {
-              var count = (groups[rule] || []).length;
-              var l = label(rule);
-              var chip = el('span', { class: 'rule-chip' + (count === 0 ? ' rule-chip-zero' : ''), title: l.description });
-              chip.appendChild(txt(l.name + ' '));
-              chip.appendChild(el('code', { text: rule }));
-              chip.appendChild(txt(' ' + count));
-              summaryRow.appendChild(chip);
+          // ---------- Dosyalar card (risk / paket, band filtreleri, arama) ----------
+          var BANDS = [
+            ['all', 'T\\u00fcm\\u00fc', function (v) { return true; }],
+            ['zero', '%0', function (v) { return v !== null && v === 0; }],
+            ['low', '%70 alt\\u0131', function (v) { return v !== null && v < 70; }],
+            ['mid', '%70\\u201390', function (v) { return v !== null && v >= 70 && v < 90; }],
+            ['high', '%90 \\u00fcst\\u00fc', function (v) { return v !== null && v >= 90; }]
+          ];
+          function computePackages() {
+            var map = {};
+            DATA.fileCoverage.files.forEach(function (f) {
+              var key = f.packagePath || '(k\\u00f6k)';
+              if (!map[key]) { map[key] = { name: key, numerator: 0, denominator: 0, count: 0 }; }
+              map[key].numerator += f.numerator;
+              map[key].denominator += f.denominator;
+              map[key].count += 1;
             });
-            wrap.appendChild(summaryRow);
+            return Object.keys(map).sort().map(function (k) {
+              var p = map[k];
+              var pct = p.denominator === 0 ? null : Math.round((p.numerator / p.denominator) * 1000) / 10;
+              return { name: p.name, sub: p.count + ' dosya', pct: pct,
+                pctText: pct === null ? 'n/a' : String(pct).replace('.', ',') + '%' };
+            });
+          }
+          function buildDosyalarCard() {
+            var state = { view: 'risk', q: '', band: 'all', asc: true };
+            var card = el('section', { id: 'dosyalar', class: 'card col-12' });
+            var head = el('div', { class: 'card-head' });
+            head.appendChild(el('h2', { class: 'card-title', text: 'Dosya baz\\u0131l\\u0131 kapsama' }));
+            card.appendChild(head);
+            card.appendChild(el('p', { class: 'card-sub',
+              text: 'Varsay\\u0131lan s\\u0131ralama alfabe de\\u011fil, risk: en d\\u00fc\\u015f\\u00fck kapsama \\u00fcstte. Paket g\\u00f6r\\u00fcn\\u00fcm\\u00fc nerede yo\\u011funla\\u015ft\\u0131\\u011f\\u0131n\\u0131 g\\u00f6sterir.' }));
 
-            if (!f.items.length) {
-              wrap.appendChild(el('p', { class: 'empty', text: 'Bulgu yok.' }));
-              return wrap;
-            }
+            var toolbar = el('div', { class: 'file-toolbar' });
+            var toggle = el('div', { class: 'file-toggle' });
+            var riskBtn = el('button', { type: 'button', text: 'Risk', 'data-on': '1' });
+            var pkgBtn = el('button', { type: 'button', text: 'Paket', 'data-on': '0' });
+            toggle.appendChild(riskBtn); toggle.appendChild(pkgBtn);
+            toolbar.appendChild(toggle);
+            var search = el('input', { type: 'text', placeholder: 'dosya ara' });
+            toolbar.appendChild(search);
+            card.appendChild(toolbar);
 
-            wrap.appendChild(el('p', { class: 'shown-count', text: f.items.length + ' bulgu, ' + Object.keys(groups).length + ' kural.' }));
+            var bandRow = el('div', { class: 'file-band-row' });
+            bandRow.appendChild(el('span', { class: 'file-band-eyebrow', text: 'F\\u0130LTRE' }));
+            var bandBtns = {};
+            var bandChips = el('div', { style: 'display:flex;gap:6px;flex-wrap:wrap' });
+            BANDS.forEach(function (b) {
+              var btn = el('button', { type: 'button', class: 'pill', 'data-on': b[0] === 'all' ? '1' : '0', text: b[1] });
+              bandBtns[b[0]] = btn;
+              bandChips.appendChild(btn);
+            });
+            bandRow.appendChild(bandChips);
+            var actions = el('div', { class: 'file-band-actions' });
+            var sortBtn = el('button', { type: 'button', class: 'file-sort-btn' });
+            var resetBtn = el('button', { type: 'button', class: 'file-reset-btn', text: 'S\\u0131f\\u0131rla' });
+            var countLabel = el('span', { class: 'file-count' });
+            actions.appendChild(sortBtn); actions.appendChild(resetBtn); actions.appendChild(countLabel);
+            bandRow.appendChild(actions);
+            card.appendChild(bandRow);
 
-            var list = el('div', { class: 'finding-groups' });
-            Object.keys(groups).sort().forEach(function (rule) {
-              var items = groups[rule];
-              var l = label(rule);
-              var group = el('details', { class: 'finding-group filter-group', 'data-default-open': '1' });
-              group.open = true;
-              var summary = el('summary');
-              summary.appendChild(txt(l.name + ' '));
-              summary.appendChild(el('code', { text: rule }));
-              summary.appendChild(el('span', { class: 'sev-badge sev-' + items[0].severity, text: label(items[0].severity).name }));
-              summary.appendChild(el('span', { class: 'finding-group-count', text: items.length + ' bulgu' }));
-              group.appendChild(summary);
-              group.appendChild(el('p', { class: 'finding-group-desc', text: l.description }));
-              var action = el('p', { class: 'finding-group-action' });
-              action.appendChild(el('strong', { text: '\\u00d6neri: ' }));
-              action.appendChild(txt(items[0].suggestedAction));
-              group.appendChild(action);
+            var rowsWrap = el('div', { class: 'file-rows' });
+            card.appendChild(rowsWrap);
+            var legend = el('div', { class: 'file-legend' });
+            var legendLeft = el('span');
+            legendLeft.appendChild(txt('E\\u015fik: '));
+            legendLeft.appendChild(el('code', { style: 'color:var(--bad)', text: '%70 alt\\u0131' }));
+            legendLeft.appendChild(txt(' \\u00b7 '));
+            legendLeft.appendChild(el('code', { style: 'color:var(--warn)', text: '%70\\u201390' }));
+            legendLeft.appendChild(txt(' \\u00b7 '));
+            legendLeft.appendChild(el('code', { style: 'color:var(--good)', text: '%90 \\u00fcst\\u00fc' }));
+            legend.appendChild(legendLeft);
+            var legendRight = el('code', { text: fmtInt(DATA.fileCoverage.totalFiles) + ' dosya \\u00b7 ' + fmtInt(DATA.fileCoverage.excluded.length) + ' hari\\u00e7 tutulan' });
+            legend.appendChild(legendRight);
+            card.appendChild(legend);
 
-              var rows = el('div', { class: 'finding-rows' });
-              items.forEach(function (it) {
-                var row = el('div', {
-                  class: 'finding-row', 'data-search': it.search,
-                  id: it.fingerprint ? ('f-' + it.fingerprint) : null
-                });
-                row.appendChild(el('span', { class: 'conf-badge conf-' + it.confidence, text: label(it.confidence).name }));
-                var loc = el('code', { class: 'finding-loc' });
-                loc.appendChild(txt(it.path + ':' + it.startLine + (it.endLine !== it.startLine ? ('-' + it.endLine) : '')));
-                row.appendChild(loc);
-                row.appendChild(el('code', { class: 'finding-method', text: it.anchorMethod || '\\u2014' }));
-                row.appendChild(el('span', { class: 'finding-message', text: it.message }));
-                rows.appendChild(row);
+            var packages = null;
+
+            function render() {
+              var src = state.view === 'risk'
+                ? DATA.fileCoverage.files.map(function (f) { return { name: f.displayPath, sub: f.module, pct: f.pct, pctText: f.pctText, fw: 500 }; })
+                : (packages || (packages = computePackages())).map(function (p) { return { name: p.name, sub: p.sub, pct: p.pct, pctText: p.pctText, fw: 600 }; });
+              var total = src.length;
+              var unit = state.view === 'risk' ? 'dosya' : 'paket';
+              var q = state.q.trim().toLowerCase();
+              var matchQ = src.filter(function (r) { return q === '' || (r.name + ' ' + r.sub).toLowerCase().indexOf(q) !== -1; });
+              var bandFn = (BANDS.filter(function (b) { return b[0] === state.band; })[0] || BANDS[0])[2];
+              var kept = matchQ.filter(function (r) { return bandFn(r.pct); })
+                .sort(function (a, b) { return band_cmp(a.pct, b.pct, state.asc); });
+
+              while (rowsWrap.firstChild) { rowsWrap.removeChild(rowsWrap.firstChild); }
+              kept.forEach(function (r) {
+                var row = el('div', { class: 'file-row' + (r.pct === 0 ? ' file-row-zero' : '') });
+                var nameWrap = el('span', { class: 'file-row-name-wrap' });
+                nameWrap.appendChild(el('span', { class: 'file-row-name', style: 'font-weight:' + r.fw, text: r.name }));
+                nameWrap.appendChild(el('span', { class: 'file-row-sub', text: r.sub }));
+                row.appendChild(nameWrap);
+                var bar = el('span', { class: 'file-row-bar' });
+                bar.appendChild(el('span', { class: 'file-row-bar-fill', style: 'width:' + (r.pct === null ? 1.5 : Math.max(r.pct, 1.5)) + '%;background:' + tone(r.pct) }));
+                row.appendChild(bar);
+                row.appendChild(el('span', { class: 'file-row-pct', style: 'color:' + (r.pct === null ? 'var(--na)' : 'var(--ink)') + (r.pct === null ? ';font-style:italic' : ''), text: r.pctText }));
+                rowsWrap.appendChild(row);
               });
-              group.appendChild(rows);
-              list.appendChild(group);
-            });
-            wrap.appendChild(list);
-            return wrap;
+
+              countLabel.textContent = kept.length + ' / ' + total + ' ' + unit;
+              sortBtn.textContent = state.asc ? '\\u2191 en d\\u00fc\\u015f\\u00fck \\u00f6nce' : '\\u2193 en y\\u00fcksek \\u00f6nce';
+              Object.keys(bandBtns).forEach(function (k) { bandBtns[k].setAttribute('data-on', k === state.band ? '1' : '0'); });
+              riskBtn.setAttribute('data-on', state.view === 'risk' ? '1' : '0');
+              pkgBtn.setAttribute('data-on', state.view === 'pkg' ? '1' : '0');
+            }
+            function band_cmp(a, b, asc) {
+              if (a === null && b === null) { return 0; }
+              if (a === null) { return 1; }
+              if (b === null) { return -1; }
+              return asc ? a - b : b - a;
+            }
+
+            riskBtn.addEventListener('click', function () { state.view = 'risk'; render(); });
+            pkgBtn.addEventListener('click', function () { state.view = 'pkg'; render(); });
+            search.addEventListener('input', debounce(function () { state.q = search.value; render(); }, 60));
+            Object.keys(bandBtns).forEach(function (k) { bandBtns[k].addEventListener('click', function () { state.band = k; render(); }); });
+            sortBtn.addEventListener('click', function () { state.asc = !state.asc; render(); });
+            resetBtn.addEventListener('click', function () { state.q = ''; state.band = 'all'; state.asc = true; search.value = ''; render(); });
+
+            render();
+            return card;
           }
 
-          // ---------- Uyarılar / eksik nedenler ----------
-          function renderReasonList(items) {
-            var wrap = el('div');
-            if (!items.length) {
-              wrap.appendChild(el('p', { class: 'empty', text: 'Yok.' }));
-              return wrap;
-            }
+          // ---------- Uyarılar / Eksik nedenler / Test bazlı kanıt ----------
+          function buildReasonCard(id, title, items) {
+            var card = el('section', { id: id, class: 'card col-12' });
+            var head = el('div', { class: 'card-head' });
+            head.appendChild(el('h2', { class: 'card-title', text: title }));
+            head.appendChild(el('span', { class: 'card-count', text: String(items.length) }));
+            card.appendChild(head);
             var ul = el('ul', { class: 'reason-list' });
             items.forEach(function (r) {
-              var li = el('li', { 'data-search': r.search });
+              var li = el('li');
               li.appendChild(codeBadge(r.code));
               li.appendChild(txt(': ' + r.message));
               if (r.path) { li.appendChild(el('code', { text: ' ' + r.path })); }
               if (r.count !== undefined && r.count !== null) { li.appendChild(txt(' (' + r.count + ')')); }
               ul.appendChild(li);
             });
-            wrap.appendChild(ul);
-            return wrap;
+            card.appendChild(ul);
+            return card;
           }
-
-          // ---------- Test bazlı kanıt (L2) ----------
-          function renderPerTest() {
-            var wrap = el('div');
-            wrap.appendChild(el('p', { class: 'section-note',
-              text: 'Testlerin hangi üretim satırlarını çalıştırdığına dair kanıt. \\u201cambient\\u201d: her testte aynı şekilde çalışan, o teste özgü olmayan satırlar.' }));
+          function buildPerTestCard() {
+            var card = el('section', { id: 'test-kaniti', class: 'card col-12' });
+            var head = el('div', { class: 'card-head' });
+            head.appendChild(el('h2', { class: 'card-title', text: 'Test baz\\u0131l\\u0131 kan\\u0131t (L2)' }));
+            card.appendChild(head);
+            card.appendChild(el('p', { class: 'card-sub',
+              text: 'Testlerin hangi \\u00fcretim sat\\u0131rlar\\u0131n\\u0131 \\u00e7al\\u0131\\u015ft\\u0131rd\\u0131\\u011f\\u0131na dair kan\\u0131t. \\u201cambient\\u201d: her testte ayn\\u0131 \\u015fekilde \\u00e7al\\u0131\\u015fan, o teste \\u00f6zg\\u00fc olmayan sat\\u0131rlar.' }));
             var tableWrap = el('div', { class: 'table-wrap' });
             var table = el('table');
-            table.appendChild(el('thead', {}, [el('tr', {}, [
-              el('th', { text: 'modül' }), el('th', { text: 'metot-satır eşleşmesi' }), el('th', { text: 'ambient satır' })
-            ])]));
+            table.appendChild(el('thead', {}, [el('tr', {}, [el('th', { text: 'mod\\u00fcl' }), el('th', { text: 'metot-sat\\u0131r e\\u015fle\\u015fmesi' }), el('th', { text: 'ambient sat\\u0131r' })])]));
             var tbody = el('tbody');
             DATA.perTest.forEach(function (m) {
-              tbody.appendChild(el('tr', {}, [
-                el('td', { text: m.moduleId }),
-                el('td', { text: fmtInt(m.entryLineCount) }),
-                el('td', { text: fmtInt(m.ambientLineCount) })
-              ]));
+              tbody.appendChild(el('tr', {}, [el('td', { text: m.moduleId }), el('td', { text: fmtInt(m.entryLineCount) }), el('td', { text: fmtInt(m.ambientLineCount) })]));
             });
             table.appendChild(tbody);
             tableWrap.appendChild(table);
-            wrap.appendChild(tableWrap);
-            return wrap;
+            card.appendChild(tableWrap);
+            return card;
           }
 
-          // ---------- Mutasyon (L3) ----------
-          function statusCountsText(counts) {
-            return Object.keys(counts).sort().map(function (s) { return label(s).name + ' ' + counts[s]; }).join(' \\u00b7 ');
-          }
-          function mutantTable(mutants, className, methodName) {
-            var wrap = el('div', { class: 'table-wrap' });
-            var table = el('table', { class: 'mutants' });
-            table.appendChild(el('thead', {}, [el('tr', {}, [
-              el('th', { text: 'mutator' }), el('th', { text: 'satır' }), el('th', { text: 'durum' }), el('th', { text: 'öldüren testler' })
-            ])]));
-            var tbody = el('tbody');
-            mutants.forEach(function (m) {
-              var killingTests = m.killingTests.join(', ');
-              var search = (className + ' ' + methodName + ' ' + m.mutator + ' ' + m.status + ' ' + killingTests).toLowerCase();
-              var tr = el('tr', { class: 'mutant-row status-' + m.status, 'data-status': m.status, 'data-search': search });
-              tr.appendChild(el('td', { text: m.mutator }));
-              tr.appendChild(el('td', { text: String(m.line) }));
-              tr.appendChild(el('td', { text: label(m.status).name }));
-              tr.appendChild(el('td', { text: killingTests || '\\u2014' }));
-              tbody.appendChild(tr);
-            });
-            table.appendChild(tbody);
-            wrap.appendChild(table);
-            return wrap;
-          }
-          function renderMutation() {
-            var mut = DATA.mutation;
-            var wrap = el('div');
-            var totals = el('div', { class: 'status-counts' });
-            Object.keys(mut.totalsByStatus).sort().forEach(function (status) {
-              var l = label(status);
-              var chip = el('span', { class: 'status-chip status-' + status });
-              chip.appendChild(txt(l.name + ' '));
-              chip.appendChild(el('strong', { text: String(mut.totalsByStatus[status]) }));
-              totals.appendChild(chip);
-            });
-            wrap.appendChild(totals);
-
-            var survivedOnly = el('input', { type: 'checkbox', id: 'mutation-survived-only', onchange: applyFilter });
-            wrap.appendChild(el('label', { class: 'mutation-survived-label' }, [survivedOnly, ' sadece SURVIVED']));
-
-            mut.modules.forEach(function (mod) {
-              wrap.appendChild(el('h3', {}, ['Modül: ', el('code', { text: mod.moduleId })]));
-              mod.classes.forEach(function (cls) {
-                var details = el('details', { class: 'mutation-class filter-group', 'data-default-open': '0' });
-                var summary = el('summary');
-                summary.appendChild(el('code', { text: cls.className }));
-                summary.appendChild(txt(' \\u00b7 ' + statusCountsText(cls.countsByStatus)));
-                details.appendChild(summary);
-                cls.methods.forEach(function (method) {
-                  details.appendChild(el('h4', {}, [
-                    el('code', { title: method.signatureFull, text: cls.className + '#' + method.signatureShort }),
-                    txt(' (satır ' + method.firstLine + '-' + method.lastLine + ')')
-                  ]));
-                  details.appendChild(mutantTable(method.mutants, cls.className, method.methodName));
-                });
-                wrap.appendChild(details);
-              });
-            });
-            return wrap;
-          }
-
-          // ---------- Dosya bazlı kapsama ----------
-          function pctSpan(node) {
-            return el('span', { class: 'tree-pct' + (node.pct === null ? ' na' : ''), text: node.pctText });
-          }
-          function buildTreeNode(node, defaultOpen) {
-            if (node.isFile) {
-              var row = el('div', { class: 'tree-file', 'data-search': (node.name + ' ' + (node.path || '')).toLowerCase() });
-              row.appendChild(el('code', { text: node.name }));
-              var barWrap = el('span', { class: 'tree-file-bar-wrap' });
-              var bar = el('span', { class: 'tree-file-bar' });
-              bar.appendChild(el('span', { class: 'tree-file-bar-fill', style: node.pct === null ? 'width:0' : ('width:' + node.pct + '%') }));
-              barWrap.appendChild(bar);
-              barWrap.appendChild(pctSpan(node));
-              row.appendChild(barWrap);
-              return row;
+          // ---------- Koşu card ----------
+          function buildKosuCard(emptyList) {
+            var card = el('section', { id: 'kosu', class: 'card col-5' });
+            card.appendChild(el('h2', { class: 'card-title', text: 'Ko\\u015fu ve te\\u015fhis' }));
+            var m = DATA.meta;
+            var dl = el('dl', { class: 'kv-grid' });
+            function row(k, vNode) { dl.appendChild(el('dt', { text: k })); var dd = el('dd'); dd.appendChild(vNode); dl.appendChild(dd); }
+            row('mod\\u00fcl', txt(m.modules));
+            row('fark modu', txt(m.diffMode));
+            row('encoding', el('code', { text: m.encoding }));
+            if (DATA.perTest) {
+              var total = DATA.perTest.reduce(function (s, p) { return s + p.entryLineCount; }, 0);
+              var ambient = DATA.perTest.reduce(function (s, p) { return s + p.ambientLineCount; }, 0);
+              row('test kan\\u0131t\\u0131', el('code', { text: 'L2 \\u00b7 ' + fmtInt(total) + ' giri\\u015f sat\\u0131r\\u0131 \\u00b7 ' + fmtInt(ambient) + ' ambient' }));
             }
-            var details = el('details', { class: 'tree-folder filter-group', 'data-default-open': defaultOpen ? '1' : '0' });
-            details.open = defaultOpen;
-            var summary = el('summary');
-            summary.appendChild(txt(node.name + '/ '));
-            summary.appendChild(pctSpan(node));
-            details.appendChild(summary);
-            node.children.forEach(function (child) { details.appendChild(buildTreeNode(child, false)); });
-            return details;
-          }
-          function renderFileTree() {
-            var fc = DATA.fileCoverage;
-            var wrap = el('div');
-            wrap.appendChild(el('p', { class: 'section-note', text: fmtInt(fc.totalFiles) + ' dosya.' }));
-            var box = el('div', { class: 'tree-box' });
-            fc.tree.forEach(function (node) { box.appendChild(buildTreeNode(node, true)); });
-            wrap.appendChild(box);
-            if (fc.excluded.length) {
-              var exDetails = el('details', {});
-              exDetails.appendChild(el('summary', { text: fc.excluded.length + ' hariç tutulan dosya' }));
-              var ul = el('ul');
-              fc.excluded.forEach(function (p) { ul.appendChild(el('li', {}, [el('code', { text: p })])); });
-              exDetails.appendChild(ul);
-              wrap.appendChild(exDetails);
-            }
-            return wrap;
-          }
+            var warnNode = DATA.warnings.length
+              ? el('span', { style: 'color:var(--warn)', text: DATA.warnings.length + ' uyar\\u0131' })
+              : el('span', { style: 'color:var(--good)', text: 'yok' });
+            row('uyar\\u0131', warnNode);
+            card.appendChild(dl);
 
-          // ---------- Section shell ----------
-          var TOP_SECTIONS = [];
-          function buildSection(id, title, countText, bodyNode) {
-            var details = el('details', { class: 'report-section', id: id });
-            var key = 'coverdict-section-' + id;
-            var stored = null;
-            try { stored = window.localStorage.getItem(key); } catch (e) { /* file:// veya gizli sekmede engellenebilir */ }
-            details.open = stored !== null ? stored === '1' : true;
-            var summary = el('summary');
-            summary.appendChild(el('h2', { text: title }));
-            if (countText) { summary.appendChild(el('span', { class: 'section-count', text: countText })); }
-            summary.appendChild(el('span', { class: 'match-badge' }));
-            details.appendChild(summary);
-            var body = el('div', { class: 'report-section-body' });
-            body.appendChild(bodyNode);
-            details.appendChild(body);
-            details.addEventListener('toggle', function () {
-              if (FILTER_ACTIVE) { return; }
-              try { window.localStorage.setItem(key, details.open ? '1' : '0'); } catch (e) { /* aynı, sorun değil */ }
-            });
-            TOP_SECTIONS.push(details);
-            return details;
-          }
-
-          var NAV_ITEMS = [
-            { id: 'run', label: 'Koşu' },
-            { id: 'findings', label: 'Bulgular' },
-            { id: 'coverage', label: 'Kapsama' },
-            { id: 'changed-files', label: 'Değişen dosyalar' },
-            { id: 'mutation', label: 'Mutasyon', needs: 'mutation' },
-            { id: 'file-coverage', label: 'Dosya bazlı kapsama', needs: 'fileCoverage' },
-            { id: 'per-test', label: 'Test bazlı kanıt', needs: 'perTest' },
-            { id: 'warnings', label: 'Uyarılar', needsLen: 'warnings' },
-            { id: 'incomplete', label: 'Eksik nedenler', needsLen: 'incompleteReasons' }
-          ];
-
-          function buildTopbar() {
-            var bar = el('div', { class: 'topbar' });
-            var inner = el('div', { class: 'topbar-inner' });
-
-            var brand = el('div', { class: 'brand' });
-            brand.appendChild(el('span', { class: 'brand-title', text: 'coverdict raporu' }));
-            brand.appendChild(el('span', { class: 'brand-sub', text: DATA.meta.modules }));
-            inner.appendChild(brand);
-
-            var search = el('input', { type: 'text', id: 'global-search', class: 'global-search',
-              placeholder: 'Rapor genelinde ara (kural, dosya, mesaj, mutator...)' });
-            inner.appendChild(search);
-
-            var nav = el('nav', { class: 'section-nav' });
-            NAV_ITEMS.forEach(function (item) {
-              if (item.needs && !DATA[item.needs]) { return; }
-              if (item.needsLen && !(DATA[item.needsLen] && DATA[item.needsLen].length)) { return; }
-              var a = el('a', { href: '#' + item.id, text: item.label });
-              a.addEventListener('click', function () {
-                var target = document.getElementById(item.id);
-                if (target && target.tagName === 'DETAILS') { target.open = true; }
+            if (emptyList.length) {
+              var block = el('div', { class: 'empty-block' });
+              block.appendChild(el('div', { class: 'empty-block-eyebrow', text: 'BU KO\\u015eUDA BO\\u015e KALAN B\\u00d6L\\u00dcMLER' }));
+              var list = el('div', { style: 'margin-top:9px;display:flex;flex-direction:column' });
+              emptyList.forEach(function (e) {
+                var r = el('div', { class: 'empty-row' });
+                r.appendChild(el('span', { class: 'empty-row-name', text: e.name }));
+                r.appendChild(el('span', { class: 'empty-row-why', text: e.why }));
+                list.appendChild(r);
               });
-              nav.appendChild(a);
-            });
-            inner.appendChild(nav);
-
-            var actions = el('div', { class: 'topbar-actions' });
-            actions.appendChild(el('button', { type: 'button', class: 'ghost-btn', text: 'Hepsini aç', onclick: function () { setAllSections(true); } }));
-            actions.appendChild(el('button', { type: 'button', class: 'ghost-btn', text: 'Hepsini kapat', onclick: function () { setAllSections(false); } }));
-            actions.appendChild(el('button', { type: 'button', class: 'ghost-btn', id: 'density-toggle', text: 'Sık\\u0131 görünüm', onclick: toggleDensity }));
-            actions.appendChild(el('button', { type: 'button', id: 'theme-toggle', class: 'theme-toggle', 'aria-label': 'Açık/koyu tema değiştir', onclick: toggleTheme }));
-            inner.appendChild(actions);
-
-            bar.appendChild(inner);
-            return bar;
+              block.appendChild(list);
+              block.appendChild(el('p', { class: 'empty-block-note',
+                text: 'Bo\\u015f b\\u00f6l\\u00fcmler tam kart yerine tek sat\\u0131ra indi: rapor, dolu oldu\\u011fu kadar g\\u00f6r\\u00fcn\\u00fcyor.' }));
+              card.appendChild(block);
+            }
+            return card;
           }
 
-          function setAllSections(open) {
-            document.querySelectorAll('details').forEach(function (d) { d.open = open; });
-          }
+          // ---------- Sidebar / scroll-spy ----------
+          function buildSidebar(navItems) {
+            var side = el('nav', { class: 'side' });
+            var head = el('div', { class: 'side-head' });
+            head.appendChild(el('span', { class: 'side-mark' }));
+            var brand = el('div', { class: 'side-brand' });
+            brand.appendChild(el('span', { class: 'side-brand-name', text: 'coverdict' }));
+            brand.appendChild(el('span', { class: 'side-brand-sub', text: DATA.meta.modules + ' \\u00b7 Java ' + DATA.meta.languageLevel }));
+            head.appendChild(brand);
+            side.appendChild(head);
 
-          // ---------- Filtering ----------
-          function applyFilter() {
-            var search = document.getElementById('global-search');
-            var q = search ? search.value.trim().toLowerCase() : '';
-            FILTER_ACTIVE = q !== '';
-
-            document.querySelectorAll('[data-search]').forEach(function (leaf) {
-              var match = q === '' || leaf.dataset.search.indexOf(q) !== -1;
-              leaf.classList.toggle('search-hidden', !match);
+            var navEl = el('div', { class: 'side-nav' });
+            navItems.forEach(function (n) {
+              var a = el('a', { href: '#' + n.id, id: 'nav-' + n.id });
+              a.appendChild(el('span', { class: 'side-nav-dot' }));
+              a.appendChild(el('span', { class: 'side-nav-label', text: n.label }));
+              if (n.count !== undefined && n.count !== '') { a.appendChild(el('span', { class: 'side-nav-count', text: n.count })); }
+              navEl.appendChild(a);
             });
+            side.appendChild(navEl);
 
-            var survivedOnlyEl = document.getElementById('mutation-survived-only');
-            var survivedOnly = !!(survivedOnlyEl && survivedOnlyEl.checked);
-            if (survivedOnly) {
-              document.querySelectorAll('.mutant-row').forEach(function (row) {
-                if (row.dataset.status !== 'SURVIVED') { row.classList.add('search-hidden'); }
+            var foot = el('div', { class: 'side-foot' });
+            var themeBtn = el('button', { type: 'button', id: 'theme-toggle', class: 'side-foot-btn', onclick: toggleTheme });
+            foot.appendChild(themeBtn);
+            foot.appendChild(el('div', { class: 'side-foot-meta',
+              text: DATA.meta.toolVersion }));
+            var metaLine2 = el('div', { class: 'side-foot-meta', text: 'schema ' + DATA.meta.schemaVersion });
+            var metaLine3 = el('div', { class: 'side-foot-meta', text: DATA.meta.generatedAt });
+            foot.appendChild(metaLine2);
+            foot.appendChild(metaLine3);
+            side.appendChild(foot);
+            return side;
+          }
+          function wireScrollSpy(ids) {
+            var links = {};
+            ids.forEach(function (id) { links[id] = document.getElementById('nav-' + id); });
+            function onScroll() {
+              var current = ids[0];
+              ids.forEach(function (id) {
+                var target = document.getElementById(id);
+                if (target && target.getBoundingClientRect().top < 140) { current = id; }
+              });
+              ids.forEach(function (id) {
+                if (links[id]) { links[id].classList.toggle('active', id === current); }
               });
             }
-            var filtering = q !== '' || survivedOnly;
-
-            document.querySelectorAll('.filter-group').forEach(function (grp) {
-              var leaves = grp.querySelectorAll('[data-search]');
-              if (!leaves.length) { return; }
-              var anyVisible = false;
-              leaves.forEach(function (leaf) { if (!leaf.classList.contains('search-hidden')) { anyVisible = true; } });
-              grp.classList.toggle('search-hidden', !anyVisible);
-              grp.open = filtering ? anyVisible : grp.dataset.defaultOpen === '1';
-            });
-
-            TOP_SECTIONS.forEach(function (sec) {
-              var leaves = sec.querySelectorAll('[data-search]');
-              if (!leaves.length) { return; }
-              if (!filtering) {
-                var key = 'coverdict-section-' + sec.id;
-                var stored = null;
-                try { stored = window.localStorage.getItem(key); } catch (e) { /* aynı */ }
-                sec.open = stored !== null ? stored === '1' : true;
-              } else {
-                var anyVisible = false;
-                leaves.forEach(function (leaf) { if (!leaf.classList.contains('search-hidden')) { anyVisible = true; } });
-                sec.open = anyVisible;
-              }
-            });
-
-            TOP_SECTIONS.forEach(function (sec) {
-              var badge = sec.querySelector('.match-badge');
-              if (!badge) { return; }
-              if (!filtering) { badge.textContent = ''; return; }
-              var leaves = sec.querySelectorAll('[data-search]');
-              var visible = 0;
-              leaves.forEach(function (leaf) { if (!leaf.classList.contains('search-hidden')) { visible++; } });
-              badge.textContent = leaves.length ? (visible + ' eşleşme') : '';
-            });
+            window.addEventListener('scroll', onScroll, { passive: true });
+            onScroll();
           }
 
-          // ---------- Theme / density ----------
-          function effectiveTheme() {
-            var explicit = document.documentElement.getAttribute('data-theme');
-            if (explicit === 'light' || explicit === 'dark') { return explicit; }
-            return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
-          }
+          // ---------- Theme (opens light by default - no prefers-color-scheme auto-dark) ----------
+          function effectiveTheme() { return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
           function updateThemeButton() {
             var btn = document.getElementById('theme-toggle');
             if (!btn) { return; }
-            var dark = effectiveTheme() === 'dark';
-            btn.textContent = dark ? '\\u2600\\ufe0f Aç\\u0131k Mod' : '\\ud83c\\udf19 Koyu Mod';
-            btn.setAttribute('aria-pressed', String(dark));
+            btn.textContent = '\\u25d0\\u00a0\\u00a0Tema de\\u011fi\\u015ftir';
           }
           function setTheme(theme) {
-            document.documentElement.setAttribute('data-theme', theme);
-            try { window.localStorage.setItem('coverdict-report-theme', theme); } catch (e) { /* aynı */ }
+            if (theme === 'dark') { document.documentElement.setAttribute('data-theme', 'dark'); }
+            else { document.documentElement.removeAttribute('data-theme'); }
+            try { window.localStorage.setItem('coverdict-report-theme', theme); } catch (e) { /* file:// veya gizli sekmede engellenebilir */ }
             updateThemeButton();
           }
           function toggleTheme() { setTheme(effectiveTheme() === 'dark' ? 'light' : 'dark'); }
           function restoreTheme() {
             try {
               var saved = window.localStorage.getItem('coverdict-report-theme');
-              if (saved === 'light' || saved === 'dark') { document.documentElement.setAttribute('data-theme', saved); }
-            } catch (e) { /* aynı */ }
+              if (saved === 'dark') { document.documentElement.setAttribute('data-theme', 'dark'); }
+            } catch (e) { /* ayn\\u0131, sorun de\\u011fil - varsay\\u0131lan a\\u00e7\\u0131k temada kal */ }
             updateThemeButton();
-          }
-          function toggleDensity() {
-            var dense = document.documentElement.getAttribute('data-density') === 'compact';
-            var next = dense ? 'comfortable' : 'compact';
-            document.documentElement.setAttribute('data-density', next);
-            try { window.localStorage.setItem('coverdict-report-density', next); } catch (e) { /* aynı */ }
-            updateDensityButton();
-          }
-          function updateDensityButton() {
-            var btn = document.getElementById('density-toggle');
-            if (!btn) { return; }
-            var compact = document.documentElement.getAttribute('data-density') === 'compact';
-            btn.textContent = compact ? 'Rahat görünüm' : 'Sık\\u0131 görünüm';
-          }
-          function restoreDensity() {
-            try {
-              var saved = window.localStorage.getItem('coverdict-report-density');
-              if (saved === 'compact') { document.documentElement.setAttribute('data-density', 'compact'); }
-            } catch (e) { /* aynı */ }
-            updateDensityButton();
           }
 
           // ---------- Print ----------
@@ -822,61 +1025,139 @@ public final class HtmlRenderer {
           });
 
           // ---------- Deep link ----------
+          // Runs after init() builds the DOM - the browser's own load-time fragment scroll happens
+          // before that (#kosu/#detay/... don't exist yet at that point), so a shared/bookmarked URL
+          // needs this to still land on the right card or finding row.
           function applyDeepLink() {
-            if (location.hash.indexOf('#f-') !== 0) { return; }
+            if (!location.hash || location.hash.length < 2) { return; }
             var target = document.getElementById(location.hash.slice(1));
             if (!target) { return; }
-            var section = target.closest('details.report-section');
-            if (section) { section.open = true; }
             var group = target.closest('.finding-group');
             if (group) { group.open = true; }
             window.requestAnimationFrame(function () {
-              target.scrollIntoView({ block: 'center' });
+              target.scrollIntoView({ block: group ? 'center' : 'start' });
               target.classList.add('deep-link-highlight');
               window.setTimeout(function () { target.classList.remove('deep-link-highlight'); }, 2000);
             });
           }
 
           // ---------- Boot ----------
-          function buildFooter() {
-            var f = el('footer');
-            f.appendChild(el('span', { text: 'coverdict ' + DATA.meta.toolVersion + ' \\u00b7 schema ' + DATA.meta.schemaVersion + ' \\u00b7 tek dosya, çevrimdışı' }));
-            f.appendChild(el('span', { text: DATA.meta.generatedAt }));
-            return f;
+          function buildOzet() {
+            var section = el('section', { id: 'ozet', style: 'scroll-margin-top:24px' });
+            var top = el('div', { style: 'display:flex;align-items:baseline;gap:14px;flex-wrap:wrap' });
+            top.appendChild(el('span', { class: 'eyebrow', text: '\\u00d6ZET' }));
+            top.appendChild(el('span', { class: 'ozet-time', text: DATA.meta.diffMode + ' \\u00b7 ' + DATA.meta.generatedAt }));
+            section.appendChild(top);
+
+            var jacoco = DATA.coverage.overall.filter(function (m) { return m.mode === 'jacoco-line'; })[0];
+            var t = DATA.mutation ? mutationTotals() : null;
+            var zeroFiles = DATA.fileCoverage ? DATA.fileCoverage.files.filter(function (f) { return f.pct === 0; }).length : 0;
+
+            var tiles = el('div', { class: 'stat-row' });
+            function tile(hrefId, label2, value, sub) {
+              var a = el('a', { href: '#' + hrefId, class: 'stat-tile' });
+              a.appendChild(el('div', { class: 'stat-tile-label', text: label2 }));
+              a.appendChild(el('div', { class: 'stat-tile-value', text: value }));
+              if (sub) { a.appendChild(el('div', { class: 'stat-tile-sub', text: sub })); }
+              return a;
+            }
+            tiles.appendChild(tile('kapsama', 'Sat\\u0131r kapsama', jacoco ? jacoco.pctText : 'n/a', jacoco ? (jacoco.numeratorText + ' / ' + jacoco.denominatorText) : null));
+            if (t) { tiles.appendChild(tile('mutasyon', 'Mutasyon', t.killed + ' / ' + t.all, t.all === 0 ? 'mutant \\u00fcretilmedi' : 'yakalanan / toplam')); }
+            tiles.appendChild(tile('bulgular', 'Bulgular', String(DATA.findings.items.length), DATA.ruleIds.length + ' kural tarand\\u0131'));
+            if (DATA.fileCoverage) { tiles.appendChild(tile('dosyalar', '%0 kapsamada dosya', String(zeroFiles), fmtInt(DATA.fileCoverage.totalFiles) + ' dosya i\\u00e7inde')); }
+            section.appendChild(tiles);
+            return section;
           }
 
           function init() {
             var app = document.getElementById('app');
-            app.appendChild(buildTopbar());
-            var main = el('main');
+            var emptyList = [];
+            var navItems = [{ id: 'ozet', label: '\\u00d6zet', count: '' }];
+            var grid = el('div', { class: 'grid' });
 
-            main.appendChild(buildSection('run', 'Koşu', '', renderRun()));
-            main.appendChild(buildSection('findings', 'Bulgular', DATA.findings.items.length + ' bulgu', renderFindings()));
-            main.appendChild(buildSection('coverage', 'Kapsama', '', renderCoverage()));
-            main.appendChild(buildSection('changed-files', 'Değişen dosyalar', DATA.changedFiles.length + ' dosya', renderChangedFiles()));
+            grid.appendChild(buildKapsamaCard());
+            navItems.push({ id: 'kapsama', label: 'Kapsama', count: '' });
+
+            var concern = findConcernMutant();
             if (DATA.mutation) {
-              main.appendChild(buildSection('mutation', 'Mutasyon kanıtı (L3)', '', renderMutation()));
-            }
-            if (DATA.fileCoverage) {
-              main.appendChild(buildSection('file-coverage', 'Dosya bazlı kapsama', fmtInt(DATA.fileCoverage.totalFiles) + ' dosya', renderFileTree()));
-            }
-            if (DATA.perTest) {
-              main.appendChild(buildSection('per-test', 'Test bazlı kanıt (L2)', '', renderPerTest()));
-            }
-            if (DATA.warnings.length) {
-              main.appendChild(buildSection('warnings', 'Uyarılar', String(DATA.warnings.length), renderReasonList(DATA.warnings)));
-            }
-            if (DATA.incompleteReasons.length) {
-              main.appendChild(buildSection('incomplete', 'Eksik nedenler', String(DATA.incompleteReasons.length), renderReasonList(DATA.incompleteReasons)));
+              grid.appendChild(buildMutasyonCard(concern));
+              var t = mutationTotals();
+              navItems.push({ id: 'mutasyon', label: 'Mutasyon', count: t.killed + '/' + t.all });
+            } else {
+              emptyList.push({ name: 'Mutasyon kan\\u0131t\\u0131', why: 'toplanmad\\u0131' });
             }
 
+            grid.appendChild(buildBulgularCard());
+            navItems.push({ id: 'bulgular', label: 'Bulgular', count: String(DATA.findings.items.length) });
+
+            if (DATA.changedFiles.length) {
+              grid.appendChild(buildChangedFilesCard());
+              navItems.push({ id: 'degisen-dosyalar', label: 'De\\u011fi\\u015fen dosyalar', count: String(DATA.changedFiles.length) });
+            } else {
+              emptyList.push({ name: 'De\\u011fi\\u015fen dosyalar', why: DATA.meta.diffMode });
+            }
+
+            if (DATA.fileCoverage) {
+              grid.appendChild(buildDosyalarCard());
+              navItems.push({ id: 'dosyalar', label: 'Dosyalar', count: fmtInt(DATA.fileCoverage.totalFiles) });
+            } else {
+              emptyList.push({ name: 'Dosya baz\\u0131l\\u0131 kapsama', why: 'toplanmad\\u0131' });
+            }
+
+            var otherConcern = 0;
+            if (concern) {
+              var totals = DATA.mutation.totalsByStatus;
+              var concerning = 0;
+              Object.keys(totals).forEach(function (s) { if (s !== 'KILLED') { concerning += totals[s]; } });
+              otherConcern = Math.max(0, concerning - 1);
+              grid.appendChild(buildDetayCard(concern, otherConcern));
+              navItems.push({ id: 'detay', label: 'Mutant detay\\u0131', count: '1' });
+            }
+
+            if (DATA.mutation && DATA.mutation.modules.length) {
+              grid.appendChild(buildMutasyonDetailCard());
+              navItems.push({ id: 'mutasyon-detay', label: 'Mutasyon detay\\u0131', count: '' });
+            }
+
+            if (DATA.warnings.length) {
+              grid.appendChild(buildReasonCard('uyarilar', 'Uyar\\u0131lar', DATA.warnings));
+              navItems.push({ id: 'uyarilar', label: 'Uyar\\u0131lar', count: String(DATA.warnings.length) });
+            } else {
+              emptyList.push({ name: 'Uyar\\u0131lar', why: '0 kay\\u0131t' });
+            }
+
+            if (DATA.incompleteReasons.length) {
+              grid.appendChild(buildReasonCard('eksik-nedenler', 'Eksik nedenler', DATA.incompleteReasons));
+              navItems.push({ id: 'eksik-nedenler', label: 'Eksik nedenler', count: String(DATA.incompleteReasons.length) });
+            } else {
+              emptyList.push({ name: 'Eksik nedenler', why: '0 kay\\u0131t' });
+            }
+
+            var perTestTotal = DATA.perTest ? DATA.perTest.reduce(function (s, p) { return s + p.entryLineCount; }, 0) : 0;
+            if (DATA.perTest && perTestTotal > 0) {
+              grid.appendChild(buildPerTestCard());
+              navItems.push({ id: 'test-kaniti', label: 'Test baz\\u0131l\\u0131 kan\\u0131t', count: fmtInt(perTestTotal) });
+            } else {
+              emptyList.push({ name: 'Test baz\\u0131l\\u0131 kan\\u0131t (L2)', why: DATA.perTest ? '0 kay\\u0131t' : 'toplanmad\\u0131' });
+            }
+
+            grid.appendChild(buildKosuCard(emptyList));
+            navItems.push({ id: 'kosu', label: 'Ko\\u015fu', count: '' });
+
+            app.appendChild(buildSidebar(navItems));
+            var main = el('div', { class: 'main' });
+            var wrap = el('div', { class: 'wrap' });
+            wrap.appendChild(buildOzet());
+            wrap.appendChild(grid);
+            var footer = el('div', { class: 'footer-strip' });
+            footer.appendChild(el('span', { text: 'coverdict ' + DATA.meta.toolVersion + ' \\u00b7 schema ' + DATA.meta.schemaVersion + ' \\u00b7 tek dosya, \\u00e7evrimd\\u0131\\u015f\\u0131, harici istek yok' }));
+            footer.appendChild(el('span', { text: DATA.meta.generatedAt }));
+            wrap.appendChild(footer);
+            main.appendChild(wrap);
             app.appendChild(main);
-            app.appendChild(buildFooter());
 
             restoreTheme();
-            restoreDensity();
-            var search = document.getElementById('global-search');
-            if (search) { search.addEventListener('input', debounce(applyFilter, 60)); }
+            wireScrollSpy(navItems.map(function (n) { return n.id; }));
             applyDeepLink();
           }
 

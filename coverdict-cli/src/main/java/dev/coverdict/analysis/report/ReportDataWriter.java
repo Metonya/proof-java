@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -35,22 +34,21 @@ import dev.coverdict.analysis.pertest.PerTestModuleEvidence;
 import dev.coverdict.analysis.vcs.VcsIdentity;
 
 /**
- * D-80: the HTML report's presentation data, as one JSON object
+ * D-80/D-81: the HTML report's presentation data, as one JSON object
  * {@link HtmlRenderer} embeds verbatim in a {@code <script
  * type="application/json">} for the report's own client-side script to
  * read. Separate from {@link VerdictJsonWriter} on purpose - that one
  * writes the schema-contract document (hard rule 7); this one writes
  * display-shaped data (Turkish-formatted numbers, a friendly-name lookup
- * for only the codes this exact report uses, a path-compressed file tree)
- * that has no business in the verdict JSON schema.
+ * for only the codes this exact report uses, a flat source-root-relative
+ * file list) that has no business in the verdict JSON schema.
  *
  * <p>Reads only what {@code doc} already carries and never computes a new
- * metric: every numerator/denominator pair below is copied or summed from
- * already-computed pairs (hard rule 4), and every percentage is
- * recalculated with the exact same scale-1/HALF_UP rule {@link
- * dev.coverdict.analysis.metrics.Metric#of} uses, so a folder's rolled-up
- * percentage in the file tree matches what {@code Metric.of} would have
- * produced from the same numerator/denominator.
+ * metric: every numerator/denominator pair below is copied verbatim from an
+ * already-computed {@link dev.coverdict.analysis.metrics.Metric} (hard rule
+ * 4) - nothing here re-derives a percentage from anything but that metric's
+ * own numerator/denominator, with the same scale-1/HALF_UP rule {@link
+ * dev.coverdict.analysis.metrics.Metric#of} used to produce it.
  */
 final class ReportDataWriter {
 
@@ -80,7 +78,7 @@ final class ReportDataWriter {
                 writeMutation(g, doc.mutation(), used);
             }
             if (doc.fileCoverage() != null) {
-                writeFileCoverage(g, doc.fileCoverage());
+                writeFileCoverage(g, doc.fileCoverage(), doc.modules());
             }
             writeLabels(g, used);
             g.writeEndObject();
@@ -524,35 +522,18 @@ final class ReportDataWriter {
         return "(" + String.join(", ", parts) + ")";
     }
 
-    // ---- File coverage: path-compressed tree (D-80 fix for the 8-click single-child chain, #1) ----
+    // ---- File coverage: flat, source-root-relative file list (D-81) ----
+    //
+    // D-80 tried a nested, path-compressed folder tree here; D-81 replaced it with a flat list
+    // once the report moved to a fixed dashboard (no more expand-a-folder browsing UI - the
+    // "Dosyalar" card sorts/filters this flat list by risk or groups it by immediate package
+    // client-side). displayPath strips each entry's own module-root+source-root prefix (from
+    // that module's declared sourceRoots, never a guess) so "gson/src/main/java/com/google/gson/
+    // internal/bind/TreeTypeAdapter.java" reads as "com/google/gson/internal/bind/TreeTypeAdapter.java"
+    // - the full repo-relative path is still carried as `path` for anyone who needs it verbatim.
 
-    private static final class TreeNode {
-        final Map<String, TreeNode> children = new LinkedHashMap<>();
-        final List<FileCoverageEntry> files = new ArrayList<>();
-    }
-
-    private record Agg(int numerator, int denominator) {
-        static final Agg ZERO = new Agg(0, 0);
-
-        Agg plus(Agg other) {
-            return new Agg(numerator + other.numerator, denominator + other.denominator);
-        }
-
-        BigDecimal percent() {
-            if (denominator == 0) {
-                return null;
-            }
-            return BigDecimal.valueOf(numerator).multiply(BigDecimal.valueOf(100))
-                .divide(BigDecimal.valueOf(denominator), 1, RoundingMode.HALF_UP);
-        }
-
-        String percentText() {
-            BigDecimal p = percent();
-            return p == null ? "n/a" : p.toString().replace('.', ',') + "%";
-        }
-    }
-
-    private static void writeFileCoverage(JsonGenerator g, FileCoverageBlock block) throws IOException {
+    private static void writeFileCoverage(JsonGenerator g, FileCoverageBlock block, List<ModuleInput> modules)
+        throws IOException {
         g.writeObjectFieldStart("fileCoverage");
         g.writeNumberField("totalFiles", block.files().size());
         g.writeArrayFieldStart("excluded");
@@ -561,106 +542,58 @@ final class ReportDataWriter {
         }
         g.writeEndArray();
 
-        Map<String, TreeNode> byModule = new LinkedHashMap<>();
-        for (FileCoverageEntry entry : block.files()) {
-            TreeNode moduleRoot = byModule.computeIfAbsent(entry.module(), k -> new TreeNode());
-            insertIntoTree(moduleRoot, entry);
-        }
-        List<String> moduleIds = new ArrayList<>(byModule.keySet());
-        Collections.sort(moduleIds);
-        g.writeArrayFieldStart("tree");
-        for (String moduleId : moduleIds) {
-            writeTreeNode(g, new ArrayList<>(), byModule.get(moduleId), moduleId);
-        }
-        g.writeEndArray();
-        g.writeEndObject();
-    }
-
-    private static void insertIntoTree(TreeNode root, FileCoverageEntry entry) {
-        String[] segments = entry.path().split("/");
-        TreeNode current = root;
-        for (int i = 0; i < segments.length - 1; i++) {
-            current = current.children.computeIfAbsent(segments[i], k -> new TreeNode());
-        }
-        current.files.add(entry);
-    }
-
-    /**
-     * Writes {@code node} as one row, first compressing forward through
-     * every ancestor that contributes no branching (a folder with exactly
-     * one child folder and no files merges into its child's name; a folder
-     * with exactly one file and no subfolders merges into a single file
-     * row) - the client never has to click through a folder that had no
-     * real choice to offer. {@code fallbackName} is used only when
-     * compression never advances at all (the root already branches), so a
-     * module whose paths don't start with its own id still gets a label.
-     * Returns the aggregate numerator/denominator sum so a parent can add
-     * an already-computed pair rather than deriving a new metric (hard
-     * rule 4).
-     */
-    private static Agg writeTreeNode(JsonGenerator g, List<String> nameParts, TreeNode node, String fallbackName)
-        throws IOException {
-        while (node.children.size() + node.files.size() == 1) {
-            if (!node.files.isEmpty()) {
-                FileCoverageEntry only = node.files.get(0);
-                List<String> leafParts = new ArrayList<>(nameParts);
-                leafParts.add(fileNameOnly(only.path()));
-                return writeFileLeaf(g, joinPath(leafParts, fallbackName), only);
-            }
-            Map.Entry<String, TreeNode> onlyChild = node.children.entrySet().iterator().next();
-            nameParts = new ArrayList<>(nameParts);
-            nameParts.add(onlyChild.getKey());
-            node = onlyChild.getValue();
-        }
-
-        List<String> childNames = new ArrayList<>(node.children.keySet());
-        Collections.sort(childNames);
-        List<FileCoverageEntry> sortedFiles = node.files.stream()
+        List<FileCoverageEntry> sorted = block.files().stream()
             .sorted(Comparator.comparing(FileCoverageEntry::path)).toList();
-
-        g.writeStartObject();
-        g.writeStringField("name", joinPath(nameParts, fallbackName));
-        g.writeBooleanField("isFile", false);
-        g.writeArrayFieldStart("children");
-        Agg agg = Agg.ZERO;
-        for (String childName : childNames) {
-            agg = agg.plus(writeTreeNode(g, new ArrayList<>(List.of(childName)), node.children.get(childName), childName));
-        }
-        for (FileCoverageEntry entry : sortedFiles) {
-            agg = agg.plus(writeFileLeaf(g, fileNameOnly(entry.path()), entry));
+        g.writeArrayFieldStart("files");
+        for (FileCoverageEntry entry : sorted) {
+            writeFileCoverageEntry(g, entry, modules);
         }
         g.writeEndArray();
-        writeAggFields(g, agg);
         g.writeEndObject();
-        return agg;
     }
 
-    private static String joinPath(List<String> parts, String fallbackWhenEmpty) {
-        return parts.isEmpty() ? fallbackWhenEmpty : String.join("/", parts);
-    }
-
-    private static Agg writeFileLeaf(JsonGenerator g, String name, FileCoverageEntry entry) throws IOException {
+    private static void writeFileCoverageEntry(JsonGenerator g, FileCoverageEntry entry, List<ModuleInput> modules)
+        throws IOException {
         Metric metric = entry.metrics().sonarCompatible();
-        Agg agg = new Agg(metric.numerator(), metric.denominator());
+        String display = sourceRelativePath(entry, modules);
         g.writeStartObject();
-        g.writeStringField("name", name);
-        g.writeBooleanField("isFile", true);
+        g.writeStringField("module", entry.module());
         g.writeStringField("path", entry.path());
-        writeAggFields(g, agg);
-        g.writeEndObject();
-        return agg;
-    }
-
-    private static void writeAggFields(JsonGenerator g, Agg agg) throws IOException {
-        g.writeStringField("pctText", agg.percentText());
-        BigDecimal percent = agg.percent();
+        g.writeStringField("displayPath", display);
+        g.writeStringField("packagePath", packageOf(display));
+        g.writeStringField("fileName", fileNameOnly(display));
+        BigDecimal percent = metric.percent();
+        g.writeStringField("pctText", formatPercent(percent));
         if (percent == null) {
             g.writeNullField("pct");
         } else {
             g.writeNumberField("pct", percent);
         }
-        g.writeNumberField("numerator", agg.numerator());
-        g.writeNumberField("denominator", agg.denominator());
+        g.writeNumberField("numerator", metric.numerator());
+        g.writeNumberField("denominator", metric.denominator());
+        g.writeEndObject();
+    }
+
+    /** Strips {@code entry}'s own module-root+source-root prefix using that module's declared {@code sourceRoots} - falls back to the full repo-relative path when no declared root matches (never guesses at one). */
+    private static String sourceRelativePath(FileCoverageEntry entry, List<ModuleInput> modules) {
+        for (ModuleInput module : modules) {
+            if (!module.id().equals(entry.module())) {
+                continue;
+            }
+            String rootPrefix = ".".equals(module.root()) ? "" : module.root() + "/";
+            for (String sourceRoot : module.sourceRoots()) {
+                String prefix = rootPrefix + sourceRoot + "/";
+                if (entry.path().startsWith(prefix)) {
+                    return entry.path().substring(prefix.length());
+                }
+            }
+        }
+        return entry.path();
+    }
+
+    private static String packageOf(String displayPath) {
+        int idx = displayPath.lastIndexOf('/');
+        return idx < 0 ? "" : displayPath.substring(0, idx);
     }
 
     private static String fileNameOnly(String path) {

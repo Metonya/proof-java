@@ -1982,6 +1982,87 @@ renderer's undifferentiated `BigDecimal.toString()`/bare-digit output
 rule (hard rule 5's `sonar-compatible` parity requirement) is unchanged -
 only the string representation changed, never the number.
 
+**D-81 · HTML report: fixed sidebar + scroll-spy dashboard replaces the
+collapsible-sections page; flat risk-sorted file list replaces the folder
+tree; opens in light mode; every card built strictly from numbers, never a
+generated verdict sentence** (2026-09-01)
+A follow-up Claude Design mockup ("Coverdict Dashboard") proposed a
+different top-level structure than D-80's collapsible `<details>` sections:
+a fixed left sidebar with scroll-spy navigation, a 12-column card grid
+(Kapsama/Mutasyon/Bulgular/Dosyalar as always-visible dashboard cards
+instead of expand-on-demand sections), file coverage sorted by risk
+(lowest coverage first) instead of browsed as a folder tree, and a
+consolidated "bu koşuda boş kalan bölümler" one-line list for sections with
+nothing to show instead of each rendering its own empty state. Asked
+directly, the user chose to adopt this structure fully rather than layer
+individual ideas onto D-80's page.
+
+**The interpretive headline question.** The mockup's `<h1>` read "Kapsama
+sağlam, mutasyon kanıtı yok." - a judgment sentence, the same shape D-80's
+predecessor mockup had and the user had already rejected once ("Hiç özet
+olmasın"). Asked whether this reversed that rejection, the user's answer
+sharpened the rule rather than reversing it: *"ai çıktı veremeyeceği için
+süslü cümlelerin olmadığı elimizdeki veriler ile özet olabilir"* - coverdict
+is a deterministic CLI, not an LLM, and cannot honestly assert an adjective
+like "sağlam" it has no basis for (hard rule 1: evidence over judgment). A
+summary is fine as a **fact strip only** - labeled numbers, no adjectives,
+no sentence construction. The Özet section (`buildOzet` in
+{@code HtmlRenderer}'s script) is four stat tiles (satır kapsama, mutasyon
+killed/total, bulgu count, files-at-0%), each linking to its card - no
+headline, no generated prose anywhere in the report.
+
+**Light by default.** A separate explicit instruction ("ilk olarak açık
+renk modda açılsın") overrides the mockup's own dark-first default: the
+CSS's bare `:root` now carries the light token values directly, and the
+`@media (prefers-color-scheme: dark)` auto-switch block D-77 introduced is
+gone entirely - a first-time reader (no `coverdict-report-theme` in
+`localStorage`) always opens light regardless of OS theme. The manual
+toggle (`:root[data-theme="dark"]`) still works exactly as before.
+
+**File coverage: flat list, not a tree.** D-80's path-compressed folder
+tree solved the "8 empty clicks" problem but a fixed dashboard has no
+expand-a-folder browsing UI to hang it on. `ReportDataWriter` now writes
+`fileCoverage.files` as a flat array - each entry carrying `displayPath`
+(the repo-relative `path` with that file's own module's declared
+`sourceRoots` prefix stripped, e.g. `gson/src/main/java/com/google/gson/
+internal/bind/TreeTypeAdapter.java` → `com/google/gson/internal/bind/
+TreeTypeAdapter.java`), `packagePath`, and `fileName` - plus the same
+numerator/denominator/percent a tree leaf carried. The "Dosyalar" card
+sorts this list by risk (lowest coverage first, matching the mockup's "en
+düşük kapsama üstte") by default, offers a Risk/Paket toggle (Paket groups
+client-side by `packagePath`, summing already-computed numerator/
+denominator pairs the same way D-80's tree aggregation did - hard rule 4
+still holds, only the aggregation moved from a nested Java structure to a
+flat client-side `reduce`), five coverage-band filter chips (Tümü/%0/%70
+altı/%70–90/%90 üstü), and a text search - all scoped to this card, not a
+page-wide search box, since the dashboard's cards are meant to be
+self-contained. `TreeNode`/`writeTreeNode`/the `Agg` record are gone from
+`ReportDataWriter`.
+
+**Mutation: three tiers.** A compact "Mutasyon" card (col-4) shows the
+kill ratio and, when nothing was killed, a one-mutant callout with a link
+to a "Mutant detayı" spotlight card (col-7) - the single most concerning
+mutant (priority: `SURVIVED` > `TIMED_OUT`/`RUN_ERROR`/`MEMORY_ERROR`/
+`NON_VIABLE`/`STARTED`/`NOT_STARTED` > `NO_COVERAGE` > `KILLED`, which never
+qualifies), with a "N tane daha var" note when more than one mutant is
+concerning. A full "Mutasyon kanıtı — tüm mutantlar" card (col-12) keeps
+the complete per-class/per-method/per-mutant breakdown with the same
+search+survived-only filter D-80 had, so no mutant becomes unreachable just
+because only one gets the spotlight - the compact/detail split is
+navigation, not data loss. `buildMutasyonCard` treats "zero mutants
+generated" as its own neutral state (`mut-badge-none`/`VERİ YOK`), never as
+green/clean - hard rule 3a: a run with nothing tested must never look the
+same as a run where everything passed.
+
+**Deep links now cover any card id, not just findings.** D-80's
+`applyDeepLink` only handled `#f-<fingerprint>`. Since cards now have their
+own ids that a stat tile or the mutation callout can link to (`#kapsama`,
+`#detay`, ...), and the browser's own load-time fragment scroll happens
+before the script has built the DOM (so it finds nothing and silently does
+nothing), `applyDeepLink` now looks up any `location.hash` id after
+`init()` finishes and scrolls to it - findings additionally get their
+parent `.finding-group` opened first.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

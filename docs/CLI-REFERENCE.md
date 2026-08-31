@@ -142,30 +142,28 @@ from a mutation phase that is merely slow (D-64).
   `mutation`/`fileCoverage` blocks when those are enabled.
 - **Text** (stdout): the same document rendered for humans, followed by
   `verdict written to <out>`.
-- **HTML** (`--html-report`, opt-in, D-75/D-76/D-77/D-79/D-80): the same document
-  rendered as a single self-contained, offline HTML file. D-80 rewrote this as a
-  data-embedded report: [`ReportDataWriter`](../coverdict-cli/src/main/java/dev/coverdict/analysis/report/ReportDataWriter.java)
-  turns the document into one Turkish-formatted, presentation-shaped JSON object
-  ([`docs/GLOSSARY.md`](GLOSSARY.md) has the friendly-name mapping for every
-  rule id/reason code/enum/status it can show), embedded in a
+- **HTML** (`--html-report`, opt-in, D-75/D-76/D-77/D-79/D-80/D-81): the same
+  document rendered as a single self-contained, offline HTML file - a fixed
+  sidebar + scroll-spy dashboard, opening in light mode by default.
+  [`ReportDataWriter`](../coverdict-cli/src/main/java/dev/coverdict/analysis/report/ReportDataWriter.java)
+  turns the document into one Turkish-formatted, presentation-shaped JSON
+  object ([`docs/GLOSSARY.md`](GLOSSARY.md) has the friendly-name mapping for
+  every rule id/reason code/enum/status it can show), embedded in a
   `<script type="application/json">` that a small static, interpolation-free
-  `<script>` reads and renders into the DOM (`textContent`/`setAttribute` only,
-  never `innerHTML`/`eval`). All top-level sections are collapsible
-  `<details>` with state remembered per browser (`localStorage`); one search
-  box filters findings, warnings, changed files, mutation evidence, and the
-  file tree at once, opening whatever matches and closing whatever doesn't.
-  Findings group by rule (name/description/suggested action shown once per
-  group, not once per row); the file-coverage tree collapses every
-  single-child folder chain and single-file folder into one row instead of
-  making the reader click through each directory level; mutation counts are
-  broken out by exact PIT status (no catch-all "other" bucket hiding what
-  those mutants actually did). "Değişen dosyalar" and other schema-guaranteed
-  sections always render, with an explicit empty-state message when there's
-  nothing to list, rather than disappearing (hard rule 3a: absence must look
-  like absence, never like it was never checked). A `@media print` rule
-  and matching `beforeprint`/`afterprint` handlers open every section for
-  printing to PDF. Requires JavaScript; a `<noscript>` block says so rather
-  than shipping a silently blank page.
+  `<script>` reads and renders into the DOM (`textContent`/`setAttribute`
+  only, never `innerHTML`/`eval`). Kapsama/Mutasyon/Bulgular/Dosyalar render
+  as always-visible dashboard cards (a donut for `jacoco-line`, a mutation
+  kill-ratio card with a "Mutant detayı" spotlight for the most concerning
+  mutant, per-rule finding groups with a soft "0" chip for rules that never
+  fired, a risk-sorted flat file list with Risk/Paket toggle + coverage-band
+  filter chips); sections with nothing to show (no changed files, no
+  warnings, ...) fold into one "bu koşuda boş kalan bölümler" line instead of
+  each rendering (or hiding) its own empty card. The report never generates
+  an interpretive verdict sentence about the run - only labeled numbers (hard
+  rule 1: evidence over judgment; D-81 has the full reasoning). A
+  `@media print` rule and `beforeprint`/`afterprint` handlers open every
+  collapsible group for printing to PDF. Requires JavaScript; a `<noscript>`
+  block says so rather than shipping a silently blank page.
 
 ## `render-html` — render an existing verdict JSON, no fresh analysis
 
