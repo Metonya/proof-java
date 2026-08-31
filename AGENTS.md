@@ -25,6 +25,10 @@ measurement or mutation testing.
 3. `docs/ROADMAP.md` — the current milestone. Work only inside it.
 4. `docs/RESEARCH.md` — measured facts and verified formulas. Cite these
    instead of re-deriving from memory.
+5. `docs/GLOSSARY.md` — the Turkish friendly-name mapping for every code
+   the HTML report shows (rule ids, `AnalysisReason` codes, enums, mutant
+   statuses, metric modes). Add a code here before it can appear unlabeled
+   in a report; `ReportLabelsTest` enforces this.
 
 `prototype/` is a validated proof of concept, kept as reference. Production
 code is written fresh (see D-03 and D-11 in DECISIONS); do not extend the

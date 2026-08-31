@@ -1860,6 +1860,128 @@ within their own `.table-wrap` instead of `overflow-wrap: anywhere`
 breaking a filename mid-extension - prose cells (message/suggestedAction)
 still wrap normally at word boundaries.
 
+**D-80 · HTML report rewritten as a data-embedded, JS-rendered report:
+friendly-name glossary, path-compressed file tree, one global search,
+per-status mutation counts, always-present sections** (2026-08-31)
+D-75 through D-79 kept adding features to a renderer that printed every row
+as HTML server-side; a real report (gson corpus, 33 findings, 12 mutants, 81
+files) surfaced the shape of problem another feature couldn't fix: the file
+tree needed 8 clicks through single-child folders before showing a single
+real file, 33 findings repeated the same rule description and suggested
+action 33 times, per-section filter boxes meant knowing which section held
+what you searched for, the mutation summary bucketed 12 `NO_COVERAGE`
+mutants into an opaque "12 diğer", `renderChangedFiles` returned early on an
+empty list so "no changed files" and "this was never computed" looked
+identical (contrary to hard rule 3a), and every table's horizontal scrollbar
+hid the column a reader actually needed. Fixing these one at a time inside
+the print-every-row-as-HTML architecture kept adding bespoke per-section
+JS (`coverdictFilterMutation`, `coverdictFilterFileTree`, ...) that didn't
+compose.
+
+Architecture: [`ReportDataWriter`](../coverdict-cli/src/main/java/dev/coverdict/analysis/report/ReportDataWriter.java)
+turns `VerdictDocument` into one presentation-shaped JSON object (Turkish
+number formatting, a path-compressed file tree, simplified mutation method
+signatures, a friendly-name/description lookup for only the codes this
+report actually uses) instead of `HtmlRenderer` printing markup row by row.
+`HtmlRenderer` now only builds a static shell (head/CSS/`<noscript>`) and
+embeds that JSON in `<script id="coverdict-data" type="application/json">`;
+one static, interpolation-free `<script>` (same file, unconditionally
+static source text - `HtmlRenderer.render` never touches it with a doc-derived
+value) parses it and builds the whole page with `createElement`/
+`textContent`/`setAttribute`/`classList` only, never `innerHTML`/`eval` -
+the same no-injection posture D-75/D-76 established, now enforced at one
+boundary instead of forty call sites. This is a within-milestone rendering
+change only (hard rule 8): the verdict JSON schema, `VerdictDocument`,
+`VerdictJsonWriter`, `TextRenderer`, and both CLI commands (`analyze
+--html-report`, `render-html`) are unchanged - `HtmlRenderer.render(doc)`
+keeps its exact signature.
+
+**Security boundary moved, not weakened.** The old renderer HTML-escaped
+every doc-derived string as it was interpolated into markup (`esc()`,
+forty-plus call sites). The new one has exactly one escaping boundary:
+{@link HtmlRenderer#jsonEscapeForScript}, applied once to the fully-built
+JSON text before embedding. Jackson already produces valid JSON (quotes and
+control characters correctly escaped per the JSON spec); `jsonEscapeForScript`
+additionally turns `<`, `>`, `&`, U+2028, and U+2029 into `\uXXXX` escapes.
+Since a literal `<` can only occur inside an already-quoted JSON string value
+(JSON's own structural characters are only `{}[]:,"`), replacing it with an
+escape sequence is a no-op under `JSON.parse` and removes every literal `<`
+from the page source - so `</script` (in any case) cannot occur inside the
+embedded block, which is what actually closes a `<script>` element per the
+HTML parsing spec. This is deliberately **not** HTML-entity escaping
+(`&lt;`): `<script>` is a raw-text element and browsers do not decode
+entities inside one, so an entity-encoded `<` would reach `JSON.parse` as
+the four literal characters `&lt;` and corrupt the payload instead of
+protecting it. `HtmlRendererTest` keeps an XSS-attempt test (a finding whose
+path contains a literal `</script><script>alert(1)</script>` sequence and
+control characters) - it now round-trips the parsed JSON to confirm the
+exact original content survives, on top of confirming the raw HTML source
+never contains the breakout sequence.
+
+**Glossary** (user request): every rule id, `AnalysisReason` code actually
+constructed in this codebase, `Severity`/`Confidence`/`Classification`
+value, PIT mutant status, and coverage metric mode gets one Turkish
+friendly name plus a one-sentence explanation, defined once in
+[`ReportLabels`](../coverdict-cli/src/main/java/dev/coverdict/analysis/report/ReportLabels.java)
+and mirrored in prose at [`docs/GLOSSARY.md`](GLOSSARY.md). The raw code is
+never replaced, only accompanied (hard rule 5: a metric's canonical id is
+never dropped in favor of its friendly name) - the report always shows
+"Doğrulamasız test `NO_RECOGNIZED_ORACLE`", not one without the other.
+`ReportLabelsTest` fails the build if any code that can actually surface in
+a report has no entry, and separately asserts `RuleIds.ALL` contains every
+`String` constant declared on `RuleIds` (so a rule id added to the class but
+forgotten in `ALL` fails loudly instead of silently rendering unlabeled).
+
+**File tree compression.** The old tree made every path segment its own
+`<details>` regardless of whether it had any real siblings, so a module
+whose changed files all lived under `gson/src/main/java/com/google/gson`
+rendered eight nested single-child folders before the first real branch.
+`ReportDataWriter#writeTreeNode` now compresses forward through any node
+whose combined child-folder-plus-file count is exactly 1: a chain of
+single-child folders merges into one name (`gson/src/main/java/com/google/gson`),
+and a folder holding exactly one file with no subfolders merges into a
+single file row (`reflect/TypeToken.java` for a `reflect/` folder holding
+only `TypeToken.java`) rather than an extra click for a folder that never
+offered a real choice. Aggregation still only sums already-computed
+numerator/denominator pairs (hard rule 4) - compression changes what a row
+is called, never what a percentage means.
+
+**Deliberately deferred.** Virtualized/lazy DOM building for very large file
+trees was considered and dropped for v0.1: the compressed tree at realistic
+repo scale (dozens to low hundreds of rows) is cheap to build eagerly, and
+lazy-loading would have doubled the file-tree code path (build-on-open vs.
+build-eager) for a scale problem not yet observed in a real report. Revisit
+if a dogfood run surfaces a tree slow enough to matter.
+
+**Findings grouped by rule.** `HtmlRenderer`'s script groups the flat
+`findings.items` array by `rule` client-side and shows each group's
+description and suggested action once (taken from the first finding in the
+group, since both are per-rule constants in every current rule
+implementation - `NoRecognizedOracleRule.SUGGESTED_ACTION` and siblings) with
+only the per-finding message and location repeated per row. `ruleIds`
+(the full v0.1 rule catalog, always written) lets the report show a rule
+with zero findings as a soft "0" chip instead of omitting it - "0 bir
+bilgidir": a reader comparing two runs should be able to see that
+`TAUTOLOGICAL_ORACLE` was checked and found nothing, not wonder whether it
+ran at all.
+
+**Mutation status counts.** `totalsByStatus`/`countsByStatus` are now a map
+keyed by the exact PIT status (`KILLED`, `SURVIVED`, `NO_COVERAGE`,
+`TIMED_OUT`, ...), replacing the old three-bucket `MutantCounts(killed,
+survived, other)` that collapsed every non-killed/non-survived status into
+one opaque "diğer" - a run where all mutants are `NO_COVERAGE` (nothing ran
+them) now reads differently from one with a mix of `TIMED_OUT` and
+`RUN_ERROR` (something went wrong running them), which the old bucket made
+indistinguishable.
+
+**Number formatting.** All percentages and integer numerator/denominator
+pairs are now formatted with `Locale("tr","TR")` (comma decimal separator,
+dot thousands grouping - `"83,8%"`, `"3.144 / 3.754"`) instead of the old
+renderer's undifferentiated `BigDecimal.toString()`/bare-digit output
+(`"92.5%"`, `"4967/5372"`). The percentage's own scale-1/HALF_UP rounding
+rule (hard rule 5's `sonar-compatible` parity requirement) is unchanged -
+only the string representation changed, never the number.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

@@ -2,11 +2,21 @@ package dev.coverdict.analysis.report;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 
 import dev.coverdict.analysis.jacoco.LineCoverage;
 import dev.coverdict.analysis.metrics.MetricsEngine;
@@ -24,7 +34,20 @@ import dev.coverdict.analysis.pertest.PerTestLine;
 import dev.coverdict.analysis.pertest.PerTestModuleEvidence;
 import dev.coverdict.analysis.vcs.VcsIdentity;
 
-/** SECURITY-POLICY.md #4 (extended to HTML output): a control character or an HTML metacharacter in any rendered field never reaches the browser raw. */
+/**
+ * D-80: the renderer now embeds one JSON object ({@link ReportDataWriter})
+ * instead of printing every row as HTML server-side, so these tests read
+ * that JSON back (via {@link #parseData(String)}, a small jackson-core
+ * streaming reader since the project only depends on jackson-core, not
+ * jackson-databind) rather than grepping for table markup.
+ *
+ * <p>SECURITY-POLICY.md #4 (extended to HTML output): a control character,
+ * an HTML metacharacter, or a {@code </script>} sequence in any
+ * doc-derived field never lets the embedded JSON break out of its
+ * {@code <script>} element - see {@link HtmlRenderer}'s class javadoc for
+ * why {@code \\u003c}-style escaping, not HTML-entity escaping, is the
+ * correct defense for content inside a raw-text element.
+ */
 class HtmlRendererTest {
 
     private ModuleInput module() {
@@ -37,68 +60,137 @@ class HtmlRendererTest {
             NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), findings, List.of());
     }
 
+    // ---- JSON extraction helper (jackson-core streaming; no jackson-databind dependency) ----
+
+    private static Map<String, Object> parseData(String rendered) throws IOException {
+        String marker = "id=\"coverdict-data\" type=\"application/json\">";
+        int start = rendered.indexOf(marker);
+        assertTrue(start >= 0, "coverdict-data script tag not found: " + rendered);
+        start += marker.length();
+        int end = rendered.indexOf("</script>", start);
+        String embedded = rendered.substring(start, end);
+        JsonFactory factory = new JsonFactory();
+        try (JsonParser p = factory.createParser(embedded)) {
+            p.nextToken();
+            @SuppressWarnings("unchecked")
+            Map<String, Object> result = (Map<String, Object>) readValue(p);
+            return result;
+        }
+    }
+
+    private static Object readValue(JsonParser p) throws IOException {
+        return switch (p.currentToken()) {
+            case START_OBJECT -> {
+                Map<String, Object> map = new LinkedHashMap<>();
+                while (p.nextToken() != JsonToken.END_OBJECT) {
+                    String key = p.currentName();
+                    p.nextToken();
+                    map.put(key, readValue(p));
+                }
+                yield map;
+            }
+            case START_ARRAY -> {
+                List<Object> list = new ArrayList<>();
+                while (p.nextToken() != JsonToken.END_ARRAY) {
+                    list.add(readValue(p));
+                }
+                yield list;
+            }
+            case VALUE_STRING -> p.getText();
+            case VALUE_NUMBER_INT, VALUE_NUMBER_FLOAT -> p.getNumberValue();
+            case VALUE_TRUE, VALUE_FALSE -> p.getBooleanValue();
+            case VALUE_NULL -> null;
+            default -> throw new IllegalStateException("unexpected token: " + p.currentToken());
+        };
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> obj(Object o) {
+        return (Map<String, Object>) o;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<Object> arr(Object o) {
+        return (List<Object>) o;
+    }
+
     @Test
-    void controlCharactersAndHtmlMetacharactersInAFindingAreEscapedNotRenderedRaw() {
+    void aScriptBreakoutAttemptInAFindingCannotEscapeTheEmbeddedJson() throws IOException {
         char esc = 0x1b;
         char bel = 0x07;
-        String escapedEsc = "\\" + "u001b";
-        String escapedBel = "\\" + "u0007";
-        String maliciousPath = "src/test/java/<script>alert(1)</script>/" + esc + "Evil.java";
+        String maliciousPath = "src/test/java/</script><script>alert(1)</script>/" + esc + "Evil.java";
         String maliciousMessage = "bad \"quote\" & <b>bold</b> " + bel;
         Finding finding = new Finding("NO_RECOGNIZED_ORACLE", Severity.WARNING, Confidence.HIGH, "root",
             maliciousPath, 1, 1, "com.example.EvilTest#m()", maliciousMessage, "suggestion", "0123456789abcdef", null);
 
         String rendered = HtmlRenderer.render(baseDoc(true, List.of(), List.of(finding)));
 
-        assertFalse(rendered.contains("<script>alert"), rendered);
+        // The literal bytes that would end the <script> element must never occur.
+        assertFalse(rendered.toLowerCase(java.util.Locale.ROOT).contains("</script><script>alert"), rendered);
         assertFalse(rendered.contains("<b>bold</b>"), rendered);
-        assertFalse(rendered.indexOf(esc) >= 0, rendered);
-        assertFalse(rendered.indexOf(bel) >= 0, rendered);
-        assertTrue(rendered.contains("&lt;script&gt;"), rendered);
-        assertTrue(rendered.contains("&amp;"), rendered);
-        assertTrue(rendered.contains("&quot;quote&quot;"), rendered);
-        assertTrue(rendered.contains(escapedEsc), rendered);
-        assertTrue(rendered.contains(escapedBel), rendered);
+        assertEquals(1, countOccurrences(rendered, "<script id=\"coverdict-data\""), rendered);
+        assertEquals(1, countOccurrences(rendered.substring(rendered.indexOf("<script>\n")), "</script>"), rendered);
+
+        // ... yet JSON.parse (simulated here by the same streaming reader a browser's JSON.parse would agree with)
+        // recovers the exact original content - nothing was corrupted, only relocated out of harm's way.
+        Map<String, Object> data = parseData(rendered);
+        Map<String, Object> f = arr(obj(data.get("findings")).get("items")).stream()
+            .map(HtmlRendererTest::obj).findFirst().orElseThrow();
+        assertEquals(maliciousPath, f.get("path"));
+        assertEquals(maliciousMessage, f.get("message"));
     }
 
     @Test
-    void rendersACompleteNoVcsDocument() {
+    void rendersACompleteNoVcsDocument() throws IOException {
         String rendered = HtmlRenderer.render(baseDoc(true, List.of(), List.of()));
 
         assertTrue(rendered.startsWith("<!doctype html>"), rendered);
-        assertTrue(rendered.contains("status-complete"), rendered);
-        assertTrue(rendered.contains("Bulgu yok."), rendered);
-        assertTrue(rendered.contains("0.1.0-TEST"), rendered);
+        Map<String, Object> data = parseData(rendered);
+        Map<String, Object> meta = obj(data.get("meta"));
+        assertEquals(Boolean.TRUE, meta.get("complete"));
+        assertEquals("tamamlandı", meta.get("statusLabel"));
+        assertEquals("0.1.0-TEST", meta.get("toolVersion"));
+        assertTrue(arr(obj(data.get("findings")).get("items")).isEmpty());
     }
 
     @Test
-    void rendersAnIncompleteDocumentWithoutSilentlyDroppingTheReason() {
+    void rendersAnIncompleteDocumentWithoutSilentlyDroppingTheReason() throws IOException {
         AnalysisReason reason = new AnalysisReason("SOME_CODE", "bad " + (char) 0x1b + "[0m message");
         String rendered = HtmlRenderer.render(baseDoc(false, List.of(reason), List.of()));
 
-        assertTrue(rendered.contains("status-incomplete"), rendered);
-        assertTrue(rendered.contains("SOME_CODE"), rendered);
         assertFalse(rendered.indexOf((char) 0x1b) >= 0, rendered);
+        Map<String, Object> data = parseData(rendered);
+        Map<String, Object> meta = obj(data.get("meta"));
+        assertEquals(Boolean.FALSE, meta.get("complete"));
+        Map<String, Object> incomplete = obj(arr(data.get("incompleteReasons")).get(0));
+        assertEquals("SOME_CODE", incomplete.get("code"));
+        // JSON.parse recovers the exact original message, escape character included - only the raw HTML source
+        // (asserted above) is free of the literal byte, never the parsed content.
+        assertEquals(reason.message(), incomplete.get("message"));
     }
 
     @Test
-    void unavailableNewCodeStatusIsShownLiterallyNeverBlank() {
-        String rendered = HtmlRenderer.render(baseDoc(true, List.of(), List.of()));
-
-        assertTrue(rendered.contains("unavailable_no_vcs"), rendered);
+    void unavailableNewCodeStatusIsShownLiterallyNeverBlank() throws IOException {
+        Map<String, Object> data = parseData(HtmlRenderer.render(baseDoc(true, List.of(), List.of())));
+        Map<String, Object> newCode = obj(obj(data.get("coverage")).get("newCode"));
+        assertEquals(Boolean.FALSE, newCode.get("available"));
+        assertEquals("unavailable_no_vcs", newCode.get("unavailableStatus"));
     }
 
     @Test
-    void optionalBlocksAreAbsentWhenNull() {
-        String rendered = HtmlRenderer.render(baseDoc(true, List.of(), List.of()));
+    void optionalBlocksAreAbsentWhenNull() throws IOException {
+        Map<String, Object> data = parseData(HtmlRenderer.render(baseDoc(true, List.of(), List.of())));
 
-        assertFalse(rendered.contains("Test bazlı kanıt"), rendered);
-        assertFalse(rendered.contains("Mutasyon kanıtı"), rendered);
-        assertFalse(rendered.contains("Dosya bazlı kapsama"), rendered);
+        assertNull(data.get("perTest"));
+        assertNull(data.get("mutation"));
+        assertNull(data.get("fileCoverage"));
+        // changedFiles is a schema-guaranteed list, not an optional block - always present, even empty (D-80 fix).
+        assertNotNull(data.get("changedFiles"));
+        assertTrue(arr(data.get("changedFiles")).isEmpty());
     }
 
     @Test
-    void optionalBlocksRenderWhenPresent() {
+    void optionalBlocksRenderWhenPresent() throws IOException {
         PerTestModuleEvidence perTestModule = new PerTestModuleEvidence("root",
             List.of(new PerTestEntry("com.example.Calculator", "add", List.of(new PerTestLine(10, List.of("com.example.CalculatorTest#add()"))))),
             List.of());
@@ -115,12 +207,16 @@ class HtmlRendererTest {
             NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), List.of(), List.of(),
             List.of(perTestModule), List.of(mutationModule), fileCoverage);
 
-        String rendered = HtmlRenderer.render(doc);
+        Map<String, Object> data = parseData(HtmlRenderer.render(doc));
 
-        assertTrue(rendered.contains("Test bazlı kanıt"), rendered);
-        assertTrue(rendered.contains("Mutasyon kanıtı"), rendered);
-        assertTrue(rendered.contains("Dosya bazlı kapsama"), rendered);
-        assertTrue(rendered.contains("Calculator.java"), rendered);
+        assertNotNull(data.get("perTest"));
+        assertNotNull(data.get("mutation"));
+        assertNotNull(data.get("fileCoverage"));
+        assertEquals("root", obj(arr(data.get("perTest")).get(0)).get("moduleId"));
+        // path-compressed: "src/main/java/com/example/Calculator.java" has no branching, so it's one file leaf.
+        Map<String, Object> tree0 = obj(arr(obj(data.get("fileCoverage")).get("tree")).get(0));
+        assertEquals(Boolean.TRUE, tree0.get("isFile"));
+        assertEquals("src/main/java/com/example/Calculator.java", tree0.get("name"));
     }
 
     @Test
@@ -137,7 +233,7 @@ class HtmlRendererTest {
     }
 
     @Test
-    void mutationSectionRendersPerMutantRowsGroupedByClassWithFilterControls() {
+    void mutationSectionCarriesPerMutantDataGroupedByClassWithNoOtherBucket() throws IOException {
         Mutant killed = new Mutant("RETURNS", 10, "KILLED", List.of("com.example.CalculatorTest#add()"));
         Mutant survived = new Mutant("RETURNS", 11, "SURVIVED", List.of());
         MutatedMethod method = new MutatedMethod("com.example.Calculator", "add", "(II)I", 10, 11, List.of(killed, survived));
@@ -148,23 +244,29 @@ class HtmlRendererTest {
             NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), List.of(), List.of(),
             null, List.of(mutationModule));
 
-        String rendered = HtmlRenderer.render(doc);
+        Map<String, Object> data = parseData(HtmlRenderer.render(doc));
+        Map<String, Object> mutation = obj(data.get("mutation"));
+        Map<String, Object> totals = obj(mutation.get("totalsByStatus"));
+        assertEquals(1, ((Number) totals.get("KILLED")).intValue());
+        assertEquals(1, ((Number) totals.get("SURVIVED")).intValue());
+        assertNull(totals.get("NO_COVERAGE"));
 
-        assertTrue(rendered.contains("id=\"mutation-filter\""), rendered);
-        assertTrue(rendered.contains("id=\"mutation-survived-only\""), rendered);
-        assertTrue(rendered.contains("class=\"mutation-class\""), rendered);
-        assertTrue(rendered.contains("com.example.Calculator"), rendered);
-        assertTrue(rendered.contains("data-status=\"KILLED\""), rendered);
-        assertTrue(rendered.contains("data-status=\"SURVIVED\""), rendered);
-        assertTrue(rendered.contains("class=\"mutant-row status-KILLED\""), rendered);
-        assertTrue(rendered.contains("class=\"mutant-row status-SURVIVED\""), rendered);
-        assertTrue(rendered.contains("com.example.CalculatorTest#add()"), rendered);
-        assertTrue(rendered.contains("1</strong> KILLED"), rendered);
-        assertTrue(rendered.contains("1</strong> SURVIVED"), rendered);
+        Map<String, Object> mod = obj(arr(mutation.get("modules")).get(0));
+        Map<String, Object> cls = obj(arr(mod.get("classes")).get(0));
+        assertEquals("com.example.Calculator", cls.get("className"));
+        List<Object> mutants = arr(obj(arr(cls.get("methods")).get(0)).get("mutants"));
+        assertEquals(2, mutants.size());
+        assertEquals("KILLED", obj(mutants.get(0)).get("status"));
+        assertEquals("SURVIVED", obj(mutants.get(1)).get("status"));
+        assertEquals(List.of("com.example.CalculatorTest#add()"), arr(obj(mutants.get(0)).get("killingTests")));
+
+        // Every status this codebase can produce has a friendly label available.
+        assertNotNull(obj(data.get("labels")).get("KILLED"));
+        assertNotNull(obj(data.get("labels")).get("SURVIVED"));
     }
 
     @Test
-    void fileCoverageRendersANestedFolderTreeWithAggregatePercentagesAndFilterInput() {
+    void fileCoverageCompressesSingleChildChainsIntoOneRow() throws IOException {
         FileCoverageEntry a = new FileCoverageEntry("root", "src/main/java/com/example/pkg/A.java",
             MetricsEngine.compute(List.of()), List.of());
         FileCoverageEntry b = new FileCoverageEntry("root", "src/main/java/com/example/pkg/B.java",
@@ -178,110 +280,103 @@ class HtmlRendererTest {
             NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), List.of(), List.of(),
             null, null, fileCoverage);
 
-        String rendered = HtmlRenderer.render(doc);
+        Map<String, Object> data = parseData(HtmlRenderer.render(doc));
+        Map<String, Object> fc = obj(data.get("fileCoverage"));
+        assertEquals(3, ((Number) fc.get("totalFiles")).intValue());
+        assertEquals(List.of("excluded/Gen.java"), arr(fc.get("excluded")));
 
-        assertTrue(rendered.contains("id=\"file-filter\""), rendered);
-        assertTrue(rendered.contains("class=\"tree-folder\""), rendered);
-        assertTrue(rendered.contains("data-default-open=\"1\""), rendered);
-        assertTrue(rendered.contains("<summary>pkg/"), rendered);
-        assertTrue(rendered.contains("data-path=\"src/main/java/com/example/pkg/a.java\""), rendered);
-        assertTrue(rendered.contains("<code>A.java</code>"), rendered);
-        assertTrue(rendered.contains("<code>Root.java</code>"), rendered);
-        assertTrue(rendered.contains("1 hariç tutulan dosya."), rendered);
+        // "src/main/java" has two entries directly under it (pkg/ folder, Root.java file) so it does NOT collapse
+        // further than that single-child chain from the module root - unlike the old renderer's 8-click chain,
+        // there is exactly one compressed row down to the real branch point.
+        Map<String, Object> topRow = obj(arr(fc.get("tree")).get(0));
+        assertEquals("src/main/java", topRow.get("name"));
+        assertEquals(Boolean.FALSE, topRow.get("isFile"));
+        List<Object> children = arr(topRow.get("children"));
+        assertEquals(2, children.size());
+        Map<String, Object> pkgFolder = obj(children.get(0));
+        assertEquals("com/example/pkg", pkgFolder.get("name"));
+        assertEquals(2, arr(pkgFolder.get("children")).size());
+        Map<String, Object> rootFile = obj(children.get(1));
+        assertEquals("Root.java", rootFile.get("name"));
+        assertEquals(Boolean.TRUE, rootFile.get("isFile"));
     }
 
     @Test
-    void theEmittedScriptIsStaticAndNeverEchoesInputDerivedContentVerbatim() {
+    void theEmittedScriptIsStaticAndNeverBuildsMarkupFromRawHtml() {
         String rendered = HtmlRenderer.render(baseDoc(true, List.of(), List.of()));
 
         long openScript = countOccurrences(rendered, "<script>");
-        long closeScript = countOccurrences(rendered, "</script>");
-        assertTrue(openScript == 1 && closeScript == 1, rendered);
-        assertTrue(rendered.contains("coverdictFilterMutation"), rendered);
-        assertTrue(rendered.contains("coverdictFilterFileTree"), rendered);
+        long closeScriptTotal = countOccurrences(rendered, "</script>");
+        assertTrue(openScript == 1, rendered);
+        // one closing tag for the data script, one for the code script.
+        assertEquals(2, closeScriptTotal, rendered);
         assertFalse(rendered.contains("innerHTML"), rendered);
         assertFalse(rendered.contains("eval("), rendered);
     }
 
     @Test
-    void everyTableIsWrappedForHorizontalScrollInsteadOfBlowingOutThePage() {
-        Finding finding = new Finding("NO_RECOGNIZED_ORACLE", Severity.WARNING, Confidence.HIGH, "root",
-            "src/test/java/com/example/VeryLongPackageName/AnotherVeryLongSegment/EvilTest.java", 1, 1,
-            "com.example.EvilTest#m()", "message", "suggestion", "0123456789abcdef", null);
-        String rendered = HtmlRenderer.render(baseDoc(true, List.of(), List.of(finding)));
-
-        long openWraps = countOccurrences(rendered, "class=\"table-wrap");
-        long openTables = countOccurrences(rendered, "<table");
-        assertTrue(openWraps >= 1, rendered);
-        assertTrue(openWraps == openTables, rendered);
-    }
-
-    @Test
-    void themeToggleButtonIsPresentWithBothExplicitThemeCssBlocks() {
+    void themeAndDensityControlsArePresentInTheStaticScript() {
         String rendered = HtmlRenderer.render(baseDoc(true, List.of(), List.of()));
 
-        assertTrue(rendered.contains("id=\"theme-toggle\""), rendered);
-        assertTrue(rendered.contains("onclick=\"coverdictToggleTheme()\""), rendered);
+        assertTrue(rendered.contains("'theme-toggle'"), rendered);
+        assertTrue(rendered.contains("function toggleTheme"), rendered);
         assertTrue(rendered.contains(":root[data-theme=\"dark\"]"), rendered);
         assertTrue(rendered.contains(":root[data-theme=\"light\"]"), rendered);
-        assertTrue(rendered.contains("coverdictSetTheme"), rendered);
         assertTrue(rendered.contains("coverdict-report-theme"), rendered);
+        assertTrue(rendered.contains("coverdict-report-density"), rendered);
     }
 
     @Test
-    void everySectionIsACollapsibleDetailsOpenByDefault() {
-        Finding finding = new Finding("NO_RECOGNIZED_ORACLE", Severity.WARNING, Confidence.HIGH, "root",
-            "src/test/FooTest.java", 1, 1, "com.example.FooTest#m()", "message", "suggestion", "0123456789abcdef", null);
-        String rendered = HtmlRenderer.render(baseDoc(true, List.of(), List.of(finding)));
+    void noscriptFallbackExplainsTheBlankPageRatherThanShowingNothing() {
+        String rendered = HtmlRenderer.render(baseDoc(true, List.of(), List.of()));
 
-        long reportSections = countOccurrences(rendered, "class=\"report-section\"");
-        long openReportSections = countOccurrences(rendered, "<details open class=\"report-section\"");
-        assertTrue(reportSections >= 2, rendered);
-        assertEquals(reportSections, openReportSections, rendered);
+        assertTrue(rendered.contains("<noscript>"), rendered);
+        assertTrue(rendered.contains("JavaScript"), rendered);
     }
 
     @Test
-    void headerShowsGeneratedAtTimestampModulesAndSettingsInsteadOfARawIdentityDump() throws java.io.IOException {
+    void headerCarriesGeneratedAtModulesAndSettingsInsteadOfARawIdentityDump() throws IOException {
         VcsIdentity identity = new VcsIdentity("b3f4ca20087f9066de4c340522ff84e0558e1ad1", "main",
             "b3f4ca20087f9066de4c340522ff84e0558e1ad1", "b3f4ca20087f9066de4c340522ff84e0558e1ad1", true);
         VerdictDocument doc = new VerdictDocument("0.1.0", "0.1.0-TEST", true, List.of(),
             17, "UTF-8", List.of("**/generated/**"), List.of(module()), "base-ref", "all", identity,
             MetricsEngine.compute(List.of()), NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), List.of(), List.of());
 
-        String rendered = HtmlRenderer.render(doc);
+        Map<String, Object> data = parseData(HtmlRenderer.render(doc));
+        Map<String, Object> meta = obj(data.get("meta"));
 
-        assertTrue(rendered.contains("Rapor oluşturulma zamanı"), rendered);
-        assertTrue(rendered.contains("root (.)"), rendered);
-        assertTrue(rendered.contains("belirtilen referansla fark"), rendered);
-        assertTrue(rendered.contains("tüm test dosyaları"), rendered);
-        assertTrue(rendered.contains("**/generated/**"), rendered);
-        // base == mergeBase == head: a single deduplicated "Commit" row, short hash, full hash only in the tooltip.
-        assertTrue(rendered.contains("<dt>Commit</dt>"), rendered);
-        assertFalse(rendered.contains("<dt>Base commit</dt>"), rendered);
-        assertTrue(rendered.contains(">b3f4ca2<"), rendered);
-        assertFalse(rendered.contains(">b3f4ca20087f9066de4c340522ff84e0558e1ad1<"), rendered);
-        assertTrue(rendered.contains("title=\"b3f4ca20087f9066de4c340522ff84e0558e1ad1\""), rendered);
-        assertTrue(rendered.contains("Kaydedilmemiş değişiklik"), rendered);
+        assertNotNull(meta.get("generatedAt"));
+        assertEquals("root (.)", meta.get("modules"));
+        assertEquals("belirtilen referansla fark (base-ref)", meta.get("diffMode"));
+        assertEquals("tüm test dosyaları", meta.get("findingsScopeLabel"));
+        assertEquals(List.of("**/generated/**"), arr(meta.get("exclusions")));
+        assertEquals(Boolean.TRUE, meta.get("dirty"));
+
+        // base == mergeBase == head: a single deduplicated "Commit" row, short hash, full hash kept alongside it.
+        List<Object> commitRows = arr(meta.get("commitRows"));
+        assertEquals(1, commitRows.size());
+        Map<String, Object> row = obj(commitRows.get(0));
+        assertEquals("Commit", row.get("label"));
+        assertEquals("b3f4ca2", row.get("short"));
+        assertEquals("b3f4ca20087f9066de4c340522ff84e0558e1ad1", row.get("full"));
     }
 
     @Test
-    void headerShowsThreeSeparateCommitRowsWhenBaseMergeBaseAndHeadDiffer() throws java.io.IOException {
+    void headerCarriesThreeSeparateCommitRowsWhenBaseMergeBaseAndHeadDiffer() throws IOException {
         VcsIdentity identity = new VcsIdentity("1111111111111111111111111111111111111a", "feature",
             "2222222222222222222222222222222222222b", "3333333333333333333333333333333333333c", false);
         VerdictDocument doc = new VerdictDocument("0.1.0", "0.1.0-TEST", true, List.of(),
             17, "UTF-8", List.of(), List.of(module()), "base-ref", "all", identity,
             MetricsEngine.compute(List.of()), NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), List.of(), List.of());
 
-        String rendered = HtmlRenderer.render(doc);
-
-        assertTrue(rendered.contains("<dt>Base commit</dt>"), rendered);
-        assertTrue(rendered.contains("<dt>Merge-base</dt>"), rendered);
-        assertTrue(rendered.contains("<dt>HEAD</dt>"), rendered);
-        assertFalse(rendered.contains("<dt>Commit</dt>"), rendered);
+        Map<String, Object> data = parseData(HtmlRenderer.render(doc));
+        List<Object> commitRows = arr(obj(data.get("meta")).get("commitRows"));
+        List<String> labels = commitRows.stream().map(o -> (String) obj(o).get("label")).toList();
+        assertEquals(List.of("Base commit", "Merge-base", "HEAD"), labels);
     }
 
     @Test
-    void changedFilesFindingsAndReasonsAreFilterableWithASearchInput() {
+    void changedFilesFindingsAndReasonsCarryLowercasedSearchBlobs() throws IOException {
         ChangedFile file = new ChangedFile("src/main/java/Foo.java", "root", Classification.MAPPED, 5, 3, List.of());
         Finding finding = new Finding("NO_RECOGNIZED_ORACLE", Severity.WARNING, Confidence.HIGH, "root",
             "src/test/FooTest.java", 1, 1, "com.example.FooTest#m()", "no assertions here", "add one", "0123456789abcdef", null);
@@ -292,13 +387,27 @@ class HtmlRendererTest {
             MetricsEngine.compute(List.of()), NewCodeCoverage.unavailable("unavailable_no_vcs"),
             List.of(file), List.of(finding), List.of(warning));
 
-        String rendered = HtmlRenderer.render(doc);
+        Map<String, Object> data = parseData(HtmlRenderer.render(doc));
 
-        assertTrue(rendered.contains("oninput=\"coverdictFilterRows(this)\""), rendered);
-        assertTrue(rendered.contains("data-search=\"root src/main/java/foo.java mapped\""), rendered);
-        assertTrue(rendered.contains("data-search=\"no_recognized_oracle warning high src/test/footest.java com.example.footest#m() no assertions here add one\""), rendered);
-        assertTrue(rendered.contains("data-search=\"some_code a warning message\""), rendered);
-        assertTrue(rendered.contains("class=\"filterable\""), rendered);
+        Map<String, Object> changedFile = obj(arr(data.get("changedFiles")).get(0));
+        assertEquals("root src/main/java/foo.java mapped", changedFile.get("search"));
+
+        Map<String, Object> findingRow = arr(obj(data.get("findings")).get("items")).stream()
+            .map(HtmlRendererTest::obj).findFirst().orElseThrow();
+        assertEquals("no_recognized_oracle warning high src/test/footest.java com.example.footest#m() no assertions here add one",
+            findingRow.get("search"));
+
+        Map<String, Object> warningRow = obj(arr(data.get("warnings")).get(0));
+        assertEquals("some_code a warning message", warningRow.get("search"));
+    }
+
+    @Test
+    void everyRuleIdIsListedEvenWhenItHasZeroFindings() throws IOException {
+        Map<String, Object> data = parseData(HtmlRenderer.render(baseDoc(true, List.of(), List.of())));
+        List<Object> ruleIds = arr(data.get("ruleIds"));
+        assertTrue(ruleIds.contains("NO_RECOGNIZED_ORACLE"));
+        assertTrue(ruleIds.contains("SUBSUMED_TEST"));
+        assertEquals(dev.coverdict.analysis.model.RuleIds.ALL.size(), ruleIds.size());
     }
 
     private static long countOccurrences(String haystack, String needle) {

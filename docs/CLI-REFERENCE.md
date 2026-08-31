@@ -142,21 +142,30 @@ from a mutation phase that is merely slow (D-64).
   `mutation`/`fileCoverage` blocks when those are enabled.
 - **Text** (stdout): the same document rendered for humans, followed by
   `verdict written to <out>`.
-- **HTML** (`--html-report`, opt-in, D-75/D-76/D-77/D-79): the same document rendered as a
-  single self-contained, offline HTML file — same sections as the JSON/text
-  renderers, plus HTML-entity escaping of every input-derived string. Mutation
-  evidence renders as a per-class, filterable detail view (mutator/line/status/
-  killing tests, not just counts) and file coverage as a collapsible,
-  Sonar-style folder tree — both via native `<details>` plus one small static
-  `<script>` (no template interpolation, never touches `innerHTML`/`eval`).
-  Every table scrolls inside its own bounded box instead of the whole page
-  (D-77), a manual light/dark toggle sits in the header alongside the
-  default `prefers-color-scheme` behavior, every top-level section is
-  independently collapsible, and every table/list section carries its own
-  text filter (D-79). The header itself is a what/when/settings summary
-  (modules, diff mode, deduplicated short commit hash, language level,
-  encoding, findings scope, exclusions, render timestamp) rather than a raw
-  git-identity dump.
+- **HTML** (`--html-report`, opt-in, D-75/D-76/D-77/D-79/D-80): the same document
+  rendered as a single self-contained, offline HTML file. D-80 rewrote this as a
+  data-embedded report: [`ReportDataWriter`](../coverdict-cli/src/main/java/dev/coverdict/analysis/report/ReportDataWriter.java)
+  turns the document into one Turkish-formatted, presentation-shaped JSON object
+  ([`docs/GLOSSARY.md`](GLOSSARY.md) has the friendly-name mapping for every
+  rule id/reason code/enum/status it can show), embedded in a
+  `<script type="application/json">` that a small static, interpolation-free
+  `<script>` reads and renders into the DOM (`textContent`/`setAttribute` only,
+  never `innerHTML`/`eval`). All top-level sections are collapsible
+  `<details>` with state remembered per browser (`localStorage`); one search
+  box filters findings, warnings, changed files, mutation evidence, and the
+  file tree at once, opening whatever matches and closing whatever doesn't.
+  Findings group by rule (name/description/suggested action shown once per
+  group, not once per row); the file-coverage tree collapses every
+  single-child folder chain and single-file folder into one row instead of
+  making the reader click through each directory level; mutation counts are
+  broken out by exact PIT status (no catch-all "other" bucket hiding what
+  those mutants actually did). "Değişen dosyalar" and other schema-guaranteed
+  sections always render, with an explicit empty-state message when there's
+  nothing to list, rather than disappearing (hard rule 3a: absence must look
+  like absence, never like it was never checked). A `@media print` rule
+  and matching `beforeprint`/`afterprint` handlers open every section for
+  printing to PDF. Requires JavaScript; a `<noscript>` block says so rather
+  than shipping a silently blank page.
 
 ## `render-html` — render an existing verdict JSON, no fresh analysis
 
