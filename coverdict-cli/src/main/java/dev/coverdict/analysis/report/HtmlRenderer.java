@@ -17,7 +17,13 @@ package dev.coverdict.analysis.report;
  * page with a fixed sidebar + scroll-spy + dashboard card grid (opens in
  * light mode by default - no {@code prefers-color-scheme} auto-dark on
  * first load); every card is built strictly from computed numbers, never a
- * generated judgment sentence (see D-81 for why).
+ * generated judgment sentence (see D-81 for why). D-82 fixed the layout
+ * bugs that survived that rewrite: no text is {@code white-space: nowrap}
+ * without a way to break any more (findings and mutant ids used to paint
+ * over each other and drag a horizontal scrollbar onto the whole page),
+ * the sidebar's links carry group captions instead of a per-row dot that
+ * read as an unchecked checkbox, and below 900px the sidebar becomes a
+ * scrolling top strip rather than disappearing.
  *
  * <p><b>Security.</b> Every byte of {@code doc}-derived text reaches the
  * browser through exactly one path: JSON-encoded (Jackson escapes {@code "}
@@ -138,12 +144,14 @@ public final class HtmlRenderer {
         .side-brand-name { font-size: 15px; font-weight: 680; letter-spacing: -0.01em; }
         .side-brand-sub { font-size: 11px; color: var(--ink3); font-family: var(--mono); white-space: nowrap;
           overflow: hidden; text-overflow: ellipsis; }
-        .side-nav { flex: 1; padding: 12px 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
-        .side-nav a { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 11px; align-items: center;
-          padding: 9px 18px; border-left: 3px solid transparent; color: var(--ink2); font-size: 13px; }
+        .side-nav { flex: 1; padding: 6px 0 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
+        .side-nav-group { padding: 15px 21px 5px 24px; font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+          letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink3); }
+        .side-nav-group:first-child { padding-top: 6px; }
+        .side-nav a { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center;
+          padding: 7px 18px 7px 21px; border-left: 3px solid transparent; color: var(--ink2); font-size: 13px; }
         .side-nav a:hover { background: var(--surf2); color: var(--ink); text-decoration: none; }
-        .side-nav a.active { border-left-color: var(--good); background: var(--surf2); color: var(--ink); }
-        .side-nav-dot { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid currentColor; opacity: 0.6; }
+        .side-nav a.active { border-left-color: var(--good); background: var(--surf2); color: var(--ink); font-weight: 600; }
         .side-nav-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .side-nav-count { font-family: var(--mono); font-size: 10.5px; color: var(--ink3); background: var(--surf2);
           padding: 1px 6px; border-radius: 99px; white-space: nowrap; }
@@ -222,7 +230,7 @@ public final class HtmlRenderer {
           border: 1px solid var(--line); font-family: var(--mono); font-size: 11.5px; display: flex;
           flex-direction: column; gap: 5px; }
         .mut-callout-code { color: var(--ink); overflow-wrap: anywhere; }
-        .mut-callout-meta { color: var(--ink3); }
+        .mut-callout-meta { color: var(--ink3); overflow-wrap: anywhere; }
         .mut-more-link { margin-top: 14px; font-size: 12.5px; color: var(--ink2); display: inline-block; }
         .mut-toolbar { display: flex; gap: 10px; align-items: center; margin: 14px 0 0; flex-wrap: wrap; }
         .mut-toolbar input[type=text] { flex: 1 1 220px; padding: 7px 11px; border: 1px solid var(--line2);
@@ -230,9 +238,12 @@ public final class HtmlRenderer {
         .mut-toolbar label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink2); }
         details.mutation-class { background: var(--surf2); border: 1px solid var(--line); border-radius: 8px;
           padding: 0.5rem 0.8rem; margin: 10px 0 0; }
-        details.mutation-class > summary { cursor: pointer; font-weight: 600; font-size: 13px; }
-        table.mutants { width: max-content; min-width: 100%; }
-        table.mutants td:nth-child(3) { font-weight: 600; }
+        details.mutation-class > summary { cursor: pointer; font-weight: 600; font-size: 13px; overflow-wrap: anywhere; }
+        details.mutation-class h4 { overflow-wrap: anywhere; }
+        table.mutants { width: 100%; }
+        table.mutants td { overflow-wrap: anywhere; vertical-align: top; }
+        table.mutants td:nth-child(3) { font-weight: 600; white-space: nowrap; }
+        table.mutants td:nth-child(4) { color: var(--ink2); }
         tr.status-KILLED td:nth-child(3) { color: var(--good); }
         tr.status-SURVIVED td:nth-child(3) { color: var(--bad); }
 
@@ -260,11 +271,14 @@ public final class HtmlRenderer {
         .finding-group-desc { color: var(--ink2); font-size: 0.88em; margin: 0.5rem 0 0.25rem; }
         .finding-group-action { font-size: 0.88em; margin: 0 0 0.5rem; }
         .finding-rows { border-top: 1px solid var(--line); margin-top: 0.4rem; }
-        .finding-row { display: grid; grid-template-columns: auto minmax(0, auto) minmax(0, auto) 1fr; gap: 0.6rem;
-          align-items: baseline; padding: 0.4rem 0; border-bottom: 1px dotted var(--line); font-size: 0.85em; }
+        .finding-row { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.7rem;
+          align-items: baseline; padding: 0.5rem 0; border-bottom: 1px dotted var(--line); font-size: 0.85em; }
         .finding-row:last-child { border-bottom: none; }
-        .finding-loc, .finding-method { white-space: nowrap; }
-        .finding-message { color: var(--ink2); }
+        .finding-body { min-width: 0; }
+        .finding-ident { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; min-width: 0; }
+        .finding-loc { color: var(--ink); overflow-wrap: anywhere; }
+        .finding-method { color: var(--ink3); overflow-wrap: anywhere; }
+        .finding-message { color: var(--ink2); margin: 3px 0 0; overflow-wrap: anywhere; }
         .sev-badge, .conf-badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.72em; font-weight: 600; }
         .sev-WARNING { background: var(--warn-dim); color: var(--warn); }
         .sev-INFO { background: var(--info-dim); color: var(--info); }
@@ -330,10 +344,25 @@ public final class HtmlRenderer {
           body { background: #fff; }
         }
         @media (max-width: 900px) {
-          .side { display: none !important; }
+          .side { position: static; inset: auto; width: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+          .side-head { border-bottom: 0; padding: 16px 16px 10px; }
+          .side-nav { flex: none; flex-direction: row; align-items: center; gap: 4px;
+            overflow-x: auto; overflow-y: hidden; padding: 0 14px 10px; }
+          .side-nav-group { display: none; }
+          .side-nav a { flex: none; grid-template-columns: auto auto; white-space: nowrap; padding: 6px 10px;
+            border-left: 0; border-bottom: 2px solid transparent; border-radius: 6px 6px 0 0; }
+          .side-nav a.active { border-left: 0; border-bottom-color: var(--good); }
+          .side-foot { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 10px 14px; }
+          .side-foot-btn { width: auto; }
+          .side-foot-meta { display: none; }
           .main { margin-left: 0 !important; }
+          .wrap { padding: 22px 18px 32px; }
           .grid { grid-template-columns: 1fr; }
           .grid > * { grid-column: auto !important; }
+          .metric-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+          .metric-row code { flex: 1 1 auto; }
+          .metric-row-bar { flex: 1 1 100%; order: 9; }
+          .file-row { grid-template-columns: minmax(0, 1fr) 90px 52px; gap: 10px; }
         }
         """;
 
@@ -524,8 +553,8 @@ public final class HtmlRenderer {
             return card;
           }
           function buildDetayCard(concern, otherCount) {
-            var card = el('section', { id: 'detay', class: 'card col-7' });
-            var head = el('div', { style: 'padding:0 0 14px;margin:-22px -26px 18px;padding:18px 26px;background:var(--bad-dim);border-bottom:1px solid var(--line);border-radius:12px 12px 0 0;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap' });
+            var card = el('section', { id: 'detay', class: 'card col-12' });
+            var head = el('div', { style: 'margin:-22px -26px 18px;padding:18px 26px;background:var(--bad-dim);border-bottom:1px solid var(--line);border-radius:12px 12px 0 0;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap' });
             head.appendChild(el('span', { class: 'mut-flag mut-flag-bad', text: label(concern.status).name.toUpperCase() }));
             head.appendChild(el('span', { style: 'font-size:14px;font-weight:600', text: label(concern.status).name + ' mutant' }));
             head.appendChild(el('span', { style: 'font-size:12px;color:var(--ink2);margin-left:auto', text: 'L3 \\u00b7 ' + concern.moduleId }));
@@ -537,8 +566,8 @@ public final class HtmlRenderer {
               text: 'sat\\u0131r ' + concern.firstLine + '-' + concern.lastLine }));
             card.appendChild(top);
             var mutRow = el('div', { style: 'margin-top:12px;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;padding:10px 13px;border-radius:8px;background:var(--surf2);border:1px solid var(--line);font-family:var(--mono);font-size:12px' });
-            mutRow.appendChild(el('span', { style: 'color:var(--bad);font-weight:600', text: concern.mutator }));
-            mutRow.appendChild(el('span', { style: 'color:var(--ink3);margin-left:auto',
+            mutRow.appendChild(el('span', { style: 'color:var(--bad);font-weight:600;min-width:0;overflow-wrap:anywhere', text: concern.mutator }));
+            mutRow.appendChild(el('span', { style: 'color:var(--ink3);margin-left:auto;min-width:0;overflow-wrap:anywhere',
               text: concern.killingTests.length ? concern.killingTests.join(', ') : 'öldüren test yok' }));
             card.appendChild(mutRow);
             if (otherCount > 0) {
@@ -631,7 +660,7 @@ public final class HtmlRenderer {
             card.appendChild(head);
             card.appendChild(el('p', { class: 'card-sub',
               text: f.items.length === 0
-                ? DATA.ruleIds.length + ' kuraln\\u0131n hi\\u00e7biri tetiklenmedi. Kural listesi s\\u0131f\\u0131rken de g\\u00f6r\\u00fcn\\u00fcr kal\\u0131yor \\u2014 hangi kontrollerin ger\\u00e7ekten \\u00e7al\\u0131\\u015ft\\u0131\\u011f\\u0131, sonu\\u00e7 bo\\u015f oldu\\u011funda daha \\u00f6nemlidir.'
+                ? DATA.ruleIds.length + ' kural\\u0131n hi\\u00e7biri tetiklenmedi. Kural listesi s\\u0131f\\u0131rken de g\\u00f6r\\u00fcn\\u00fcr kal\\u0131yor \\u2014 hangi kontrollerin ger\\u00e7ekten \\u00e7al\\u0131\\u015ft\\u0131\\u011f\\u0131, sonu\\u00e7 bo\\u015f oldu\\u011funda daha \\u00f6nemlidir.'
                 : f.items.length + ' bulgu, ' + Object.keys(groups).length + ' kuralda topland\\u0131.' }));
 
             var pillRow = el('div', { class: 'pill-row' });
@@ -673,11 +702,14 @@ public final class HtmlRenderer {
                 items.forEach(function (it) {
                   var row = el('div', { class: 'finding-row', 'data-search': it.search, id: it.fingerprint ? ('f-' + it.fingerprint) : null });
                   row.appendChild(el('span', { class: 'conf-badge conf-' + it.confidence, text: label(it.confidence).name }));
-                  var loc = el('code', { class: 'finding-loc' });
-                  loc.appendChild(txt(it.path + ':' + it.startLine + (it.endLine !== it.startLine ? ('-' + it.endLine) : '')));
-                  row.appendChild(loc);
-                  row.appendChild(el('code', { class: 'finding-method', text: it.anchorMethod || '\\u2014' }));
-                  row.appendChild(el('span', { class: 'finding-message', text: it.message }));
+                  var ident = el('div', { class: 'finding-ident' });
+                  ident.appendChild(el('code', { class: 'finding-loc',
+                    text: it.path + ':' + it.startLine + (it.endLine !== it.startLine ? ('-' + it.endLine) : '') }));
+                  ident.appendChild(el('code', { class: 'finding-method', text: it.anchorMethod || '\\u2014' }));
+                  var body = el('div', { class: 'finding-body' });
+                  body.appendChild(ident);
+                  body.appendChild(el('p', { class: 'finding-message', text: it.message }));
+                  row.appendChild(body);
                   rows.appendChild(row);
                 });
                 group.appendChild(rows);
@@ -765,7 +797,7 @@ public final class HtmlRenderer {
             var state = { view: 'risk', q: '', band: 'all', asc: true };
             var card = el('section', { id: 'dosyalar', class: 'card col-12' });
             var head = el('div', { class: 'card-head' });
-            head.appendChild(el('h2', { class: 'card-title', text: 'Dosya baz\\u0131l\\u0131 kapsama' }));
+            head.appendChild(el('h2', { class: 'card-title', text: 'Dosya bazl\\u0131 kapsama' }));
             card.appendChild(head);
             card.appendChild(el('p', { class: 'card-sub',
               text: 'Varsay\\u0131lan s\\u0131ralama alfabe de\\u011fil, risk: en d\\u00fc\\u015f\\u00fck kapsama \\u00fcstte. Paket g\\u00f6r\\u00fcn\\u00fcm\\u00fc nerede yo\\u011funla\\u015ft\\u0131\\u011f\\u0131n\\u0131 g\\u00f6sterir.' }));
@@ -885,9 +917,9 @@ public final class HtmlRenderer {
             return card;
           }
           function buildPerTestCard() {
-            var card = el('section', { id: 'test-kaniti', class: 'card col-12' });
+            var card = el('section', { id: 'test-kaniti', class: 'card col-7' });
             var head = el('div', { class: 'card-head' });
-            head.appendChild(el('h2', { class: 'card-title', text: 'Test baz\\u0131l\\u0131 kan\\u0131t (L2)' }));
+            head.appendChild(el('h2', { class: 'card-title', text: 'Test bazl\\u0131 kan\\u0131t (L2)' }));
             card.appendChild(head);
             card.appendChild(el('p', { class: 'card-sub',
               text: 'Testlerin hangi \\u00fcretim sat\\u0131rlar\\u0131n\\u0131 \\u00e7al\\u0131\\u015ft\\u0131rd\\u0131\\u011f\\u0131na dair kan\\u0131t. \\u201cambient\\u201d: her testte ayn\\u0131 \\u015fekilde \\u00e7al\\u0131\\u015fan, o teste \\u00f6zg\\u00fc olmayan sat\\u0131rlar.' }));
@@ -955,9 +987,13 @@ public final class HtmlRenderer {
             side.appendChild(head);
 
             var navEl = el('div', { class: 'side-nav' });
+            var lastGroup = null;
             navItems.forEach(function (n) {
+              if (n.group && n.group !== lastGroup) {
+                navEl.appendChild(el('div', { class: 'side-nav-group', text: n.group }));
+                lastGroup = n.group;
+              }
               var a = el('a', { href: '#' + n.id, id: 'nav-' + n.id });
-              a.appendChild(el('span', { class: 'side-nav-dot' }));
               a.appendChild(el('span', { class: 'side-nav-label', text: n.label }));
               if (n.count !== undefined && n.count !== '') { a.appendChild(el('span', { class: 'side-nav-count', text: n.count })); }
               navEl.appendChild(a);
@@ -1072,36 +1108,37 @@ public final class HtmlRenderer {
           function init() {
             var app = document.getElementById('app');
             var emptyList = [];
-            var navItems = [{ id: 'ozet', label: '\\u00d6zet', count: '' }];
+            var navItems = [{ id: 'ozet', label: '\\u00d6zet', count: '', group: 'GENEL' }];
             var grid = el('div', { class: 'grid' });
 
             grid.appendChild(buildKapsamaCard());
-            navItems.push({ id: 'kapsama', label: 'Kapsama', count: '' });
+            var jacocoNav = DATA.coverage.overall.filter(function (m) { return m.mode === 'jacoco-line'; })[0];
+            navItems.push({ id: 'kapsama', label: 'Kapsama', count: jacocoNav ? jacocoNav.pctText : '', group: 'GENEL' });
 
             var concern = findConcernMutant();
             if (DATA.mutation) {
               grid.appendChild(buildMutasyonCard(concern));
               var t = mutationTotals();
-              navItems.push({ id: 'mutasyon', label: 'Mutasyon', count: t.killed + '/' + t.all });
+              navItems.push({ id: 'mutasyon', label: 'Mutasyon', count: t.killed + '/' + t.all, group: 'GENEL' });
             } else {
               emptyList.push({ name: 'Mutasyon kan\\u0131t\\u0131', why: 'toplanmad\\u0131' });
             }
 
             grid.appendChild(buildBulgularCard());
-            navItems.push({ id: 'bulgular', label: 'Bulgular', count: String(DATA.findings.items.length) });
+            navItems.push({ id: 'bulgular', label: 'Bulgular', count: String(DATA.findings.items.length), group: 'GENEL' });
 
             if (DATA.changedFiles.length) {
               grid.appendChild(buildChangedFilesCard());
-              navItems.push({ id: 'degisen-dosyalar', label: 'De\\u011fi\\u015fen dosyalar', count: String(DATA.changedFiles.length) });
+              navItems.push({ id: 'degisen-dosyalar', label: 'De\\u011fi\\u015fen dosyalar', count: String(DATA.changedFiles.length), group: 'KAPSAMA DETAYI' });
             } else {
               emptyList.push({ name: 'De\\u011fi\\u015fen dosyalar', why: DATA.meta.diffMode });
             }
 
             if (DATA.fileCoverage) {
               grid.appendChild(buildDosyalarCard());
-              navItems.push({ id: 'dosyalar', label: 'Dosyalar', count: fmtInt(DATA.fileCoverage.totalFiles) });
+              navItems.push({ id: 'dosyalar', label: 'Dosyalar', count: fmtInt(DATA.fileCoverage.totalFiles), group: 'KAPSAMA DETAYI' });
             } else {
-              emptyList.push({ name: 'Dosya baz\\u0131l\\u0131 kapsama', why: 'toplanmad\\u0131' });
+              emptyList.push({ name: 'Dosya bazl\\u0131 kapsama', why: 'toplanmad\\u0131' });
             }
 
             var otherConcern = 0;
@@ -1111,24 +1148,24 @@ public final class HtmlRenderer {
               Object.keys(totals).forEach(function (s) { if (s !== 'KILLED') { concerning += totals[s]; } });
               otherConcern = Math.max(0, concerning - 1);
               grid.appendChild(buildDetayCard(concern, otherConcern));
-              navItems.push({ id: 'detay', label: 'Mutant detay\\u0131', count: '1' });
+              navItems.push({ id: 'detay', label: '\\u00d6ne \\u00e7\\u0131kan mutant', count: String(otherConcern + 1), group: 'MUTASYON DETAYI' });
             }
 
             if (DATA.mutation && DATA.mutation.modules.length) {
               grid.appendChild(buildMutasyonDetailCard());
-              navItems.push({ id: 'mutasyon-detay', label: 'Mutasyon detay\\u0131', count: '' });
+              navItems.push({ id: 'mutasyon-detay', label: 'T\\u00fcm mutantlar', count: fmtInt(mutationTotals().all), group: 'MUTASYON DETAYI' });
             }
 
             if (DATA.warnings.length) {
               grid.appendChild(buildReasonCard('uyarilar', 'Uyar\\u0131lar', DATA.warnings));
-              navItems.push({ id: 'uyarilar', label: 'Uyar\\u0131lar', count: String(DATA.warnings.length) });
+              navItems.push({ id: 'uyarilar', label: 'Uyar\\u0131lar', count: String(DATA.warnings.length), group: 'TE\\u015eH\\u0130S' });
             } else {
               emptyList.push({ name: 'Uyar\\u0131lar', why: '0 kay\\u0131t' });
             }
 
             if (DATA.incompleteReasons.length) {
               grid.appendChild(buildReasonCard('eksik-nedenler', 'Eksik nedenler', DATA.incompleteReasons));
-              navItems.push({ id: 'eksik-nedenler', label: 'Eksik nedenler', count: String(DATA.incompleteReasons.length) });
+              navItems.push({ id: 'eksik-nedenler', label: 'Eksik nedenler', count: String(DATA.incompleteReasons.length), group: 'TE\\u015eH\\u0130S' });
             } else {
               emptyList.push({ name: 'Eksik nedenler', why: '0 kay\\u0131t' });
             }
@@ -1136,13 +1173,13 @@ public final class HtmlRenderer {
             var perTestTotal = DATA.perTest ? DATA.perTest.reduce(function (s, p) { return s + p.entryLineCount; }, 0) : 0;
             if (DATA.perTest && perTestTotal > 0) {
               grid.appendChild(buildPerTestCard());
-              navItems.push({ id: 'test-kaniti', label: 'Test baz\\u0131l\\u0131 kan\\u0131t', count: fmtInt(perTestTotal) });
+              navItems.push({ id: 'test-kaniti', label: 'Test bazl\\u0131 kan\\u0131t', count: fmtInt(perTestTotal), group: 'TE\\u015eH\\u0130S' });
             } else {
-              emptyList.push({ name: 'Test baz\\u0131l\\u0131 kan\\u0131t (L2)', why: DATA.perTest ? '0 kay\\u0131t' : 'toplanmad\\u0131' });
+              emptyList.push({ name: 'Test bazl\\u0131 kan\\u0131t (L2)', why: DATA.perTest ? '0 kay\\u0131t' : 'toplanmad\\u0131' });
             }
 
             grid.appendChild(buildKosuCard(emptyList));
-            navItems.push({ id: 'kosu', label: 'Ko\\u015fu', count: '' });
+            navItems.push({ id: 'kosu', label: 'Ko\\u015fu ve te\\u015fhis', count: '', group: 'TE\\u015eH\\u0130S' });
 
             app.appendChild(buildSidebar(navItems));
             var main = el('div', { class: 'main' });

@@ -2063,6 +2063,91 @@ nothing), `applyDeepLink` now looks up any `location.hash` id after
 `init()` finishes and scrolls to it - findings additionally get their
 parent `.finding-group` opened first.
 
+**D-82 · HTML report: findings stop overflowing the page, sidebar navigation
+gets groups instead of checkbox-looking dots, and the report stays usable
+below 900px** (2026-09-01)
+Looking at a real generated report (`coverdict-playground`, 11 findings, 21
+mutants), the user rejected two things by name: the sidebar's section
+labels, and areas whose content spilled out of them. Both were real; the
+overflow was a layout bug, not a styling preference.
+
+**The findings table could not fit on one line and nothing stopped it.**
+D-81's `.finding-row` was a four-column grid - `auto minmax(0, auto)
+minmax(0, auto) 1fr` - holding a confidence badge, a `path:line`, a
+fully-qualified `class#signature`, and a sentence, with `white-space:
+nowrap` on the two `<code>` columns. `minmax(0, auto)` maxes out at
+max-content, nowrap content refuses to shrink, and no clipping was set - so
+the location text painted straight over the method text, the message column
+collapsed to ~60px of ribbon, and the overflow cascaded up
+`.finding-rows` → `.finding-group` → `.card` → `.grid` → `.wrap` → `body`,
+giving the whole page a horizontal scrollbar (measured: 1604px of content
+in a 1440px viewport; 1411px in 1024px). Sibling code already knew better -
+`.file-row` uses `minmax(0, 1fr)` plus `overflow: hidden` on its name cell
+and never overflowed.
+
+The row is now two lines inside one `max-content minmax(0, 1fr)` grid:
+badge in column one, and in column two a `.finding-ident` flex line (path,
+then the method in `--ink3`) above a full-width `.finding-message`
+paragraph. Both `<code>` elements carry `overflow-wrap: anywhere`, so a long
+path wraps instead of either overflowing or being cut - **ellipsis was
+rejected here**: a truncated path hides the half that identifies the file
+(`.../Calculator.java:11`), and hard rule 1 does not allow the report to
+drop evidence for tidiness. Wrapping is lossless; truncation is not.
+
+**The mutant table asked for 5 470px.** `table.mutants` was `width:
+max-content`, and its "öldüren testler" cell joins whole JUnit unique ids
+(`[engine:junit-jupiter]/[class:...]/[method:...]`) with commas - one cell
+measured 4 839px wide. `.table-wrap`'s `overflow-x: auto` kept that off the
+page but left the evidence behind a scrollbar nobody reaches the end of.
+The table is now `width: 100%` with `overflow-wrap: anywhere` on its cells:
+same rows, same ids, wrapped into the card. `.mut-callout-meta` and the
+spotlight card's killing-test list got the same treatment; they were
+overflowing the narrow col-4 Mutasyon card for the same reason.
+
+**The sidebar read as a to-do list.** `.side-nav-dot` was a 14px square with
+a 1.5px border, no fill, one per row - visually an unchecked checkbox, and
+the strongest cue in the whole sidebar. It is gone; the active-state left
+rail (already there) is enough. In its place the nav gained group captions
+(`GENEL`, `KAPSAMA DETAYI`, `MUTASYON DETAYI`, `TEŞHİS`) emitted from an
+optional `group` field on each nav item. **Card order was deliberately not
+touched** so that nav order still equals DOM order - scroll-spy compares
+`getBoundingClientRect().top` against a fixed threshold and mis-highlights
+the moment the two diverge.
+
+Three labels sat adjacent and said nearly the same thing - "Mutasyon",
+"Mutant detayı", "Mutasyon detayı". The last two are now "Öne çıkan mutant"
+and "Tüm mutantlar", and "Koşu" is "Koşu ve teşhis", matching its own card
+title. Counts that were placeholders became facts: Kapsama shows the
+jacoco-line percentage, "Öne çıkan mutant" shows how many mutants are
+actually concerning (the same `otherCount + 1` its card already prints)
+instead of a hard-coded `1`, and "Tüm mutantlar" shows the mutant total
+instead of nothing.
+
+**Below 900px the sidebar used to `display: none`.** Every section link
+disappeared with it and nothing replaced them. The sidebar now becomes a
+static top strip whose nav scrolls horizontally (group captions hide, the
+active marker moves from the left border to the bottom); `.metric-row` and
+`.file-row` reflow rather than overflow at that width. The `@media print`
+rule still hides it.
+
+**Two grid holes closed.** The mutant spotlight was `col-7` with nothing
+beside it (five dead columns) and needed the width anyway for its
+`class#signature` and killing-test ids - it is `col-12` now. "Test bazlı
+kanıt" was a three-row table at `col-12`; at `col-7` it pairs exactly with
+"Koşu ve teşhis" (`col-5`) and the report no longer ends on a half-empty
+row.
+
+**Two Turkish strings were wrong.** `bazılı` renders "bazılı", not
+"bazlı" - five occurrences in `HtmlRenderer` ("Test bazlı kanıt", "Dosya
+bazlı kapsama"), while `ReportLabels` had spelled the same word correctly
+all along. The zero-findings line read "6 kuralnın hiçbiri tetiklenmedi";
+the genitive of *kural* is *kuralın*.
+
+Finding messages and `suggestedAction` text stay English - they come from
+the analysis engine and are part of the verdict document (the JSON is the
+product; only the report's own chrome is Turkish). Left as is, noted here
+because it looks like an oversight in a Turkish report and is not one.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not
