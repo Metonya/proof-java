@@ -1,9 +1,9 @@
 # Research notes
 
 Facts, measurements, models, and external observations the project relies on.
-Prototype numbers reproduce via `prototype/demo-bank/run.sh`; modeled and
-externally sourced numbers are labeled separately and are research context,
-not product acceptance evidence.
+Modeled and externally sourced numbers are labeled as such: they are research
+context, not product acceptance evidence. Numbers from the pre-CLI prototype are
+kept where they are still the best measurement available, and marked.
 
 ## 1. Coverage metric formulas
 
@@ -34,13 +34,12 @@ Resolved constraint: the JaCoCo agent's state is global; parallel test execution
 races `reset()` across threads. D-13 selects a sequential spike, while D-18
 records why exact attribution remains unproven.
 
-**Superseded by D-47 (M2 Faz 0, 2026-08-25):** this whole mechanism -
-JUnit listener + JaCoCo `reset()`/`getExecutionData()` - is not the L2
-engine. PIT's own coverage-collection phase (`CoverageExporterFactory` +
-`LineMapper` SPI) already produces a per-test line map without any reset
-choreography of proof-java's own. See `validation/runs/pit-spike/FINDINGS.md`
-and §13 below. D-13's sequential-reset design survives only as M2's
-documented fallback if a corpus repo cannot get PIT's coverage phase green.
+**This is not how L2 is built (D-47).** PIT's own coverage-collection phase
+(`CoverageExporterFactory` + `LineMapper` SPI) already produces a per-test line
+map, with no reset choreography of proof-java's own; see §13. The reset findings
+above are kept because they are still true of the JaCoCo agent, and because
+D-13's sequential-reset design remains the documented fallback if PIT's coverage
+phase cannot be made to work on a given repo.
 
 ## 3. Scaling measurement
 
@@ -49,9 +48,9 @@ Measured: per-test analysis via one `jacococli` process per exec file, 16 tests
 ≈ 25 min. The earlier ~60× in-process claim is an unverified upper-bound model,
 not a benchmark; D-18 requires measurement before architecture.
 
-**Correction (M2 Faz 0, 2026-08-25):** the 309 ms/test figure is an artifact
-of this specific prototype's process-per-test design (`jacococli` shelled
-out once per `.exec` file), not a property of per-test coverage generally.
+**The 309 ms/test figure does not generalize.** It is an artifact of the
+prototype's process-per-test design (`jacococli` shelled out once per `.exec`
+file), not a property of per-test coverage.
 PIT's coverage-collection phase, measured against proof-java's own
 `analysis.oracle.*` scope (41 test classes), completed in ~1 second total -
 no per-test process spawn, no per-test disk write. The 25-minute,
@@ -96,20 +95,20 @@ an actual dependency/license inventory.
 - SonarQube has broader static test-hygiene rules than first assumed; its
   architectural gap is local diff/runtime evidence, not absence of AST rules.
 - JNose Test is the closest open-source detector: Java AST + JaCoCo, but a GPLv3
-  research web app without local diff or mutation fusion. Never copy its source.
+  research web app without local diff or mutation fusion. Its licence also makes
+  it unusable as a source of implementation ideas for this project.
 - Teamscale is the closest overall commercial capability; deep-dive in §7a.
 - ArcMutate owns commercial diff-scoped mutation. Open-source PIT removed
   `scmMutationCoverage` and requires caller-supplied targets (D-12).
 - Diffblue Cover and Qodo Cover generate tests; they do not provide this audit
-  workflow. Pricing and version details are volatile and stay in raw research.
+  workflow.
 
-Full evidence and dated URLs: `docs/research-raw/01-competitive-landscape.md`.
+Pricing and version details are volatile and deliberately not recorded here.
 
-### 7a. Teamscale deep-dive
+### 7a. Teamscale
 
-Per-contributor pricing, no public list price: `Licensed Contributors =
-max(active 180-day UI/API users, 180-day committers on analyzed paths)` — a
-max of two counts, not a union. `teamscale-java-profiler` (open-source JVM
+The closest overall commercial capability, and the useful comparison is
+architectural rather than commercial. `teamscale-java-profiler` (open-source JVM
 agent, embeds JaCoCo) attributes per-test coverage via explicit
 `POST /test/start|end` lifecycle calls rather than automatic detection, and
 runs fully offline in `exec-file`/`disk` mode; only the intelligence layer
@@ -119,40 +118,34 @@ new-code metric is method-level: `(untested new+changed methods) /
 ranking combines coverage-efficiency, term-similarity, **and LLM-embedding
 clustering** — the third heuristic is exactly what AGENTS.md hard rule 1
 rules out for proof-java; never an auto-delete suggestion either way. No
-mutation engine. Weak-oracle/tautology detection is undocumented (treat as
-absent, not confirmed absent). Full evidence:
-`docs/research-raw/05-teamscale-deep-dive.md`.
+mutation engine. Weak-oracle/tautology detection is undocumented, which means
+absent from the docs, not confirmed absent from the product.
 
 ## 8. Release licensing and trademarks
 
 JaCoCo linking/redistribution is compatible with the chosen Apache-2.0 project
 license if EPL notices, source availability, and the actual transitive license
 inventory are shipped. JavaParser is used under its Apache-2.0 option. Descartes
-stays external under the voluntary policy in D-09/D-20. ASF policy is guidance,
-not jurisdiction over proof-java. Trademark conclusions remain project policy,
-not legal advice: third-party marks stay adjectival next to a descriptive noun
-and never become a CLI value, subcommand, package or repo name — which is why
-the metric mode is `sonar-compatible`. Full evidence:
-`docs/research-raw/02-licensing.md`.
+stays external under the voluntary policy in D-09/D-20. Trademark conclusions
+are project policy, not legal advice: third-party marks stay adjectival next to
+a descriptive noun and never become a CLI value, subcommand, package or repo
+name — which is why the metric mode is `sonar-compatible` and never bare
+`sonar`.
 
 ## 9. Per-test coverage under parallel execution
 
 JaCoCo probe arrays are process-global, so overlapping tests cannot be isolated
 by reset. Thread-local probes also lose attribution across async/thread-pool
-boundaries. A sequential profile is therefore the M2 hypothesis, not proof of
-exact attribution: lifecycle, static state, retries, child JVMs, and lingering
-async work remain. Earlier 18–22/18–25 minute figures are models. Full evidence:
-`docs/research-raw/03-parallel-coverage.md`; decision boundary: D-13/D-18.
+boundaries. Earlier 18–22 minute figures are models, not measurements; decision boundary:
+D-13/D-18.
 
-**Superseded by D-47 (M2 Faz 0, 2026-08-25):** this entire problem statement
-assumed proof-java has to solve JaCoCo probe isolation itself. It does not -
-PIT already isolates coverage collection per test inside its own minion
-process and exposes a per-test line map through a public SPI. Lifecycle,
-static state, and child-JVM risks are still real questions, but they are now
-M2 Faz 2's *validation* questions (do PIT's own isolation guarantees hold on
-real repos - measured via Jaccard stability, not assumed), not open design
-questions proof-java has to solve by writing its own reset choreography. See
-§13.
+**proof-java does not solve this itself (D-47).** PIT isolates coverage
+collection per test inside its own minion process and exposes a per-test line
+map through a public SPI. Lifecycle, static state and child-JVM risks are still
+real, but they became validation questions - do PIT's isolation guarantees hold
+on real repos, measured via Jaccard stability rather than assumed - instead of
+design questions this project has to answer with its own reset choreography.
+See §13.
 
 ## 10. Known detection limits
 
@@ -177,7 +170,7 @@ not for popularity: nested-class dollar-sign naming (`Outer$Inner` in JaCoCo
 XML vs. child-node AST), dynamic-test source constructs, inheritance, generated
 code, and multi-module path resolution. Runtime-event aggregation belongs to
 M2, not M1. M0 pins a small canary plus AssertJ Core, JUnit 5, and Dropwizard;
-full rationale and alternatives: `docs/research-raw/04-repo-selection.md`.
+the alternatives considered are in this repo's history.
 
 ## 12. Non-Java landscape (context, not a product boundary)
 
@@ -187,13 +180,11 @@ iOS/Swift, and six SaaS platforms (Codecov, Coveralls, DeepSource,
 CodeClimate, Qlty, GitHub CodeQL). Stryker (JS and .NET) is the closest
 multi-axis tool anywhere — native diff-scoped mutation — but still has no
 static oracle-quality check, and its per-test coverage data skips irrelevant
-mutants rather than flagging redundant tests. Full evidence:
-`docs/research-raw/06-non-java-landscape.md`.
+mutants rather than flagging redundant tests.
 
 ## 13. Per-test attribution engines (M2 Faz 0, 2026-08-25)
 
-A deep-research report (`docs/research-raw/07-jvm-per-test-coverage-research.md`)
-surveyed alternative L2 architectures - group testing, ablation, hybrid
+A survey of alternative L2 architectures - group testing, ablation, hybrid
 static/dynamic call graphs, a custom ASM forked-worker agent - against
 existing engines (PIT, JCov, IntelliJ, Azure DevOps TIA, Datadog, Google/Meta
 internal systems). Its own evidence undercut its top recommendation (a custom

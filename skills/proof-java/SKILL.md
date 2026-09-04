@@ -147,8 +147,8 @@ default budget of 300s **per module**.
 - **Never judge a test by reading it and record that as a finding.** Findings come
   from proof-java only (hard rule 1: evidence over judgment).
 
-## Record the run
+## Report what you changed
 
-A loop that leaves no trace cannot be evaluated later. Fill in
-`reference/loop-log-template.md` as you go — it captures which findings appeared,
-what you did about each, and whether the finding changed what you did.
+Say which findings you acted on and which you left alone, and why. A finding you
+deliberately ignored is a decision the human needs to see — silently skipping it
+looks the same as never having run the tool.

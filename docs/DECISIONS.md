@@ -1790,7 +1790,7 @@ scrolls when it doesn't; `td`/`th` also cap at `max-width: 28rem` with
 `overflow-wrap: anywhere` so one absurdly long token wraps before forcing
 the table wider still. (2) the report only ever followed the OS/browser's
 `prefers-color-scheme` with no manual override - added a fixed-position
-"Koyu Mod"/"Açık Mod" toggle button (`#theme-toggle`) in the header,
+theme toggle button (`#theme-toggle`) in the header,
 following the artifact-design three-tier token pattern: light values on
 bare `:root`, the existing dark `@media` block now guarded by
 `:root:not([data-theme="light"])` so an explicit choice can still win, and
@@ -1808,14 +1808,13 @@ design: `proof-java.exportReport`'s optional per-test/mutation re-run could
 come back with `PER_TEST_NO_CHANGED_TARGETS`/`MUTATION_NO_CHANGED_TARGETS`
 (no class currently in the diff) even though the extension's own sidebar
 had real, current-looking per-class evidence a moment earlier from an
-explicitly-targeted Derin Tarama/Mutasyon Testi run - and the export command
+explicitly-targeted deep-scan or mutation run - and the export command
 then unconditionally overwrote that good in-memory state with the empty
 rescan's result, exactly the class of silent-clobber bug D-73/D-74 already
-fixed once for `PERTEST_STORAGE_FILE`/`MUTATION_STORAGE_FILE`. Separately:
-"kapa aç yapıyorum bunlar kayboluyor, en güncel taramayla gelmesi gerekmez
-mi" - the user's real expectation is that export reflects what the
-extension already knows, not a brand-new, possibly narrower-scoped
-analysis.
+fixed once for `PERTEST_STORAGE_FILE`/`MUTATION_STORAGE_FILE`. Separately, the
+reported expectation was that closing and reopening the panel should not
+lose evidence, and that export reflects what the extension already knows -
+not a brand-new, possibly narrower-scoped analysis.
 
 Fix: `proof-vscode` no longer calls `analyze` to build the export's
 document. It composes a verdict JSON directly from whatever it currently
@@ -1835,318 +1834,112 @@ by round-tripping every field through both (`VerdictJsonReaderTest`).
 the same one render implementation (hard rule 7), reading from disk
 instead of building a `VerdictDocument` in-process.
 
-**D-79 · HTML report: collapsible sections everywhere, filters on every
-table, header redone as a what/when/settings summary** (2026-08-30)
-Three more real complaints against the same live report: (1) the header
-was a raw git-identity dump (`baseRef`/`base`/`mergeBase`/`head` as
-unlabeled 40-char hashes, often three identical ones stacked) with no
-render timestamp, no module identity, no settings - replaced with a
-labeled summary (module list, human-phrased diff mode, deduplicated short
-commit hash with the full SHA in a tooltip, language level, encoding,
-findings scope, exclusions) plus a "Rapor oluşturulma zamanı" line -
-honestly the HTML's own render time (`Instant.now()`), not an "evidence
-collected at" claim the byte-deterministic JSON schema has no field for.
-(2) Only the mutation/file-coverage sections were collapsible - every
-top-level section is now a `<details open class="report-section">`
-(`openSection`/`closeSection`), so Uyarılar (or any section) can be closed
-exactly like those two already could. (3) Only mutation/file-coverage were
-filterable - Değişen Dosyalar, Bulgular, Uyarılar/Eksik nedenler, and Test
-bazlı kanıt now carry a text filter too, via one new generic script
-function (`proof-javaFilterRows`, `input.closest('.filterable')` +
-`[data-search]`) instead of a bespoke function per section. A related fix
-found while widening the findings table with real long content: `<code>`
-cells (paths, method signatures) now get `white-space: nowrap` and scroll
-within their own `.table-wrap` instead of `overflow-wrap: anywhere`
-breaking a filename mid-extension - prose cells (message/suggestedAction)
-still wrap normally at word boundaries.
+**D-79 · HTML report: labeled run header, collapsible sections, per-table
+filters** (2026-08-30)
+The header was a raw git-identity dump - `baseRef`/`base`/`mergeBase`/`head` as
+unlabeled 40-char hashes, often three identical ones stacked. Replaced with a
+labeled summary: module list, human-phrased diff mode, deduplicated short commit
+hash with the full SHA in a tooltip, language level, encoding, findings scope,
+exclusions. The timestamp on it is honestly the HTML's own render time
+(`Instant.now()`), never an "evidence collected at" claim - the byte-deterministic
+JSON has no field for that, and inventing one would be a provenance lie. Every
+top-level section became collapsible and every table filterable, through one
+generic filter function rather than a bespoke one per section.
 
-**D-80 · HTML report rewritten as a data-embedded, JS-rendered report:
-friendly-name glossary, path-compressed file tree, one global search,
-per-status mutation counts, always-present sections** (2026-08-31)
-D-75 through D-79 kept adding features to a renderer that printed every row
-as HTML server-side; a real report (gson corpus, 33 findings, 12 mutants, 81
-files) surfaced the shape of problem another feature couldn't fix: the file
-tree needed 8 clicks through single-child folders before showing a single
-real file, 33 findings repeated the same rule description and suggested
-action 33 times, per-section filter boxes meant knowing which section held
-what you searched for, the mutation summary bucketed 12 `NO_COVERAGE`
-mutants into an opaque "12 diğer", `renderChangedFiles` returned early on an
-empty list so "no changed files" and "this was never computed" looked
-identical (contrary to hard rule 3a), and every table's horizontal scrollbar
-hid the column a reader actually needed. Fixing these one at a time inside
-the print-every-row-as-HTML architecture kept adding bespoke per-section
-JS (`proof-javaFilterMutation`, `proof-javaFilterFileTree`, ...) that didn't
-compose.
+**D-80 · HTML report rewritten as a data-embedded, JS-rendered document with a
+friendly-name glossary** (2026-08-31)
+D-75 through D-79 kept adding features to a renderer that printed every row as
+HTML server-side. A real report (gson corpus: 33 findings, 12 mutants, 81 files)
+showed the architecture was the problem, not the features: eight clicks through
+single-child folders before a real file appeared, the same rule description
+repeated 33 times, per-section filter boxes that required knowing which section
+held what you wanted, and twelve `NO_COVERAGE` mutants collapsed into an opaque
+"12 other".
 
-Architecture: [`ReportDataWriter`](../proof-java-cli/src/main/java/dev/proofjava/analysis/report/ReportDataWriter.java)
-turns `VerdictDocument` into one presentation-shaped JSON object (Turkish
-number formatting, a path-compressed file tree, simplified mutation method
-signatures, a friendly-name/description lookup for only the codes this
-report actually uses) instead of `HtmlRenderer` printing markup row by row.
-`HtmlRenderer` now only builds a static shell (head/CSS/`<noscript>`) and
-embeds that JSON in `<script id="proof-data" type="application/json">`;
-one static, interpolation-free `<script>` (same file, unconditionally
-static source text - `HtmlRenderer.render` never touches it with a doc-derived
-value) parses it and builds the whole page with `createElement`/
-`textContent`/`setAttribute`/`classList` only, never `innerHTML`/`eval` -
-the same no-injection posture D-75/D-76 established, now enforced at one
-boundary instead of forty call sites. This is a within-milestone rendering
-change only (hard rule 8): the verdict JSON schema, `VerdictDocument`,
-`VerdictJsonWriter`, `TextRenderer`, and both CLI commands (`analyze
---html-report`, `render-html`) are unchanged - `HtmlRenderer.render(doc)`
-keeps its exact signature.
+[`ReportDataWriter`](../proof-java-cli/src/main/java/dev/proofjava/analysis/report/ReportDataWriter.java)
+now turns `VerdictDocument` into one presentation-shaped JSON object;
+`HtmlRenderer` builds only a static shell and embeds that JSON in
+`<script id="proof-data" type="application/json">`. One static,
+interpolation-free script parses it and builds the page with
+`createElement`/`textContent`/`setAttribute` only - never `innerHTML` or `eval`.
+`HtmlRenderer.render` never touches that script with a document-derived value, so
+the no-injection posture D-75 established is enforced at a single boundary
+(`jsonEscapeForScript`) instead of at every print site.
 
-**Security boundary moved, not weakened.** The old renderer HTML-escaped
-every doc-derived string as it was interpolated into markup (`esc()`,
-forty-plus call sites). The new one has exactly one escaping boundary:
-{@link HtmlRenderer#jsonEscapeForScript}, applied once to the fully-built
-JSON text before embedding. Jackson already produces valid JSON (quotes and
-control characters correctly escaped per the JSON spec); `jsonEscapeForScript`
-additionally turns `<`, `>`, `&`, U+2028, and U+2029 into `\uXXXX` escapes.
-Since a literal `<` can only occur inside an already-quoted JSON string value
-(JSON's own structural characters are only `{}[]:,"`), replacing it with an
-escape sequence is a no-op under `JSON.parse` and removes every literal `<`
-from the page source - so `</script` (in any case) cannot occur inside the
-embedded block, which is what actually closes a `<script>` element per the
-HTML parsing spec. This is deliberately **not** HTML-entity escaping
-(`&lt;`): `<script>` is a raw-text element and browsers do not decode
-entities inside one, so an entity-encoded `<` would reach `JSON.parse` as
-the four literal characters `&lt;` and corrupt the payload instead of
-protecting it. `HtmlRendererTest` keeps an XSS-attempt test (a finding whose
-path contains a literal `</script><script>alert(1)</script>` sequence and
-control characters) - it now round-trips the parsed JSON to confirm the
-exact original content survives, on top of confirming the raw HTML source
-never contains the breakout sequence.
+Three rules came out of this and still hold:
 
-**Glossary** (user request): every rule id, `AnalysisReason` code actually
-constructed in this codebase, `Severity`/`Confidence`/`Classification`
-value, PIT mutant status, and coverage metric mode gets one Turkish
-friendly name plus a one-sentence explanation, defined once in
-[`ReportLabels`](../proof-java-cli/src/main/java/dev/proofjava/analysis/report/ReportLabels.java)
-and mirrored in prose at [`docs/GLOSSARY.md`](GLOSSARY.md). The raw code is
-never replaced, only accompanied (hard rule 5: a metric's canonical id is
-never dropped in favor of its friendly name) - the report always shows
-"Doğrulamasız test `NO_RECOGNIZED_ORACLE`", not one without the other.
-`ReportLabelsTest` fails the build if any code that can actually surface in
-a report has no entry, and separately asserts `RuleIds.ALL` contains every
-`String` constant declared on `RuleIds` (so a rule id added to the class but
-forgotten in `ALL` fails loudly instead of silently rendering unlabeled).
+- **A code is accompanied by its friendly name, never replaced by it**
+  (hard rule 5). The report shows `Test with no assertion` next to
+  `NO_RECOGNIZED_ORACLE`, so it stays greppable by the same id used in
+  `--suppress`, `docs/rules/`, and the JSON. The map lives in `ReportLabels`,
+  its prose mirror in [`GLOSSARY.md`](GLOSSARY.md), and `ReportLabelsTest`
+  fails the build on an unlabeled code.
+- **Mutant counts are reported per status, never bucketed into "other."**
+  Twelve `NO_COVERAGE` mutants and a mix of five failure modes are not the same
+  finding, and one label for both hides which one you have.
+- **A section that has nothing to show still appears** (hard rule 3a).
+  "No changed files" and "this was never computed" must not render identically.
 
-**File tree compression.** The old tree made every path segment its own
-`<details>` regardless of whether it had any real siblings, so a module
-whose changed files all lived under `gson/src/main/java/com/google/gson`
-rendered eight nested single-child folders before the first real branch.
-`ReportDataWriter#writeTreeNode` now compresses forward through any node
-whose combined child-folder-plus-file count is exactly 1: a chain of
-single-child folders merges into one name (`gson/src/main/java/com/google/gson`),
-and a folder holding exactly one file with no subfolders merges into a
-single file row (`reflect/TypeToken.java` for a `reflect/` folder holding
-only `TypeToken.java`) rather than an extra click for a folder that never
-offered a real choice. Aggregation still only sums already-computed
-numerator/denominator pairs (hard rule 4) - compression changes what a row
-is called, never what a percentage means.
+**D-81 · HTML report: sidebar dashboard, risk-sorted file list, light by
+default, and no generated verdict sentence** (2026-09-01)
+A design mockup proposed a fixed left sidebar with scroll-spy navigation, a card
+grid of always-visible sections, and file coverage sorted by risk rather than
+browsed as a folder tree. Adopted in full, replacing D-80's collapsible page.
 
-**Deliberately deferred.** Virtualized/lazy DOM building for very large file
-trees was considered and dropped for v0.1: the compressed tree at realistic
-repo scale (dozens to low hundreds of rows) is cheap to build eagerly, and
-lazy-loading would have doubled the file-tree code path (build-on-open vs.
-build-eager) for a scale problem not yet observed in a real report. Revisit
-if a dogfood run surfaces a tree slow enough to matter.
+**The report never writes a sentence about the run.** The mockup's headline read
+as a judgment ("coverage is solid, no mutation evidence"). proof-java is a
+deterministic CLI with no basis for an adjective like "solid" (hard rule 1:
+evidence over judgment), so the summary is a fact strip only - four stat tiles
+of labeled numbers, each linking to its card. No headline, no generated prose
+anywhere in the report. This holds even where a sentence would read well.
 
-**Findings grouped by rule.** `HtmlRenderer`'s script groups the flat
-`findings.items` array by `rule` client-side and shows each group's
-description and suggested action once (taken from the first finding in the
-group, since both are per-rule constants in every current rule
-implementation - `NoRecognizedOracleRule.SUGGESTED_ACTION` and siblings) with
-only the per-finding message and location repeated per row. `ruleIds`
-(the full v0.1 rule catalog, always written) lets the report show a rule
-with zero findings as a soft "0" chip instead of omitting it - "0 bir
-bilgidir": a reader comparing two runs should be able to see that
-`TAUTOLOGICAL_ORACLE` was checked and found nothing, not wonder whether it
-ran at all.
+File coverage became a flat array (`displayPath`/`packagePath`/`fileName` plus
+the same numerator/denominator/percent a tree leaf carried), sorted lowest
+coverage first, with a Risk/Package toggle that aggregates client-side from
+already-computed pairs - hard rule 4 still holds, only the aggregation moved.
+The mutation card treats "zero mutants generated" as its own neutral state,
+never as green: a run where nothing was tested must not look like a run where
+everything passed. The report opens in light mode regardless of OS theme; the
+manual toggle still works and is remembered per browser.
 
-**Mutation status counts.** `totalsByStatus`/`countsByStatus` are now a map
-keyed by the exact PIT status (`KILLED`, `SURVIVED`, `NO_COVERAGE`,
-`TIMED_OUT`, ...), replacing the old three-bucket `MutantCounts(killed,
-survived, other)` that collapsed every non-killed/non-survived status into
-one opaque "diğer" - a run where all mutants are `NO_COVERAGE` (nothing ran
-them) now reads differently from one with a mix of `TIMED_OUT` and
-`RUN_ERROR` (something went wrong running them), which the old bucket made
-indistinguishable.
+**D-82 · HTML report: content stops overflowing its containers** (2026-09-01)
+Against a real generated report, the findings table could not fit on one line and
+nothing stopped it: nowrap `<code>` columns in an `auto minmax(0,auto)
+minmax(0,auto) 1fr` grid refused to shrink, so location text painted over method
+text and the overflow cascaded all the way to `body`, giving the whole page a
+horizontal scrollbar. Fixed by letting those columns scroll inside their own
+container, which sibling code already did. The sidebar gained group headings, and
+the layout stays usable below 900px.
 
-**Number formatting.** All percentages and integer numerator/denominator
-pairs are now formatted with `Locale("tr","TR")` (comma decimal separator,
-dot thousands grouping - `"83,8%"`, `"3.144 / 3.754"`) instead of the old
-renderer's undifferentiated `BigDecimal.toString()`/bare-digit output
-(`"92.5%"`, `"4967/5372"`). The percentage's own scale-1/HALF_UP rounding
-rule (hard rule 5's `sonar-compatible` parity requirement) is unchanged -
-only the string representation changed, never the number.
+**D-83 · The project is renamed to proof-java; sibling engines get the same
+root name with a language suffix** (2026-09-05)
+`coverdict` was a coinage that split badly when read aloud, and it tied the
+identity to a single word that would not extend once a second language engine
+existed. The project is now **proof-java**: repository `proof-java`, command
+`proof-java analyze`, Maven `dev.proofjava:proof-java-parent`/`proof-java-cli`,
+Java package `dev.proofjava`, artifact `proof-java.jar`.
 
-**D-81 · HTML report: fixed sidebar + scroll-spy dashboard replaces the
-collapsible-sections page; flat risk-sorted file list replaces the folder
-tree; opens in light mode; every card built strictly from numbers, never a
-generated verdict sentence** (2026-09-01)
-A follow-up Claude Design mockup ("Proof-java Dashboard") proposed a
-different top-level structure than D-80's collapsible `<details>` sections:
-a fixed left sidebar with scroll-spy navigation, a 12-column card grid
-(Kapsama/Mutasyon/Bulgular/Dosyalar as always-visible dashboard cards
-instead of expand-on-demand sections), file coverage sorted by risk
-(lowest coverage first) instead of browsed as a folder tree, and a
-consolidated "bu koşuda boş kalan bölümler" one-line list for sections with
-nothing to show instead of each rendering its own empty state. Asked
-directly, the user chose to adopt this structure fully rather than layer
-individual ideas onto D-80's page.
+Sibling engines will be separate repositories under the same root -
+`proof-python`, `proof-js`, `proof-vscode` - following the testcontainers
+pattern rather than a monorepo, because the evidence sources have nothing in
+common: a Python engine reads coverage.py and mutmut, not JaCoCo and PIT. Each
+binary is namespaced (`proof-java`, `proof-python`), so installing two never
+collides on PATH, and a thin `proof` launcher that dispatches by what it finds
+in the working directory stays possible later without breaking either.
 
-**The interpretive headline question.** The mockup's `<h1>` read "Kapsama
-sağlam, mutasyon kanıtı yok." - a judgment sentence, the same shape D-80's
-predecessor mockup had and the user had already rejected once ("Hiç özet
-olmasın"). Asked whether this reversed that rejection, the user's answer
-sharpened the rule rather than reversing it: *"ai çıktı veremeyeceği için
-süslü cümlelerin olmadığı elimizdeki veriler ile özet olabilir"* - proof-java
-is a deterministic CLI, not an LLM, and cannot honestly assert an adjective
-like "sağlam" it has no basis for (hard rule 1: evidence over judgment). A
-summary is fine as a **fact strip only** - labeled numbers, no adjectives,
-no sentence construction. The Özet section (`buildOzet` in
-{@code HtmlRenderer}'s script) is four stat tiles (satır kapsama, mutasyon
-killed/total, bulgu count, files-at-0%), each linking to its card - no
-headline, no generated prose anywhere in the report.
+What deliberately does *not* carry the language: the config file
+(`proof.config.json`), the verdict output (`proof-verdict.json`) and the JSON
+Schema. Those are the contract a second engine should share, and naming them
+after Java would make sharing them look wrong.
 
-**Light by default.** A separate explicit instruction ("ilk olarak açık
-renk modda açılsın") overrides the mockup's own dark-first default: the
-CSS's bare `:root` now carries the light token values directly, and the
-`@media (prefers-color-scheme: dark)` auto-switch block D-77 introduced is
-gone entirely - a first-time reader (no `proof-java-report-theme` in
-`localStorage`) always opens light regardless of OS theme. The manual
-toggle (`:root[data-theme="dark"]`) still works exactly as before.
+Schema `$id`s moved from `https://coverdict.dev/...`, a domain nobody owns, to a
+tag-pinned raw.githubusercontent.com URL under this repository. `$id` is an
+identity URI, so pointing it at a domain someone else could register was a
+standing liability. The `0.1.0` schema version is deliberately kept: the wire
+format did not change, only the `tool.name` value.
 
-**File coverage: flat list, not a tree.** D-80's path-compressed folder
-tree solved the "8 empty clicks" problem but a fixed dashboard has no
-expand-a-folder browsing UI to hang it on. `ReportDataWriter` now writes
-`fileCoverage.files` as a flat array - each entry carrying `displayPath`
-(the repo-relative `path` with that file's own module's declared
-`sourceRoots` prefix stripped, e.g. `gson/src/main/java/com/google/gson/
-internal/bind/TreeTypeAdapter.java` → `com/google/gson/internal/bind/
-TreeTypeAdapter.java`), `packagePath`, and `fileName` - plus the same
-numerator/denominator/percent a tree leaf carried. The "Dosyalar" card
-sorts this list by risk (lowest coverage first, matching the mockup's "en
-düşük kapsama üstte") by default, offers a Risk/Paket toggle (Paket groups
-client-side by `packagePath`, summing already-computed numerator/
-denominator pairs the same way D-80's tree aggregation did - hard rule 4
-still holds, only the aggregation moved from a nested Java structure to a
-flat client-side `reduce`), five coverage-band filter chips (Tümü/%0/%70
-altı/%70–90/%90 üstü), and a text search - all scoped to this card, not a
-page-wide search box, since the dashboard's cards are meant to be
-self-contained. `TreeNode`/`writeTreeNode`/the `Agg` record are gone from
-`ReportDataWriter`.
-
-**Mutation: three tiers.** A compact "Mutasyon" card (col-4) shows the
-kill ratio and, when nothing was killed, a one-mutant callout with a link
-to a "Mutant detayı" spotlight card (col-7) - the single most concerning
-mutant (priority: `SURVIVED` > `TIMED_OUT`/`RUN_ERROR`/`MEMORY_ERROR`/
-`NON_VIABLE`/`STARTED`/`NOT_STARTED` > `NO_COVERAGE` > `KILLED`, which never
-qualifies), with a "N tane daha var" note when more than one mutant is
-concerning. A full "Mutasyon kanıtı — tüm mutantlar" card (col-12) keeps
-the complete per-class/per-method/per-mutant breakdown with the same
-search+survived-only filter D-80 had, so no mutant becomes unreachable just
-because only one gets the spotlight - the compact/detail split is
-navigation, not data loss. `buildMutasyonCard` treats "zero mutants
-generated" as its own neutral state (`mut-badge-none`/`VERİ YOK`), never as
-green/clean - hard rule 3a: a run with nothing tested must never look the
-same as a run where everything passed.
-
-**Deep links now cover any card id, not just findings.** D-80's
-`applyDeepLink` only handled `#f-<fingerprint>`. Since cards now have their
-own ids that a stat tile or the mutation callout can link to (`#kapsama`,
-`#detay`, ...), and the browser's own load-time fragment scroll happens
-before the script has built the DOM (so it finds nothing and silently does
-nothing), `applyDeepLink` now looks up any `location.hash` id after
-`init()` finishes and scrolls to it - findings additionally get their
-parent `.finding-group` opened first.
-
-**D-82 · HTML report: findings stop overflowing the page, sidebar navigation
-gets groups instead of checkbox-looking dots, and the report stays usable
-below 900px** (2026-09-01)
-Looking at a real generated report (`proof-java-playground`, 11 findings, 21
-mutants), the user rejected two things by name: the sidebar's section
-labels, and areas whose content spilled out of them. Both were real; the
-overflow was a layout bug, not a styling preference.
-
-**The findings table could not fit on one line and nothing stopped it.**
-D-81's `.finding-row` was a four-column grid - `auto minmax(0, auto)
-minmax(0, auto) 1fr` - holding a confidence badge, a `path:line`, a
-fully-qualified `class#signature`, and a sentence, with `white-space:
-nowrap` on the two `<code>` columns. `minmax(0, auto)` maxes out at
-max-content, nowrap content refuses to shrink, and no clipping was set - so
-the location text painted straight over the method text, the message column
-collapsed to ~60px of ribbon, and the overflow cascaded up
-`.finding-rows` → `.finding-group` → `.card` → `.grid` → `.wrap` → `body`,
-giving the whole page a horizontal scrollbar (measured: 1604px of content
-in a 1440px viewport; 1411px in 1024px). Sibling code already knew better -
-`.file-row` uses `minmax(0, 1fr)` plus `overflow: hidden` on its name cell
-and never overflowed.
-
-The row is now two lines inside one `max-content minmax(0, 1fr)` grid:
-badge in column one, and in column two a `.finding-ident` flex line (path,
-then the method in `--ink3`) above a full-width `.finding-message`
-paragraph. Both `<code>` elements carry `overflow-wrap: anywhere`, so a long
-path wraps instead of either overflowing or being cut - **ellipsis was
-rejected here**: a truncated path hides the half that identifies the file
-(`.../Calculator.java:11`), and hard rule 1 does not allow the report to
-drop evidence for tidiness. Wrapping is lossless; truncation is not.
-
-**The mutant table asked for 5 470px.** `table.mutants` was `width:
-max-content`, and its "öldüren testler" cell joins whole JUnit unique ids
-(`[engine:junit-jupiter]/[class:...]/[method:...]`) with commas - one cell
-measured 4 839px wide. `.table-wrap`'s `overflow-x: auto` kept that off the
-page but left the evidence behind a scrollbar nobody reaches the end of.
-The table is now `width: 100%` with `overflow-wrap: anywhere` on its cells:
-same rows, same ids, wrapped into the card. `.mut-callout-meta` and the
-spotlight card's killing-test list got the same treatment; they were
-overflowing the narrow col-4 Mutasyon card for the same reason.
-
-**The sidebar read as a to-do list.** `.side-nav-dot` was a 14px square with
-a 1.5px border, no fill, one per row - visually an unchecked checkbox, and
-the strongest cue in the whole sidebar. It is gone; the active-state left
-rail (already there) is enough. In its place the nav gained group captions
-(`GENEL`, `KAPSAMA DETAYI`, `MUTASYON DETAYI`, `TEŞHİS`) emitted from an
-optional `group` field on each nav item. **Card order was deliberately not
-touched** so that nav order still equals DOM order - scroll-spy compares
-`getBoundingClientRect().top` against a fixed threshold and mis-highlights
-the moment the two diverge.
-
-Three labels sat adjacent and said nearly the same thing - "Mutasyon",
-"Mutant detayı", "Mutasyon detayı". The last two are now "Öne çıkan mutant"
-and "Tüm mutantlar", and "Koşu" is "Koşu ve teşhis", matching its own card
-title. Counts that were placeholders became facts: Kapsama shows the
-jacoco-line percentage, "Öne çıkan mutant" shows how many mutants are
-actually concerning (the same `otherCount + 1` its card already prints)
-instead of a hard-coded `1`, and "Tüm mutantlar" shows the mutant total
-instead of nothing.
-
-**Below 900px the sidebar used to `display: none`.** Every section link
-disappeared with it and nothing replaced them. The sidebar now becomes a
-static top strip whose nav scrolls horizontally (group captions hide, the
-active marker moves from the left border to the bottom); `.metric-row` and
-`.file-row` reflow rather than overflow at that width. The `@media print`
-rule still hides it.
-
-**Two grid holes closed.** The mutant spotlight was `col-7` with nothing
-beside it (five dead columns) and needed the width anyway for its
-`class#signature` and killing-test ids - it is `col-12` now. "Test bazlı
-kanıt" was a three-row table at `col-12`; at `col-7` it pairs exactly with
-"Koşu ve teşhis" (`col-5`) and the report no longer ends on a half-empty
-row.
-
-**Two Turkish strings were wrong.** `bazılı` renders "bazılı", not
-"bazlı" - five occurrences in `HtmlRenderer` ("Test bazlı kanıt", "Dosya
-bazlı kapsama"), while `ReportLabels` had spelled the same word correctly
-all along. The zero-findings line read "6 kuralnın hiçbiri tetiklenmedi";
-the genitive of *kural* is *kuralın*.
-
-Finding messages and `suggestedAction` text stay English - they come from
-the analysis engine and are part of the verdict document (the JSON is the
-product; only the report's own chrome is Turkish). Left as is, noted here
-because it looks like an oversight in a Turkish report and is not one.
+`validation/` is not rewritten. It records measurements taken under the old
+name, and renaming inside a measurement log would falsify the record.
 
 ## Rejected
 
@@ -2167,5 +1960,5 @@ sites and break line attribution; Android adds its own report layout,
 flavor/variant matrix, and generated sources. Out of scope unless a dogfood
 repo (M0 item 1) forces it.
 
-Resolved: O-01 is **proof-java**; O-03 is D-13/D-18; O-04 is D-23; O-05 is
+Resolved: O-01 is settled by D-83 (the project is **proof-java**); O-03 is D-13/D-18; O-04 is D-23; O-05 is
 D-60; O-06 is D-04.
