@@ -144,7 +144,7 @@
               <finalName>coverdict</finalName>
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>dev.coverdict.cli.Main</mainClass>
+                  <mainClass>dev.proofjava.cli.Main</mainClass>
                 </transformer>
                 <!-- D-55: pitest-core and pitest-junit5-plugin both ship
                      META-INF/services/org.pitest.testapi.TestPluginFactory

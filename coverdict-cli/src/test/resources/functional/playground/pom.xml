@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>dev.coverdict.playground</groupId>
+  <groupId>dev.proofjava.playground</groupId>
   <artifactId>coverdict-playground</artifactId>
   <version>0.1.0</version>
   <packaging>jar</packaging>
@@ -75,10 +75,10 @@
         </dependencies>
         <configuration>
           <targetClasses>
-            <param>dev.coverdict.playground.*</param>
+            <param>dev.proofjava.playground.*</param>
           </targetClasses>
           <targetTests>
-            <param>dev.coverdict.playground.*</param>
+            <param>dev.proofjava.playground.*</param>
           </targetTests>
           <mutators>
             <mutator>RETURNS</mutator>
