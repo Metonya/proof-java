@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: maven
+
+      # Tests run before anything is published: a release that skipped them
+      # would ship a jar nobody verified.
+      - name: Build and test
+        run: mvn -B verify
+
+      # The release profile generates the third-party licence inventory, fails
+      # the build on a blacklisted licence, concatenates NOTICE, and writes
+      # SHA-256SUMS over every artifact. docs/RELEASE-CONTRACT.md is the spec.
+      - name: Build the release bundle
+        run: mvn -B -Prelease -DskipTests package
+
+      - name: Check the bundle is complete
+        run: |
+          cd target/release
+          test -f proof-java.jar
+          test -f LICENSE
+          test -f NOTICE
+          test -f THIRD-PARTY.txt
+          sha256sum -c SHA-256SUMS
+
+      - name: Publish the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: |
+            target/release/proof-java.jar
+            target/release/LICENSE
+            target/release/NOTICE
+            target/release/THIRD-PARTY.txt
+            target/release/SHA-256SUMS

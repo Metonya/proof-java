@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # JDK 17 is not a convenience here: the embedded mutation engine cannot
+      # read class files from a newer JDK, so L2/L3 refuse to run above 22.
+      # See the support table in README.md.
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: maven
+
+      - name: Build and test
+        run: mvn -B verify
+
+      # Both are runnable without the Java build and both are release
+      # contracts: the goldens must satisfy the published schema, and every
+      # pinned fixture must still hash to what the manifest says.
+      - name: Verify schema goldens
+        run: python3 schema/validate-goldens.py
+
+      - name: Verify pinned fixture checksums
+        run: sha256sum -c validation/SHA256SUMS
+
+  mutation-it:
+    # Slow (drives PIT in a subprocess), and the only automated proof that the
+    # ServiceLoader/feature-id/system-property chain between proof-java and PIT
+    # is intact. Kept off the default path, run on demand.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: maven
+      - name: Mutation integration tests
+        run: mvn -B -Pmutation-it -pl proof-java-cli verify
