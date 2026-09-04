@@ -83,11 +83,14 @@ final class JavaSourceParser {
             case 14 -> ParserConfiguration.LanguageLevel.JAVA_14;
             case 15 -> ParserConfiguration.LanguageLevel.JAVA_15;
             case 16 -> ParserConfiguration.LanguageLevel.JAVA_16;
+            case 17 -> ParserConfiguration.LanguageLevel.JAVA_17;
             case 18 -> ParserConfiguration.LanguageLevel.JAVA_18;
             case 19 -> ParserConfiguration.LanguageLevel.JAVA_19;
             case 20 -> ParserConfiguration.LanguageLevel.JAVA_20;
             case 21 -> ParserConfiguration.LanguageLevel.JAVA_21;
-            default -> ParserConfiguration.LanguageLevel.JAVA_17; // documented CLI default (M0-CLI-INPUT.md)
+            default -> throw new IllegalArgumentException("unsupported language level: " + n
+                + " (supported: " + OracleRuleEngine.MIN_LANGUAGE_LEVEL
+                + "-" + OracleRuleEngine.MAX_LANGUAGE_LEVEL + ")");
         };
     }
 }

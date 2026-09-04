@@ -45,6 +45,7 @@ import dev.proofjava.analysis.oracle.OracleScanResult;
 import dev.proofjava.analysis.pertest.PerTestCollector;
 import dev.proofjava.analysis.redundancy.RedundancyRuleEngine;
 import dev.proofjava.analysis.subprocess.EvidenceDiagnostics;
+import dev.proofjava.analysis.subprocess.PitJdkSupport;
 import dev.proofjava.config.ConfigException;
 import dev.proofjava.config.ConfigLoader;
 import dev.proofjava.config.ProofConfig;
@@ -148,7 +149,7 @@ class AnalyzeCommand implements Callable<Integer> {
     @Option(names = "--diagnostics-dir", description = "Directory for per-module L2/L3 subprocess logs. Also turns the engine verbose, which is the only way to see why its own coverage minion died (D-64). Off by default: verbose output with nowhere to land is just a slower run.")
     private String diagnosticsDirOption;
 
-    @Option(names = "--language-level", defaultValue = "17", description = "Java language level for JavaParser (oracle critic) and recorded as provenance.")
+    @Option(names = "--language-level", defaultValue = "17", description = "Java language level for JavaParser (oracle critic), 8-21, and recorded as provenance.")
     private int languageLevel;
 
     @Option(names = "--encoding", defaultValue = "UTF-8", description = "Charset used to read test sources for the oracle critic, and recorded as provenance.")
@@ -194,6 +195,7 @@ class AnalyzeCommand implements Callable<Integer> {
         ProofConfig config = ConfigLoader.load(repoRoot, configOption);
         applyConfigPrecedence(config);
         validateFindingsScope(diffMode);
+        validateLanguageLevel();
 
         List<String> exclusions = exclusionsArg == null || exclusionsArg.isBlank()
             ? List.of()
@@ -226,6 +228,37 @@ class AnalyzeCommand implements Callable<Integer> {
                 + "(docs/M0-CLI-INPUT.md).");
         }
         return selectedDiffMode();
+    }
+
+    /**
+     * @throws CliUsageException when the level is outside what JavaParser
+     *         supports. Rejected rather than clamped: parsing Java 22 sources
+     *         at level 17 does not fail loudly, it just yields
+     *         {@code UNPARSEABLE_TEST_SOURCE} findings that read as a defect in
+     *         the user's tests rather than a limit of this tool.
+     */
+    private void validateLanguageLevel() {
+        if (languageLevel < OracleRuleEngine.MIN_LANGUAGE_LEVEL
+            || languageLevel > OracleRuleEngine.MAX_LANGUAGE_LEVEL) {
+            throw new CliUsageException("--language-level must be between "
+                + OracleRuleEngine.MIN_LANGUAGE_LEVEL + " and " + OracleRuleEngine.MAX_LANGUAGE_LEVEL
+                + " (the parser this release embeds), got: " + languageLevel);
+        }
+    }
+
+    /**
+     * @return true when the running JDK is too new for the embedded mutation
+     *         engine, after recording why. The caller then skips collection, so
+     *         the run reports incomplete (exit 3) rather than the silent
+     *         zero-finding green PIT would otherwise produce - see
+     *         {@link PitJdkSupport}.
+     */
+    private boolean pitEvidenceBlocked(List<AnalysisReason> incompleteReasons, String code, String flag) {
+        if (PitJdkSupport.isRuntimeSupported()) {
+            return false;
+        }
+        incompleteReasons.add(new AnalysisReason(code, PitJdkSupport.unsupportedMessage(flag)));
+        return true;
     }
 
     /** @throws CliUsageException on an unknown --findings-scope value, or 'changed' combined with --no-vcs. */
@@ -651,7 +684,7 @@ class AnalyzeCommand implements Callable<Integer> {
             // branch (validatePerTestReport rejects bare --no-vcs + --per-test-report) - it names its own
             // targets, so no diff is needed (Faz 14a, mirrors --mutation-target).
             List<dev.proofjava.analysis.pertest.PerTestModuleEvidence> perTest = null;
-            if (perTestReport) {
+            if (perTestReport && !pitEvidenceBlocked(allReasons, "PER_TEST_JDK_UNSUPPORTED", "--per-test-report")) {
                 PerTestOutcome outcome = collectPerTestEvidence(repoRoot, evidencedModules, List.of(),
                     inv.perTestClasspathFilesById(), inv.perTestTargetFqcnsById(), buildDiagnostics());
                 perTest = outcome.perTest();
@@ -662,7 +695,7 @@ class AnalyzeCommand implements Callable<Integer> {
             // branch (validateMutationReport rejects bare --no-vcs + --mutation-report) - it names its own
             // targets, so no diff is needed (Plan.md Faz 2).
             List<MutationModuleEvidence> mutation = null;
-            if (mutationReport) {
+            if (mutationReport && !pitEvidenceBlocked(allReasons, "MUTATION_JDK_UNSUPPORTED", "--mutation-report")) {
                 MutationOutcome outcome = collectMutationEvidence(repoRoot, evidencedModules, List.of(),
                     inv.mutationClasspathFilesById(), inv.mutationTargetFqcnsById(), buildDiagnostics());
                 mutation = outcome.mutation();
@@ -703,7 +736,8 @@ class AnalyzeCommand implements Callable<Integer> {
             EvidenceDiagnostics diagnostics = buildDiagnostics();
 
             List<dev.proofjava.analysis.pertest.PerTestModuleEvidence> perTest = null;
-            if (perTestReport) {
+            if (perTestReport
+                && !pitEvidenceBlocked(allIncompleteReasons, "PER_TEST_JDK_UNSUPPORTED", "--per-test-report")) {
                 // --per-test-target takes priority over diff-derived targets,
                 // all-or-nothing across every module in this run (Faz 14a,
                 // mirrors --mutation-target's collectMutationEvidence).
@@ -715,7 +749,8 @@ class AnalyzeCommand implements Callable<Integer> {
 
             List<Finding> allFindings = new ArrayList<>(scan.findings());
             List<MutationModuleEvidence> mutation = null;
-            if (mutationReport) {
+            if (mutationReport
+                && !pitEvidenceBlocked(allIncompleteReasons, "MUTATION_JDK_UNSUPPORTED", "--mutation-report")) {
                 MutationOutcome outcome = collectMutationEvidence(repoRoot, evidencedModules,
                     classification.changedFiles(), inv.mutationClasspathFilesById(), inv.mutationTargetFqcnsById(),
                     diagnostics);

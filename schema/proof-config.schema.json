@@ -7,10 +7,10 @@
   "additionalProperties": false,
   "properties": {
     "languageLevel": {
-      "description": "Java language level for JavaParser. CLI --language-level overrides this.",
+      "description": "Java language level for JavaParser (8-21, the range the embedded parser supports). CLI --language-level overrides this.",
       "type": "integer",
-      "minimum": 1,
-      "maximum": 25
+      "minimum": 8,
+      "maximum": 21
     },
     "encoding": {
       "description": "Charset used to read test sources. CLI --encoding overrides this.",

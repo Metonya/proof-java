@@ -33,6 +33,18 @@ import dev.proofjava.analysis.model.ModuleDefinition;
  */
 public final class OracleRuleEngine {
 
+    /** Lowest Java language level the embedded parser is configured for. */
+    public static final int MIN_LANGUAGE_LEVEL = 8;
+
+    /**
+     * Highest Java language level the embedded parser knows - its
+     * {@code LanguageLevel} enum ends there. A higher level cannot be honored,
+     * and quietly parsing newer syntax at an older level would report
+     * {@code UNPARSEABLE_TEST_SOURCE} against the user's tests rather than
+     * naming this tool's own limit (hard rule 3a), so callers reject it up front.
+     */
+    public static final int MAX_LANGUAGE_LEVEL = 21;
+
     static {
         // JavaParser's own PrimitiveType resolution (javaparser-core) does an
         // internal default-locale case conversion; under a Turkish default

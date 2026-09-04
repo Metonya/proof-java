@@ -23,6 +23,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import dev.proofjava.analysis.oracle.OracleRuleEngine;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion.VersionFlag;
@@ -173,6 +175,40 @@ class AnalyzeCommandTest {
 
         assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
         assertFalse(Files.exists(outFile), "exit 2 must never write a verdict document (schema note)");
+    }
+
+    /**
+     * A level the embedded parser does not know used to fall through to Java 17
+     * instead of being rejected, so {@code --language-level 22} parsed newer
+     * syntax at an older level and blamed the user's tests with
+     * {@code UNPARSEABLE_TEST_SOURCE}. Rejecting up front keeps the tool's own
+     * limit visible (hard rule 3a).
+     */
+    @Test
+    void aLanguageLevelBeyondTheEmbeddedParserIsInvalidInvocationAndWritesNoJson() {
+        Path outFile = repoRoot.resolve("verdict.json");
+
+        int exitCode = run("analyze", "--no-vcs",
+            "--repo", repoRoot.toString(),
+            "--language-level", String.valueOf(OracleRuleEngine.MAX_LANGUAGE_LEVEL + 1),
+            "--report", FIXTURES.resolve("mixed-coverage.xml").toString(),
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
+        assertFalse(Files.exists(outFile), "exit 2 must never write a verdict document (schema note)");
+    }
+
+    @Test
+    void theHighestSupportedLanguageLevelIsAccepted() {
+        Path outFile = repoRoot.resolve("verdict.json");
+
+        int exitCode = run("analyze", "--no-vcs",
+            "--repo", repoRoot.toString(),
+            "--language-level", String.valueOf(OracleRuleEngine.MAX_LANGUAGE_LEVEL),
+            "--report", FIXTURES.resolve("mixed-coverage.xml").toString(),
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.COMPLETE.value(), exitCode);
     }
 
     @Test
