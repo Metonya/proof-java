@@ -3,8 +3,9 @@
 decisions to labels.csv, indexed by the sample's fingerprint-sorted order
 (matching findings-bodies.txt's [N] indices)."""
 import csv
+from pathlib import Path
 
-CSV = "C:/Users/Mert/Desktop/coverdict/validation/runs/assertj/labels.csv"
+CSV = str(Path(__file__).with_name("labels.csv"))
 LABELER = "claude-sonnet-5 (coverdict M1c-2 assertj phase, 2026-08-24)"
 
 INTERNAL_ENGINE = (

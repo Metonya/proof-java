@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """One-off: apply the phase-1 gson labeling decisions (see run-log.md) to labels.csv."""
 import csv
+from pathlib import Path
 
-CSV = "C:/Users/Mert/Desktop/coverdict/validation/runs/gson/labels.csv"
+CSV = str(Path(__file__).with_name("labels.csv"))
 LABELER = "claude-opus-5 (coverdict M1c-2 session, 2026-08-24)"
 
 TRUE_POSITIVES = {

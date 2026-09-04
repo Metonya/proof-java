@@ -79,7 +79,7 @@ param(
     [Parameter(Mandatory)][string]$Name,
     [Parameter(Mandatory)][string]$RepoUrl,
     [Parameter(Mandatory)][string]$Pin,
-    [string]$CorpusRoot = "C:\Users\Mert\Desktop\coverdict-corpus",
+    [string]$CorpusRoot = (Join-Path (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))) 'coverdict-corpus'),
     [Parameter(Mandatory)][string[]]$ModuleIds,
     [Parameter(Mandatory)][string[]]$ModuleRoots,
     [string]$SourceRootRelative = "src/main/java",
@@ -120,7 +120,7 @@ if ($BuildTool -eq "Gradle") {
     if ($ModuleIds.Count -gt 1) { throw "multi-module binding is Maven-only today (D-37) - Gradle mode supports exactly one -GradleModule" }
 }
 
-if (-not $OutDir) { $OutDir = "C:\Users\Mert\Desktop\coverdict\validation\runs\$Name" }
+if (-not $OutDir) { $OutDir = Join-Path (Split-Path -Parent $PSScriptRoot) "runs\$Name" }
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 $repoDir = Join-Path $CorpusRoot $Name
 

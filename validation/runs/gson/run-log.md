@@ -3,7 +3,7 @@
 Repo: `https://github.com/google/gson.git` @ `dae37cf0fe12235b76fb09f01118a0a8c8823f42`
 (pinned in `docs/M0-VALIDATION-MANIFEST.md`; confirmed reachable and still at
 `main`'s tip on 2026-08-24).
-Clone: `C:\Users\Mert\Desktop\coverdict-corpus\gson` (sibling of the coverdict
+Clone: a local `coverdict-corpus/gson` checkout (sibling of the coverdict
 repo, never committed to it).
 Module analyzed: `gson` (core, JUnit4/Truth-heavy, ~123 test files) — the
 manifest's "small, fast smoke run" scope. `extras`, `metrics`, `proto`,

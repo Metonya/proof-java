@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Round 2: apply the calibration-round-2 labeling decisions to labels.csv."""
 import csv
+from pathlib import Path
 
-CSV = "C:/Users/Mert/Desktop/coverdict/validation/runs/gson/round2/labels.csv"
+CSV = str(Path(__file__).with_name("labels.csv"))
 LABELER = "claude-opus-5 (coverdict M1c-2 round 2 session, 2026-08-24)"
 
 CROSS_CLASS_REASON = ("Delegates to a public static helper defined in a DIFFERENT .java file "

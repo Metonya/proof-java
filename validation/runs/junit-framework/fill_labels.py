@@ -3,8 +3,9 @@
 manual review decisions to labels.csv, indexed by the sample's
 fingerprint-sorted order (matching _bodies.txt's [N] indices)."""
 import csv
+from pathlib import Path
 
-CSV = "C:/Users/Mert/Desktop/coverdict/validation/runs/junit-framework/labels.csv"
+CSV = str(Path(__file__).with_name("labels.csv"))
 LABELER = "claude-sonnet-5 (coverdict M1c-2 junit-framework phase, 2026-08-24)"
 
 TESTKIT_CHAIN_TERMINAL = (

@@ -9,7 +9,7 @@ pom.xml patches (required on a fresh (non -SkipBuild) build - NOT (re)applied th
   - "<jacoco.skip>true</jacoco.skip>" -> "<jacoco.skip>false</jacoco.skip>"
 Language level: 17
 
-Commands (module-relative, run from C:\Users\Mert\Desktop\coverdict-corpus\assertj):
+Commands (module-relative, run from the assertj clone root):
   mvn -B -pl assertj-core -am clean org.jacoco:jacoco-maven-plugin:0.8.15:prepare-agent test org.jacoco:jacoco-maven-plugin:0.8.15:report
   java -jar coverdict.jar analyze --repo . --base 4c5ab4862668e769d0e72492f400bd919469455d~50 --module assertj-core=assertj-core --source-roots assertj-core=assertj-core/src/main/java --test-roots assertj-core=assertj-core/src/test/java --report assertj-core=assertj-core/target/site/jacoco/jacoco.xml --language-level 17 --out verdict-base.json
   java -jar coverdict.jar analyze --repo . --no-vcs (same module/source/test/report args) --out verdict-no-vcs.json

@@ -22,7 +22,7 @@ gradle.beforeProject {
     }
 }
 
-Commands (run from C:\Users\Mert\Desktop\coverdict-corpus\junit-framework):
+Commands (run from the junit-framework clone root):
   gradlew.bat --no-daemon --init-script <temp-file-above> :junit-vintage-engine:test :junit-vintage-engine:jacocoTestReport
 Language level: 17
 

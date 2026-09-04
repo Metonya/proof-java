@@ -10,7 +10,7 @@ Surefire excludes:
 pom.xml patches, applied to every module listed above (applied to the throwaway clone only - never committed to the coverdict repo):
 (none)
 
-Commands (reactor-relative, run from C:\Users\Mert\Desktop\coverdict-corpus\dropwizard):
+Commands (reactor-relative, run from the dropwizard clone root):
   mvn -B -pl dropwizard-util,dropwizard-validation -am clean org.jacoco:jacoco-maven-plugin:0.8.14:prepare-agent test org.jacoco:jacoco-maven-plugin:0.8.14:report
 Language level: 11
 

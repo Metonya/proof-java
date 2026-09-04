@@ -357,7 +357,7 @@ assert object, never touching `Assertions`/`BDDAssertions`).
 SonarQube CE completion must be polled, not slept** (2026-08-24)
 The first `sonar-parity.ps1` run against assertj-core (~4600 test files, 4x
 gson's size) triggered a real, severe incident on the development machine:
-`C:\Users\Mert\.wslconfig` had no `[wsl2] memory=` cap, so the local
+the machine's `.wslconfig` had no `[wsl2] memory=` cap, so the local
 Docker-Desktop-hosted SonarQube server's WSL2 VM balloon grew unbounded
 while ingesting the large analysis report, consumed enough of the
 machine's 32 GB RAM to freeze Windows entirely, and required a hard

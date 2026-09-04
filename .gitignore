@@ -1,4 +1,3 @@
-prototype/demo-bank/build/
 target/
 .scannerwork/
 *.class
@@ -6,4 +5,7 @@ target/
 .idea/
 *.iml
 .vscode/
+.claude/
 dependency-reduced-pom.xml
+.DS_Store
+Thumbs.db
