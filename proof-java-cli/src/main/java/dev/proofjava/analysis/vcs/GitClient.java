@@ -165,8 +165,8 @@ public final class GitClient {
 
         StreamGobbler stdout = new StreamGobbler(process.getInputStream());
         StreamGobbler stderr = new StreamGobbler(process.getErrorStream());
-        Thread outThread = new Thread(stdout, "coverdict-git-stdout");
-        Thread errThread = new Thread(stderr, "coverdict-git-stderr");
+        Thread outThread = new Thread(stdout, "proof-git-stdout");
+        Thread errThread = new Thread(stderr, "proof-git-stderr");
         outThread.start();
         errThread.start();
 

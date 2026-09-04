@@ -111,7 +111,7 @@ class DoctorDiagnosticsTest {
     @Test
     void aClasspathListWithNoCodePathIsABlocker() throws IOException {
         touch("app/target/site/jacoco/jacoco.xml", Instant.now());
-        write("app/target/coverdict-per-test-classpath.txt", "\n  \n# comment\n");
+        write("app/target/proof-per-test-classpath.txt", "\n  \n# comment\n");
 
         ModuleDiagnosis d = DoctorDiagnostics.diagnose(repoRoot, MODULE);
 
@@ -126,11 +126,11 @@ class DoctorDiagnosticsTest {
         Instant late = Instant.now();
         touch("app/target/classes/com/example/Foo.class", early);
         touch("app/target/site/jacoco/jacoco.xml", late);
-        write("app/target/coverdict-per-test-classpath.txt", "app/target/classes\n");
+        write("app/target/proof-per-test-classpath.txt", "app/target/classes\n");
 
         ModuleDiagnosis d = DoctorDiagnostics.diagnose(repoRoot, MODULE);
 
         assertFalse(d.hasBlocker());
-        assertEquals("app/target/coverdict-per-test-classpath.txt", d.perTestClasspath());
+        assertEquals("app/target/proof-per-test-classpath.txt", d.perTestClasspath());
     }
 }

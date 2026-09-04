@@ -19,7 +19,7 @@ import dev.proofjava.analysis.subprocess.ProgressMarker;
  * PIT {@link MutationResultListenerFactory} SPI implementation (D-56):
  * accumulates every {@link ClassMutationResults} PIT hands it in RAM and
  * writes {@link MutationJsonWriter}'s wire format to {@code
- * coverdict-mutants.json} in the run's report directory once the mutation
+ * proof-mutants.json} in the run's report directory once the mutation
  * phase finishes. Registered via {@code META-INF/services/
  * org.pitest.mutationtest.MutationResultListenerFactory}.
  *
@@ -36,11 +36,11 @@ import dev.proofjava.analysis.subprocess.ProgressMarker;
  */
 public final class ProofMutationListener implements MutationResultListenerFactory {
 
-    static final String NAME = "coverdict-mutation";
-    static final String OUTPUT_FILE_NAME = "coverdict-mutants.json";
+    static final String NAME = "proof-mutation";
+    static final String OUTPUT_FILE_NAME = "proof-mutants.json";
 
     /** Set by {@code MutationDriver} before calling {@code EntryPoint.execute} - the only channel available to an SPI-instantiated listener. */
-    static final String MODULE_ID_PROPERTY = "coverdict.mutation.moduleId";
+    static final String MODULE_ID_PROPERTY = "proof.mutation.moduleId";
 
     @Override
     public MutationResultListener getListener(Properties props, ListenerArguments args) {
@@ -54,7 +54,7 @@ public final class ProofMutationListener implements MutationResultListenerFactor
 
     @Override
     public String description() {
-        return "coverdict mutant kill-set exporter";
+        return "proof-java mutant kill-set exporter";
     }
 
     private static final class AccumulatingListener implements MutationResultListener {

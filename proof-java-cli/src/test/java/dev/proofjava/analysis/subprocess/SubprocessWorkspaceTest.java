@@ -47,8 +47,8 @@ class SubprocessWorkspaceTest {
 
     @Test
     void createPrivateTempDirectoryCreatesAUniqueDirectoryPerModule() {
-        Path dirA = SubprocessWorkspace.createPrivateTempDirectory("coverdict-test-", "app");
-        Path dirB = SubprocessWorkspace.createPrivateTempDirectory("coverdict-test-", "app");
+        Path dirA = SubprocessWorkspace.createPrivateTempDirectory("proof-test-", "app");
+        Path dirB = SubprocessWorkspace.createPrivateTempDirectory("proof-test-", "app");
         try {
             assertTrue(Files.isDirectory(dirA));
             assertTrue(Files.isDirectory(dirB));
@@ -61,7 +61,7 @@ class SubprocessWorkspaceTest {
 
     @Test
     void createPrivateTempDirectorySanitizesPathSeparatorsInAnUnsafeModuleId() {
-        Path dir = SubprocessWorkspace.createPrivateTempDirectory("coverdict-test-", "app/../../evil");
+        Path dir = SubprocessWorkspace.createPrivateTempDirectory("proof-test-", "app/../../evil");
         try {
             assertTrue(Files.isDirectory(dir));
             // A slash-containing module id must not escape as a path traversal -
@@ -76,7 +76,7 @@ class SubprocessWorkspaceTest {
 
     @Test
     void writeLinesWritesOneEntryPerLine() throws IOException {
-        Path dir = SubprocessWorkspace.createPrivateTempDirectory("coverdict-test-", "app");
+        Path dir = SubprocessWorkspace.createPrivateTempDirectory("proof-test-", "app");
         try {
             Path file = SubprocessWorkspace.writeLines(dir, "list.txt", List.of("a", "b", "c"));
 
@@ -89,7 +89,7 @@ class SubprocessWorkspaceTest {
 
     @Test
     void writeClasspathArgFileQuotesAndNormalizesBackslashes() throws IOException {
-        Path dir = SubprocessWorkspace.createPrivateTempDirectory("coverdict-test-", "app");
+        Path dir = SubprocessWorkspace.createPrivateTempDirectory("proof-test-", "app");
         try {
             Path argFile = SubprocessWorkspace.writeClasspathArgFile(dir, "cp.args",
                 List.of("C:\\Users\\dev\\a.jar", "C:\\Users\\dev\\b.jar"));
@@ -119,7 +119,7 @@ class SubprocessWorkspaceTest {
 
     @Test
     void deleteQuietlyRemovesADirectoryTreeWithoutThrowing() throws IOException {
-        Path dir = SubprocessWorkspace.createPrivateTempDirectory("coverdict-test-", "app");
+        Path dir = SubprocessWorkspace.createPrivateTempDirectory("proof-test-", "app");
         Files.writeString(dir.resolve("nested.txt"), "content", StandardCharsets.UTF_8);
 
         SubprocessWorkspace.deleteQuietly(dir);
@@ -129,18 +129,18 @@ class SubprocessWorkspaceTest {
 
     @Test
     void deleteQuietlyOnAMissingDirectoryDoesNotThrow() {
-        Path missing = Path.of(System.getProperty("java.io.tmpdir"), "coverdict-does-not-exist-" + System.nanoTime());
+        Path missing = Path.of(System.getProperty("java.io.tmpdir"), "proof-java-does-not-exist-" + System.nanoTime());
 
         assertDoesNotThrow(() -> SubprocessWorkspace.deleteQuietly(missing));
     }
 
     @Test
     void createPrivateTempDirectoryKeepsAnAlreadySafeModuleIdVerbatim() {
-        Path dir = SubprocessWorkspace.createPrivateTempDirectory("coverdict-test-", "app-core_1.0");
+        Path dir = SubprocessWorkspace.createPrivateTempDirectory("proof-test-", "app-core_1.0");
         try {
             // Every character here is already in sanitize()'s allowed set, so the
             // module id must survive untouched - only the random suffix is added.
-            assertTrue(dir.getFileName().toString().startsWith("coverdict-test-app-core_1.0"),
+            assertTrue(dir.getFileName().toString().startsWith("proof-test-app-core_1.0"),
                 dir.getFileName().toString());
         } finally {
             SubprocessWorkspace.deleteQuietly(dir);
@@ -149,11 +149,11 @@ class SubprocessWorkspaceTest {
 
     @Test
     void createPrivateTempDirectoryReplacesEveryUnsafeCharacterWithAnUnderscore() {
-        Path dir = SubprocessWorkspace.createPrivateTempDirectory("coverdict-test-", "my group:app x");
+        Path dir = SubprocessWorkspace.createPrivateTempDirectory("proof-test-", "my group:app x");
         try {
             // ':' is outright illegal in a Windows file name and a space is merely
             // awkward everywhere - sanitize() collapses both to '_'.
-            assertTrue(dir.getFileName().toString().startsWith("coverdict-test-my_group_app_x"),
+            assertTrue(dir.getFileName().toString().startsWith("proof-test-my_group_app_x"),
                 dir.getFileName().toString());
         } finally {
             SubprocessWorkspace.deleteQuietly(dir);
@@ -162,7 +162,7 @@ class SubprocessWorkspaceTest {
 
     @Test
     void writeLinesOnAMissingDirectoryThrowsUncheckedIOException() {
-        Path missing = Path.of(System.getProperty("java.io.tmpdir"), "coverdict-does-not-exist-" + System.nanoTime());
+        Path missing = Path.of(System.getProperty("java.io.tmpdir"), "proof-java-does-not-exist-" + System.nanoTime());
 
         UncheckedIOException thrown = assertThrows(UncheckedIOException.class,
             () -> SubprocessWorkspace.writeLines(missing, "list.txt", List.of("a")));
@@ -172,7 +172,7 @@ class SubprocessWorkspaceTest {
 
     @Test
     void writeLinesWithNoEntriesWritesAnEmptyFile() throws IOException {
-        Path dir = SubprocessWorkspace.createPrivateTempDirectory("coverdict-test-", "app");
+        Path dir = SubprocessWorkspace.createPrivateTempDirectory("proof-test-", "app");
         try {
             Path file = SubprocessWorkspace.writeLines(dir, "empty.txt", List.of());
 
@@ -185,7 +185,7 @@ class SubprocessWorkspaceTest {
 
     @Test
     void writeClasspathArgFileOnAMissingDirectoryThrowsUncheckedIOException() {
-        Path missing = Path.of(System.getProperty("java.io.tmpdir"), "coverdict-does-not-exist-" + System.nanoTime());
+        Path missing = Path.of(System.getProperty("java.io.tmpdir"), "proof-java-does-not-exist-" + System.nanoTime());
 
         UncheckedIOException thrown = assertThrows(UncheckedIOException.class,
             () -> SubprocessWorkspace.writeClasspathArgFile(missing, "cp.args", List.of("a.jar")));
@@ -195,7 +195,7 @@ class SubprocessWorkspaceTest {
 
     @Test
     void writeClasspathArgFileQuotesASingleEntryWithoutASeparator() throws IOException {
-        Path dir = SubprocessWorkspace.createPrivateTempDirectory("coverdict-test-", "app");
+        Path dir = SubprocessWorkspace.createPrivateTempDirectory("proof-test-", "app");
         try {
             Path argFile = SubprocessWorkspace.writeClasspathArgFile(dir, "cp.args", List.of("/opt/lib/only one.jar"));
 
@@ -209,7 +209,7 @@ class SubprocessWorkspaceTest {
 
     @Test
     void destroyProcessTreeKillsALiveChildJvm() throws IOException, InterruptedException {
-        Path dir = SubprocessWorkspace.createPrivateTempDirectory("coverdict-test-", "app");
+        Path dir = SubprocessWorkspace.createPrivateTempDirectory("proof-test-", "app");
         Process process = null;
         try {
             // The JDK's single-file source launcher gives a real, long-lived child
@@ -254,7 +254,7 @@ class SubprocessWorkspaceTest {
     @Test
     @EnabledOnOs(OS.WINDOWS)
     void destroyProcessTreeAlsoKillsAGrandchildProcessOnWindows() throws IOException, InterruptedException {
-        Path dir = SubprocessWorkspace.createPrivateTempDirectory("coverdict-test-", "app");
+        Path dir = SubprocessWorkspace.createPrivateTempDirectory("proof-test-", "app");
         Process parent = null;
         ProcessHandle grandchild = null;
         try {

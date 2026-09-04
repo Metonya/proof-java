@@ -6,13 +6,13 @@ import org.junit.jupiter.api.Test;
 /**
  * expect: finding rule=NO_RECOGNIZED_ORACLE method=addCheckedViaLocalSoftAssertions confidence=INCONCLUSIVE
  * SoftAssertions is a real AssertJ dependency, but run.ps1 never passes
- * --classpath to coverdict, so its jar is invisible to coverdict's oracle
+ * --classpath to proof-java, so its jar is invisible to proof-java's oracle
  * resolver. Held in a local variable (not a field, not a static import), none
  * of OracleRecognizer's fallback anchoring paths apply either, so
  * softly.assertThat(...)/.assertAll() are genuinely unresolved calls - and
  * "assert..." matches the oracle-suggestive name pattern, exercising
  * NO_RECOGNIZED_ORACLE's INCONCLUSIVE path (a test that may well have a real
- * oracle, but coverdict cannot confirm it without --classpath).
+ * oracle, but proof-java cannot confirm it without --classpath).
  *
  * <p>Deliberately calls {@code add}, not another method: {@code add}'s sole
  * mutant is already killed by {@code CalculatorGoodTest#addWorksCorrectly}, so

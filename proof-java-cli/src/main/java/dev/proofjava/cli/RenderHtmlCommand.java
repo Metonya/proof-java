@@ -25,7 +25,7 @@ import dev.proofjava.analysis.report.VerdictJsonReader;
  * exact same document shape, this time read back from disk instead of
  * built in-process).
  *
- * <p>Built for {@code coverdict-vscode}'s "Export report" command: the
+ * <p>Built for {@code proof-vscode}'s "Export report" command: the
  * extension composes a verdict JSON from whatever coverage/per-test/mutation
  * state it currently holds and hands it here for rendering, at zero
  * re-analysis cost - see D-78 for why a fresh diff-derived re-scan is the
@@ -33,7 +33,7 @@ import dev.proofjava.analysis.report.VerdictJsonReader;
  * on screen, silently discarding real evidence the extension already knew).
  */
 @Command(name = "render-html", mixinStandardHelpOptions = true,
-    description = "Render an existing verdict JSON (schema/coverdict-verdict.schema.json) as a standalone HTML report - no fresh analysis.")
+    description = "Render an existing verdict JSON (schema/proof-verdict.schema.json) as a standalone HTML report - no fresh analysis.")
 class RenderHtmlCommand implements Callable<Integer> {
 
     @Spec
@@ -51,17 +51,17 @@ class RenderHtmlCommand implements Callable<Integer> {
         try (InputStream in = Files.newInputStream(Path.of(inOption))) {
             doc = VerdictJsonReader.read(in);
         } catch (IOException e) {
-            spec.commandLine().getErr().println("coverdict: could not read " + inOption + ": " + e.getMessage());
+            spec.commandLine().getErr().println("proof-java: could not read " + inOption + ": " + e.getMessage());
             return ExitCode.INVALID_INPUT.value();
         } catch (VerdictJsonReader.VerdictJsonReadException e) {
-            spec.commandLine().getErr().println("coverdict: " + inOption + " is not a valid verdict document: " + e.getMessage());
+            spec.commandLine().getErr().println("proof-java: " + inOption + " is not a valid verdict document: " + e.getMessage());
             return ExitCode.INVALID_INPUT.value();
         }
 
         try (OutputStream out = Files.newOutputStream(Path.of(outOption))) {
             out.write(HtmlRenderer.render(doc).getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {
-            spec.commandLine().getErr().println("coverdict: could not write " + outOption + ": " + e.getMessage());
+            spec.commandLine().getErr().println("proof-java: could not write " + outOption + ": " + e.getMessage());
             return ExitCode.INTERNAL_ERROR.value();
         }
 

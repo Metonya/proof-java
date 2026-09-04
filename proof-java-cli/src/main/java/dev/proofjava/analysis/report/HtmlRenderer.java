@@ -63,13 +63,13 @@ public final class HtmlRenderer {
         sb.append("<!doctype html>\n<html lang=\"tr\">\n<head>\n");
         sb.append("<meta charset=\"utf-8\">\n");
         sb.append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n");
-        sb.append("<title>coverdict report</title>\n");
+        sb.append("<title>proof-java report</title>\n");
         sb.append("<style>\n").append(CSS).append("\n</style>\n");
         sb.append("</head>\n<body>\n");
         sb.append("<noscript><div class=\"noscript-warning\">This report is rendered with JavaScript - ")
             .append("it appears to be disabled in your browser, so the content stays empty.</div></noscript>\n");
         sb.append("<div id=\"app\"></div>\n");
-        sb.append("<script id=\"coverdict-data\" type=\"application/json\">")
+        sb.append("<script id=\"proof-data\" type=\"application/json\">")
             .append(jsonEscapeForScript(dataJson)).append("</script>\n");
         sb.append("<script>\n").append(SCRIPT).append("\n</script>\n");
         sb.append("</body>\n</html>\n");
@@ -369,14 +369,14 @@ public final class HtmlRenderer {
     /**
      * Static source text, no interpolation - see the class javadoc's
      * Security section. Reads only the escaped JSON in {@code
-     * #coverdict-data} (never {@code innerHTML}/{@code eval}) and builds
+     * #proof-data} (never {@code innerHTML}/{@code eval}) and builds
      * the DOM with {@code createElement}/{@code textContent}/{@code
      * setAttribute} only.
      */
     private static final String SCRIPT = """
         (function () {
           'use strict';
-          var DATA = JSON.parse(document.getElementById('coverdict-data').textContent);
+          var DATA = JSON.parse(document.getElementById('proof-data').textContent);
           var PRINT_STATE = [];
 
           function el(tag, attrs, children) {
@@ -981,7 +981,7 @@ public final class HtmlRenderer {
             var head = el('div', { class: 'side-head' });
             head.appendChild(el('span', { class: 'side-mark' }));
             var brand = el('div', { class: 'side-brand' });
-            brand.appendChild(el('span', { class: 'side-brand-name', text: 'coverdict' }));
+            brand.appendChild(el('span', { class: 'side-brand-name', text: 'proof-java' }));
             brand.appendChild(el('span', { class: 'side-brand-sub', text: DATA.meta.modules + ' \\u00b7 Java ' + DATA.meta.languageLevel }));
             head.appendChild(brand);
             side.appendChild(head);
@@ -1039,13 +1039,13 @@ public final class HtmlRenderer {
           function setTheme(theme) {
             if (theme === 'dark') { document.documentElement.setAttribute('data-theme', 'dark'); }
             else { document.documentElement.removeAttribute('data-theme'); }
-            try { window.localStorage.setItem('coverdict-report-theme', theme); } catch (e) { /* file:// veya gizli sekmede engellenebilir */ }
+            try { window.localStorage.setItem('proof-report-theme', theme); } catch (e) { /* file:// veya gizli sekmede engellenebilir */ }
             updateThemeButton();
           }
           function toggleTheme() { setTheme(effectiveTheme() === 'dark' ? 'light' : 'dark'); }
           function restoreTheme() {
             try {
-              var saved = window.localStorage.getItem('coverdict-report-theme');
+              var saved = window.localStorage.getItem('proof-report-theme');
               if (saved === 'dark') { document.documentElement.setAttribute('data-theme', 'dark'); }
             } catch (e) { /* fine - stay on the default light theme */ }
             updateThemeButton();
@@ -1187,7 +1187,7 @@ public final class HtmlRenderer {
             wrap.appendChild(buildSummary());
             wrap.appendChild(grid);
             var footer = el('div', { class: 'footer-strip' });
-            footer.appendChild(el('span', { text: 'coverdict ' + DATA.meta.toolVersion + ' \\u00b7 schema ' + DATA.meta.schemaVersion + ' \\u00b7 single file, offline, no external requests' }));
+            footer.appendChild(el('span', { text: 'proof-java ' + DATA.meta.toolVersion + ' \\u00b7 schema ' + DATA.meta.schemaVersion + ' \\u00b7 single file, offline, no external requests' }));
             footer.appendChild(el('span', { text: DATA.meta.generatedAt }));
             wrap.appendChild(footer);
             main.appendChild(wrap);

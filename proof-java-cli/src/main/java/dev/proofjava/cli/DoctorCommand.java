@@ -28,7 +28,7 @@ import dev.proofjava.doctor.ModuleDiagnosis;
  * <p>Read-only by default. {@code --fix} additionally regenerates any
  * missing or empty L2/L3 classpath list via a real {@code mvn
  * dependency:build-classpath} call ({@link ClasspathFixer}) - the one place
- * in coverdict that shells out to a build tool, deliberately confined to
+ * in proof-java that shells out to a build tool, deliberately confined to
  * this opt-in command (D-65).
  */
 @Command(name = "doctor", mixinStandardHelpOptions = true,
@@ -44,7 +44,7 @@ class DoctorCommand implements Callable<Integer> {
     @Option(names = "--fix", description = "Regenerate missing or empty L2/L3 classpath lists via a real 'mvn dependency:build-classpath' call.")
     private boolean fix;
 
-    @Option(names = "--write-config", description = "Write every usable module's binding to coverdict.config.json (D-66), so a rerun of 'analyze' needs no --module/--report flags at all.")
+    @Option(names = "--write-config", description = "Write every usable module's binding to proof.config.json (D-66), so a rerun of 'analyze' needs no --module/--report flags at all.")
     private boolean writeConfig;
 
     @Override
@@ -53,7 +53,7 @@ class DoctorCommand implements Callable<Integer> {
         List<MavenModule> modules = MavenProjectScanner.scan(repoRoot);
 
         if (modules.isEmpty()) {
-            printErr("coverdict: no Maven module found under " + repoRoot + " (no pom.xml, or an unparsable one).");
+            printErr("proof-java: no Maven module found under " + repoRoot + " (no pom.xml, or an unparsable one).");
             return ExitCode.INCOMPLETE.value();
         }
 
@@ -92,10 +92,10 @@ class DoctorCommand implements Callable<Integer> {
             if (before.perTestClasspath() != null && before.mutationClasspath() != null) {
                 continue; // already usable - a real mvn call here would only cost time
             }
-            printErr("coverdict: doctor: fixing classpath for '" + module.id() + "'...");
+            printErr("proof-java: doctor: fixing classpath for '" + module.id() + "'...");
             ClasspathFixer.FixResult result = ClasspathFixer.fix(repoRoot, module);
             if (!result.ok()) {
-                printErr("coverdict: doctor: '" + module.id() + "' - " + result.problem());
+                printErr("proof-java: doctor: '" + module.id() + "' - " + result.problem());
             }
         }
     }
@@ -104,9 +104,9 @@ class DoctorCommand implements Callable<Integer> {
         Path target = repoRoot.resolve(ConfigLoader.DEFAULT_FILE_NAME);
         boolean wrote = ConfigWriter.write(diagnoses, target);
         if (wrote) {
-            printErr("coverdict: doctor: wrote " + ConfigLoader.DEFAULT_FILE_NAME);
+            printErr("proof-java: doctor: wrote " + ConfigLoader.DEFAULT_FILE_NAME);
         } else {
-            printErr("coverdict: doctor: no module has a usable report yet - " + ConfigLoader.DEFAULT_FILE_NAME
+            printErr("proof-java: doctor: no module has a usable report yet - " + ConfigLoader.DEFAULT_FILE_NAME
                 + " not written");
         }
     }

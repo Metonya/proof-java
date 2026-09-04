@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coverdict.dev/schema/coverdict-verdict/0.1.0",
-  "title": "coverdict verdict",
-  "description": "Output contract of the coverdict CLI (experimental during 0.x, D-01). Deterministic: no timestamps or machine-local absolute paths; two clean runs on the same inputs are byte-identical. Ordering rules (all lexicographic by UTF-8 code point unless stated): inputs.modules by id; changedFiles by (module, path); findings by (path, startLine, rule, fingerprint); warnings and analysis.incompleteReasons by (code, path, message); perTest.modules by id; perTest entries and ambient by (className, methodName); lines by line ascending; tests lexicographic; mutation.modules by id; mutation methods by (className, methodName, methodDescription); mutants by (line, mutator, status); killingTests lexicographic; fileCoverage.files by (module, path); fileCoverage.files[].lines by line ascending; fileCoverage.excluded lexicographic. All paths are repo-relative with forward slashes. Percentages are rounded half-up to one decimal.",
+  "$id": "https://raw.githubusercontent.com/Metonya/proof-java/v0.1.0/schema/proof-verdict.schema.json",
+  "title": "proof-java verdict",
+  "description": "Output contract of the proof-java CLI (experimental during 0.x, D-01). Deterministic: no timestamps or machine-local absolute paths; two clean runs on the same inputs are byte-identical. Ordering rules (all lexicographic by UTF-8 code point unless stated): inputs.modules by id; changedFiles by (module, path); findings by (path, startLine, rule, fingerprint); warnings and analysis.incompleteReasons by (code, path, message); perTest.modules by id; perTest entries and ambient by (className, methodName); lines by line ascending; tests lexicographic; mutation.modules by id; mutation methods by (className, methodName, methodDescription); mutants by (line, mutator, status); killingTests lexicographic; fileCoverage.files by (module, path); fileCoverage.files[].lines by line ascending; fileCoverage.excluded lexicographic. All paths are repo-relative with forward slashes. Percentages are rounded half-up to one decimal.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -29,7 +29,7 @@
       ],
       "properties": {
         "name": {
-          "const": "coverdict"
+          "const": "proof-java"
         },
         "version": {
           "type": "string",

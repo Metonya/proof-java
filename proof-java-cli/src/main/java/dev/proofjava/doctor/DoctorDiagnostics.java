@@ -22,8 +22,8 @@ public final class DoctorDiagnostics {
 
     private static final String JACOCO_REPORT_RELATIVE = "target/site/jacoco/jacoco.xml";
     private static final String JACOCO_REPORT_PRESENT = "JACOCO_REPORT_PRESENT";
-    private static final String PER_TEST_CLASSPATH_NAME = "target/coverdict-per-test-classpath.txt";
-    private static final String MUTATION_CLASSPATH_NAME = "target/coverdict-mutation-classpath.txt";
+    private static final String PER_TEST_CLASSPATH_NAME = "target/proof-per-test-classpath.txt";
+    private static final String MUTATION_CLASSPATH_NAME = "target/proof-mutation-classpath.txt";
 
     private DoctorDiagnostics() {
     }

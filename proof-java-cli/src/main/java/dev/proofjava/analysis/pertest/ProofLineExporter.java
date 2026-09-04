@@ -26,12 +26,12 @@ import org.pitest.util.ResultOutputStrategy;
 /**
  * PIT {@link CoverageExporterFactory} SPI implementation (D-47): resolves
  * PIT's block coverage to source lines via {@link LineMapper} and writes
- * {@link PerTestJsonWriter}'s wire format to {@code coverdict-line-tests.json}
+ * {@link PerTestJsonWriter}'s wire format to {@code proof-line-tests.json}
  * in the run's report directory. Registered via {@code META-INF/services/
  * org.pitest.coverage.CoverageExporterFactory}; only active when {@link
- * PerTestDriver} explicitly requests the {@code coverdictspike} feature -
+ * PerTestDriver} explicitly requests the {@code proofspike} feature -
  * never on by default, so an ordinary {@code mvn verify} run of a target
- * repo embedding coverdict is unaffected.
+ * repo embedding proof-java is unaffected.
  *
  * <p>Runs in the same JVM that calls {@link org.pitest.mutationtest.tooling.EntryPoint#execute}
  * (the PIT "driver" process, not the coverage minion).
@@ -41,7 +41,7 @@ import org.pitest.util.ResultOutputStrategy;
  * ClassPath.getClassPathElementsAsFiles()} - the running JVM's own {@code
  * java.class.path}, confirmed by disassembling the constructor. That is
  * never the target repo's classes: this driver JVM is launched with only
- * coverdict's own shaded jar on its {@code -cp} ({@code PerTestRunner}
+ * proof-java's own shaded jar on its {@code -cp} ({@code PerTestRunner}
  * only needs its own classes plus PIT's on that launch command - the
  * target classpath is handed to PIT separately, through {@code
  * ReportOptions}). The result before this fix: PIT's minion genuinely
@@ -60,13 +60,13 @@ import org.pitest.util.ResultOutputStrategy;
  */
 public final class ProofLineExporter implements CoverageExporterFactory {
 
-    static final String OUTPUT_FILE_NAME = "coverdict-line-tests.json";
+    static final String OUTPUT_FILE_NAME = "proof-line-tests.json";
 
     /** Set by {@link PerTestDriver} before calling {@code EntryPoint.execute} - the only channel available to an SPI-instantiated exporter. */
-    static final String MODULE_ID_PROPERTY = "coverdict.pertest.moduleId";
+    static final String MODULE_ID_PROPERTY = "proof.pertest.moduleId";
 
     /** Set by {@link PerTestDriver}: path to the classpath list file (one entry per line) - the real target-module classpath, distinct from this driver JVM's own launch {@code -cp} (D-68). */
-    static final String CLASSPATH_FILE_PROPERTY = "coverdict.pertest.classpathFile";
+    static final String CLASSPATH_FILE_PROPERTY = "proof.pertest.classpathFile";
 
     /**
      * Set by {@link PerTestDriver}: the same {@code reportDir} it gave
@@ -74,7 +74,7 @@ public final class ProofLineExporter implements CoverageExporterFactory {
      * temp export into place (D-74), same "system property is the only
      * channel" reasoning as the two above.
      */
-    static final String REPORT_DIR_PROPERTY = "coverdict.pertest.reportDir";
+    static final String REPORT_DIR_PROPERTY = "proof.pertest.reportDir";
 
     @Override
     public CoverageExporter create(ResultOutputStrategy outputStrategy) {
@@ -83,13 +83,13 @@ public final class ProofLineExporter implements CoverageExporterFactory {
 
     @Override
     public Feature provides() {
-        return Feature.named("coverdictspike").withOnByDefault(false)
-            .withDescription("coverdict per-test line coverage exporter (D-47/D-55)");
+        return Feature.named("proofspike").withOnByDefault(false)
+            .withDescription("proof-java per-test line coverage exporter (D-47/D-55)");
     }
 
     @Override
     public String description() {
-        return "coverdict per-test line coverage exporter";
+        return "proof-java per-test line coverage exporter";
     }
 
     private static final class LineResolvingExporter implements CoverageExporter {

@@ -17,7 +17,7 @@ public final class DoctorReportRenderer {
 
     public static String render(List<ModuleDiagnosis> diagnoses) {
         StringBuilder sb = new StringBuilder();
-        sb.append("coverdict doctor: ").append(diagnoses.size()).append(" module(s) found\n\n");
+        sb.append("proof-java doctor: ").append(diagnoses.size()).append(" module(s) found\n\n");
 
         for (ModuleDiagnosis d : diagnoses) {
             sb.append(d.module().id()).append(" (").append(d.module().root()).append(")\n");
@@ -54,7 +54,7 @@ public final class DoctorReportRenderer {
         for (ModuleDiagnosis d : usable) {
             sb.append("    --report ").append(d.module().id()).append('=').append(d.jacocoReportPath()).append(" \\\n");
         }
-        sb.append("    --out coverdict-verdict.json\n");
+        sb.append("    --out proof-verdict.json\n");
 
         List<ModuleDiagnosis> withPerTest = usable.stream().filter(d -> d.perTestClasspath() != null).toList();
         List<ModuleDiagnosis> withMutation = usable.stream().filter(d -> d.mutationClasspath() != null).toList();

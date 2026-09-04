@@ -17,7 +17,7 @@ class VersionProviderTest {
     @Test
     void readsVersionAndSchemaVersionFromResource() {
         String[] version = new VersionProvider().getVersion();
-        assertTrue(version[0].startsWith("coverdict "), version[0]);
+        assertTrue(version[0].startsWith("proof-java "), version[0]);
         assertTrue(version[1].startsWith("verdict schema "), version[1]);
     }
 
@@ -26,7 +26,7 @@ class VersionProviderTest {
         // Simulates a jar built without the filtered properties file.
         VersionProvider provider = new VersionProvider(() -> null);
         IllegalStateException e = assertThrows(IllegalStateException.class, provider::getVersion);
-        assertTrue(e.getMessage().contains("coverdict-version.properties"), e.getMessage());
+        assertTrue(e.getMessage().contains("proof-java-version.properties"), e.getMessage());
     }
 
     @Test
@@ -49,7 +49,7 @@ class VersionProviderTest {
         InputStream empty = new ByteArrayInputStream(new byte[0]);
         VersionProvider provider = new VersionProvider(() -> empty);
         String[] version = provider.getVersion();
-        assertEquals("coverdict null", version[0]);
+        assertEquals("proof-java null", version[0]);
         assertEquals("verdict schema null", version[1]);
     }
 
@@ -59,6 +59,6 @@ class VersionProviderTest {
         String properties = "version=0.1.0-café\n";
         InputStream in = new ByteArrayInputStream(properties.getBytes(StandardCharsets.UTF_8));
         VersionProvider provider = new VersionProvider(() -> in);
-        assertEquals("coverdict 0.1.0-café", provider.getVersion()[0]);
+        assertEquals("proof-java 0.1.0-café", provider.getVersion()[0]);
     }
 }

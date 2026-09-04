@@ -22,7 +22,7 @@ import dev.proofjava.analysis.subprocess.TestGlobs;
 
 /**
  * Subprocess entry point spawned by {@link PerTestRunner} (never invoked as
- * {@code coverdict}'s own main command). Drives PIT's real {@code
+ * {@code proof-java}'s own main command). Drives PIT's real {@code
  * EntryPoint.execute()} - not a coverage-phase bypass (a direct {@code
  * DefaultCoverageGenerator} call was tried and hit an unreproduced minion
  * crash; EntryPoint is PIT's own proven calling model, D-51).
@@ -59,7 +59,7 @@ public final class PerTestDriver {
         System.setProperty(ProofLineExporter.MODULE_ID_PROPERTY, moduleId);
         // D-68: the only channel available to tell the SPI-instantiated
         // exporter where to actually find the target module's class bytes -
-        // this driver JVM's own -cp is coverdict's shaded jar alone (see
+        // this driver JVM's own -cp is proof-java's shaded jar alone (see
         // PerTestRunner), never the target repo's classes, so
         // ProofLineExporter cannot rely on the JVM's ambient classpath.
         System.setProperty(ProofLineExporter.CLASSPATH_FILE_PROPERTY, args[2]);
@@ -82,7 +82,7 @@ public final class PerTestDriver {
         // JVM's own runtime classpath to every driver's -cp), that made PIT
         // try to run every test class reachable there, not just the target
         // repo's - PlaygroundMutationIT hit this directly, discovering and
-        // executing coverdict's own MainTest/PlaygroundFunctionalTest
+        // executing proof-java's own MainTest/PlaygroundFunctionalTest
         // alongside the fixture's real tests and blowing the 120s timeout.
         options.setTargetTests(Glob.toGlobPredicates(TestGlobs.samePackageGlobsFor(targetClasses)));
         options.setGroupConfig(TestGroupConfig.emptyConfig()); // D-51: mandatory, else createMinionSettings() NPEs
@@ -93,7 +93,7 @@ public final class PerTestDriver {
         options.setExportLineCoverage(true); // gates whether CoverageExporter.recordCoverage() runs at all
         options.setShouldCreateTimestampedReports(false);
         options.setFailWhenNoMutations(false);
-        options.setFeatures(List.of("+coverdictspike", "-defaultcoverage"));
+        options.setFeatures(List.of("+proofspike", "-defaultcoverage"));
         // D-64: see MutationDriver - VERBOSE is the only verbosity whose
         // showMinionOutput() is true, and it is gated on --diagnostics-dir
         // so an ordinary run stays quiet.

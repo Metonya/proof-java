@@ -33,10 +33,10 @@ import dev.proofjava.analysis.model.ResolvedSourceFile;
 import dev.proofjava.analysis.model.Severity;
 import dev.proofjava.analysis.vcs.VcsIdentity;
 
-/** Asserts real analyzer output against the checked-in contract (schema/coverdict-verdict.schema.json), not just a spot-checked example. */
+/** Asserts real analyzer output against the checked-in contract (schema/proof-verdict.schema.json), not just a spot-checked example. */
 class VerdictJsonWriterTest {
 
-    private static final Path SCHEMA_FILE = Path.of("../schema/coverdict-verdict.schema.json");
+    private static final Path SCHEMA_FILE = Path.of("../schema/proof-verdict.schema.json");
     private static final String SHA_A = "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678";
     private static final String SHA_B = "0f1e2d3c4b5a69788796a5b4c3d2e1f001234567";
 

@@ -23,7 +23,7 @@ import dev.proofjava.analysis.subprocess.TestGlobs;
 
 /**
  * Subprocess entry point spawned by {@link MutationRunner} (never invoked as
- * {@code coverdict}'s own main command) - L3's sibling of {@link
+ * {@code proof-java}'s own main command) - L3's sibling of {@link
  * dev.proofjava.analysis.pertest.PerTestDriver}. Drives PIT's real {@code
  * EntryPoint.execute()} through to completion (unlike L2, this process is
  * never force-killed - {@link MutationRunner} waits, bounded by a budget).
@@ -36,7 +36,7 @@ import dev.proofjava.analysis.subprocess.TestGlobs;
  * via {@code javap} on {@code EntryPoint.checkMatrixMode}) - the resulting
  * {@code mutations.xml} is written to the private temp report dir and never
  * read; {@link ProofMutationListener#NAME} is the second requested
- * output format, the one coverdict actually consumes.
+ * output format, the one proof-java actually consumes.
  *
  * <p>Args (all file paths, one entry per line, to sidestep classpath-string
  * length and OS argv quirks): {@code <moduleId> <reportDir> <classpathFile>
@@ -85,7 +85,7 @@ public final class MutationDriver {
         // D-64: VERBOSE is the only setting whose showMinionOutput() is true,
         // and PIT's own coverage-minion crash message tells the user to
         // enable verbose logging before reporting the problem - which had no
-        // route through coverdict until --diagnostics-dir. QUIET stays the
+        // route through proof-java until --diagnostics-dir. QUIET stays the
         // default: verbose output with no log file to land in is just a
         // slower run.
         options.setVerbosity(verbose ? Verbosity.VERBOSE : Verbosity.QUIET);

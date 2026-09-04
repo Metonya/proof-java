@@ -16,7 +16,7 @@ import org.junit.jupiter.api.io.TempDir;
  * Real pom.xml text, not a hand-built object model - the depth-tracking bug
  * this class shipped with (off by one: {@code <project>} itself is the
  * first {@code START_ELEMENT}, so its own children are depth 2, not depth
- * 1 - found live testing against coverdict's own reactor) only shows up
+ * 1 - found live testing against proof-java's own reactor) only shows up
  * against a real multi-module document, not a unit-level mock.
  */
 class MavenProjectScannerTest {
@@ -49,7 +49,7 @@ class MavenProjectScannerTest {
     }
 
     /**
-     * Matches coverdict's own reactor shape exactly: a {@code packaging=pom}
+     * Matches proof-java's own reactor shape exactly: a {@code packaging=pom}
      * aggregator declaring one {@code <module>}, which is itself a real
      * jar module.
      */

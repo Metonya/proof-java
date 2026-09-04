@@ -14,7 +14,7 @@ import org.pitest.mutationtest.engine.MutationDetails;
 import dev.proofjava.analysis.model.AnalysisReason;
 
 /**
- * Groups PIT's per-mutant {@link ClassMutationResults} into coverdict's
+ * Groups PIT's per-mutant {@link ClassMutationResults} into proof-java's
  * per-method {@link MutatedMethod} shape - {@link
  * dev.proofjava.analysis.pertest.BlockLineResolver}'s sibling for L3. No
  * line-map resolution is needed here (unlike L2): {@link

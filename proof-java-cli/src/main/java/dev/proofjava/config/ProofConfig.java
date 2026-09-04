@@ -3,7 +3,7 @@ package dev.proofjava.config;
 import java.util.List;
 
 /**
- * The parsed {@code coverdict.config.json} (M0-CLI-INPUT.md). Every field is
+ * The parsed {@code proof.config.json} (M0-CLI-INPUT.md). Every field is
  * nullable/empty-by-default so {@link ConfigLoader#effective} can tell "the
  * config did not say" apart from "the config said this" - the whole point of
  * the precedence rule (command line &gt; config file &gt; documented defaults).
@@ -49,7 +49,7 @@ public record ProofConfig(
 
     /**
      * One {@code --module <id>=<root>} binding plus its report and L2/L3
-     * classpath, in one place - the shape {@code coverdict doctor
+     * classpath, in one place - the shape {@code proof-java doctor
      * --write-config} generates (D-65/D-66).
      *
      * @param sourceRoots       null means "not specified in config" -

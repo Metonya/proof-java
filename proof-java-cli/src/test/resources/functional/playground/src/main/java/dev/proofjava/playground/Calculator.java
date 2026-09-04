@@ -1,6 +1,6 @@
 package dev.proofjava.playground;
 
-/** Small, deliberately branchy production class used as coverdict's test fixture. */
+/** Small, deliberately branchy production class used as proof-java's test fixture. */
 public class Calculator {
 
     public int add(int a, int b) {

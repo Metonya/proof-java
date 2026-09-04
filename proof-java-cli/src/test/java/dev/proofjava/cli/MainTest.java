@@ -27,7 +27,7 @@ class MainTest {
     void versionReportsToolAndSchemaVersion() {
         assertEquals(ExitCode.COMPLETE.value(), run("--version"));
         String output = out.toString();
-        assertTrue(output.contains("coverdict 0.1.0"), output);
+        assertTrue(output.contains("proof-java 0.1.0"), output);
         assertTrue(output.contains("verdict schema 0.1.0"), output);
     }
 

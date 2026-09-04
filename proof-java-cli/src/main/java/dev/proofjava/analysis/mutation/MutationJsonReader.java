@@ -14,7 +14,7 @@ import dev.proofjava.analysis.model.AnalysisReason;
 /**
  * Reads back what {@link MutationJsonWriter} wrote, via Jackson's streaming
  * {@link JsonParser} - the parent process's half of the listener-to-collector
- * wire format. Not schema-validated (it is coverdict's own output, from the
+ * wire format. Not schema-validated (it is proof-java's own output, from the
  * same version of this code, never third-party input); malformed content
  * throws, converted by {@link MutationRunner} into a warning like any other
  * mutation collection failure.

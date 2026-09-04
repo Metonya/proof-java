@@ -6,7 +6,7 @@ import java.util.Set;
  * The v0.1 rule ids (docs/rules/), in one place so nothing has to restate
  * them. Both the four rule classes and the config reader's {@code
  * suppressions.rule} validation resolve here, which is what keeps
- * {@code schema/coverdict-config.schema.json}'s enum, the reader, and the
+ * {@code schema/proof-config.schema.json}'s enum, the reader, and the
  * engine from drifting into three different lists.
  */
 public final class RuleIds {

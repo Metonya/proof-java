@@ -47,7 +47,7 @@ public final class UnifiedDiffParser {
             // as a false file-boundary and misattribute every following
             // hunk's line numbers to that garbage "path" instead of the real
             // file - a comment-content collision, not a security concern
-            // (this parser only ever reads coverdict's own git subprocess
+            // (this parser only ever reads proof-java's own git subprocess
             // output, never attacker-supplied XML/report input).
             if (target.matches() && previousLine.startsWith("--- ")) {
                 currentPath = resolveTargetPath(target.group(1));

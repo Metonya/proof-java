@@ -10,10 +10,10 @@ import java.util.function.Supplier;
 
 import picocli.CommandLine.IVersionProvider;
 
-/** Reads the version Maven filtered into {@code coverdict-version.properties}. */
+/** Reads the version Maven filtered into {@code proof-java-version.properties}. */
 class VersionProvider implements IVersionProvider {
 
-    private static final String RESOURCE = "/coverdict-version.properties";
+    private static final String RESOURCE = "/proof-java-version.properties";
 
     private final Supplier<InputStream> resourceLoader;
 
@@ -39,7 +39,7 @@ class VersionProvider implements IVersionProvider {
             throw new UncheckedIOException(e);
         }
         return new String[] {
-            "coverdict " + properties.getProperty("version"),
+            "proof-java " + properties.getProperty("version"),
             "verdict schema " + properties.getProperty("schemaVersion")
         };
     }

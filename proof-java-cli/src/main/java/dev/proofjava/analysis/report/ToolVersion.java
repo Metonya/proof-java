@@ -8,14 +8,14 @@ import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 /**
- * Reads the same Maven-filtered {@code coverdict-version.properties} resource
+ * Reads the same Maven-filtered {@code proof-java-version.properties} resource
  * {@code dev.proofjava.cli.VersionProvider} uses for {@code --version} - one
  * source of truth, so the verdict JSON's {@code tool.version}/{@code
  * schemaVersion} can never silently drift from what {@code --version} prints.
  */
 public final class ToolVersion {
 
-    private static final String RESOURCE = "/coverdict-version.properties";
+    private static final String RESOURCE = "/proof-java-version.properties";
 
     private ToolVersion() {
     }

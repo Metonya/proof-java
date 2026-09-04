@@ -12,7 +12,7 @@ import sys
 from jsonschema import Draft202012Validator
 
 here = pathlib.Path(__file__).parent
-schema = json.loads((here / "coverdict-verdict.schema.json").read_text(encoding="utf-8"))
+schema = json.loads((here / "proof-verdict.schema.json").read_text(encoding="utf-8"))
 Draft202012Validator.check_schema(schema)
 validator = Draft202012Validator(schema)
 

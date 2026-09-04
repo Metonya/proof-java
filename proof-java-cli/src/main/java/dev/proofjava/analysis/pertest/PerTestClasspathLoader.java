@@ -24,7 +24,7 @@ import dev.proofjava.analysis.subprocess.ClasspathListFile;
  * over-included by this rule too; harmless here since {@link PerTestRunner}
  * never runs a mutation pre-scan (D-51's zero-units trap is specific to that
  * phase) and always calls {@code calculateCoverage} with an accept-all
- * predicate. coverdict has no Maven/Gradle build-output convention to guess
+ * predicate. proof-java has no Maven/Gradle build-output convention to guess
  * from instead (D-51 rejects build-tool detection outright) - the caller
  * states its classpath explicitly, same as {@code --classpath}.
  */

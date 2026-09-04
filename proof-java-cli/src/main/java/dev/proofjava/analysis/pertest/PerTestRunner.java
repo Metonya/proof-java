@@ -55,7 +55,7 @@ public final class PerTestRunner {
     private static final Duration HEARTBEAT = Duration.ofSeconds(30);
     private static final Duration POLL = Duration.ofMillis(200);
 
-    private static final String TEMP_DIR_PREFIX = "coverdict-pertest-";
+    private static final String TEMP_DIR_PREFIX = "proof-pertest-";
 
     private static final String PROGRESS_PREFIX = "per-test: module '";
 
@@ -90,7 +90,7 @@ public final class PerTestRunner {
             // the minion's classpath from ReportOptions.getClassPathElements(), not from the
             // driver JVM's own classpath) - appending this JVM's own runtime classpath (the
             // shaded jar in production, D-55; the full Maven classpath under test/dev) covers
-            // both coverdict's classes and PIT's.
+            // both proof-java's classes and PIT's.
             List<String> classPathWithSelf = new java.util.ArrayList<>(classPathElements);
             classPathWithSelf.addAll(ownClasspathEntries);
             Path classpathFile = writeLines(moduleId, workDir, "classpath.txt", classPathWithSelf);
@@ -116,7 +116,7 @@ public final class PerTestRunner {
             }
 
             ProcessOutputTail output = ProcessOutputTail.of(process.getInputStream(), log, null);
-            Thread outputThread = output.start("coverdict-pertest-output");
+            Thread outputThread = output.start("proof-pertest-output");
             try {
                 waitForOutputOrTimeout(process, outputFile, moduleId, timeout, diagnostics);
             } finally {

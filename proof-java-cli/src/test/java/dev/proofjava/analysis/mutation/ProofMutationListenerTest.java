@@ -31,7 +31,7 @@ import org.pitest.mutationtest.engine.MutationIdentifier;
  */
 class ProofMutationListenerTest {
 
-    private static final String MODULE_ID_PROPERTY = "coverdict.mutation.moduleId";
+    private static final String MODULE_ID_PROPERTY = "proof.mutation.moduleId";
 
     @AfterEach
     void clearModuleIdProperty() {
@@ -45,7 +45,7 @@ class ProofMutationListenerTest {
         ProofMutationListener factory = new ProofMutationListener();
         MutationResultListener listener = factory.getListener(new Properties(),
             listenerArguments(name -> {
-                assertEquals("coverdict-mutants.json", name);
+                assertEquals("proof-mutants.json", name);
                 return captured;
             }));
 
@@ -63,7 +63,7 @@ class ProofMutationListenerTest {
 
     @Test
     void nameMatchesTheConstantUsedForOutputFormatActivation() {
-        assertEquals("coverdict-mutation", new ProofMutationListener().name());
+        assertEquals("proof-mutation", new ProofMutationListener().name());
     }
 
     private static MutationResult mutationResult(String internalClassName, String methodName, String desc,

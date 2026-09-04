@@ -30,24 +30,24 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import picocli.CommandLine;
 
 /**
- * Runs coverdict's real {@code analyze --base <ref> --mutation-report}
+ * Runs proof-java's real {@code analyze --base <ref> --mutation-report}
  * against a real PIT mutation run of the checked-in playground fixture -
  * the L3 counterpart to {@link PlaygroundFunctionalTest}'s L0-only run,
  * which explicitly defers this to the {@code mutation-it} profile.
  *
  * <p>Unlike {@link
  * dev.proofjava.analysis.mutation.MutationRunnerIT}, which mutates
- * coverdict's own already-built classes (free classpath via {@code
+ * proof-java's own already-built classes (free classpath via {@code
  * java.class.path}), the playground fixture is a separate, not-yet-built
  * Maven project: its classpath has to be assembled the same way
- * coverdict-playground's own {@code run.ps1} does it - a real {@code mvn}
+ * proof-java-playground's own {@code run.ps1} does it - a real {@code mvn}
  * subprocess for {@code test-compile} and {@code dependency:build-classpath}
  * - since nothing puts the fixture's jars on this JVM's classpath for free.
  *
  * <p>{@code --mutation-report} is rejected under {@code --no-vcs} (no diff,
  * no changed-class targets), so this test commits the fixture in two steps
  * (a skeleton, then the real scenario sources) and uses {@code --base
- * <first-commit>} - the same shape coverdict-playground's own {@code
+ * <first-commit>} - the same shape proof-java-playground's own {@code
  * run.ps1} uses against the real repo's first commit.
  */
 class PlaygroundMutationIT {
@@ -95,9 +95,9 @@ class PlaygroundMutationIT {
         JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(out));
         List<String> findings = mutationFindingSummaries(doc);
 
-        // Ground truth from a real `./run.ps1` run against coverdict-playground
+        // Ground truth from a real `./run.ps1` run against proof-java-playground
         // (private repo) - see that repo's README scenario table and
-        // checked-in coverdict-verdict.json.
+        // checked-in proof-verdict.json.
         String pkg = "dev.proofjava.playground.";
         assertEquals(4, findings.size(), "unexpected L3 finding count: " + findings);
         assertTrue(findings.contains("PSEUDO_TESTED_METHOD HIGH " + pkg + "Calculator#subtract(II)I"));
@@ -190,7 +190,7 @@ class PlaygroundMutationIT {
         Path log = diagnosticsDir.resolve("root-mutation.log");
         assertTrue(Files.exists(log), "expected --diagnostics-dir to write " + log);
         String logged = Files.readString(log, StandardCharsets.UTF_8);
-        assertTrue(logged.contains("##coverdict-progress "),
+        assertTrue(logged.contains("##proof-progress "),
             "expected per-class progress markers in the log, got: " + logged);
         assertTrue(logged.contains("PIT >>"),
             "expected verbose engine output in the log (the whole point of --diagnostics-dir), got: " + logged);

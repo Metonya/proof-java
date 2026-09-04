@@ -16,7 +16,7 @@ public final class TextRenderer {
 
     public static String render(VerdictDocument doc) {
         StringBuilder sb = new StringBuilder();
-        sb.append("coverdict: analysis ").append(doc.complete() ? "complete" : "incomplete")
+        sb.append("proof-java: analysis ").append(doc.complete() ? "complete" : "incomplete")
             .append(" (").append(doc.diffMode()).append(")\n");
 
         sb.append(metricLine("jacoco-line", doc.overallMetrics().jacocoLine()));

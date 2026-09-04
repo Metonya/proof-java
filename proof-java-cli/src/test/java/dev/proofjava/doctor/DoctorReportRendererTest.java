@@ -29,8 +29,8 @@ class DoctorReportRendererTest {
         ModuleDiagnosis app = new ModuleDiagnosis(APP, List.of(DoctorCheck.ok("JACOCO_REPORT_PRESENT", "found")),
             "app/target/site/jacoco/jacoco.xml", null, null);
         ModuleDiagnosis data = new ModuleDiagnosis(DATA, List.of(DoctorCheck.ok("JACOCO_REPORT_PRESENT", "found")),
-            "data/target/site/jacoco/jacoco.xml", "data/target/coverdict-per-test-classpath.txt",
-            "data/target/coverdict-mutation-classpath.txt");
+            "data/target/site/jacoco/jacoco.xml", "data/target/proof-per-test-classpath.txt",
+            "data/target/proof-mutation-classpath.txt");
 
         String rendered = DoctorReportRenderer.render(List.of(app, data));
 

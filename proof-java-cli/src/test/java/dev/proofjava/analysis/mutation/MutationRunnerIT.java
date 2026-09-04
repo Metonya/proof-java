@@ -13,7 +13,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 /**
- * Drives a real PIT mutation run against coverdict's own repository - not
+ * Drives a real PIT mutation run against proof-java's own repository - not
  * bound to the default {@code mvn verify} gate (minutes, not milliseconds;
  * needs a real classpath), only to the {@code mutation-it} profile: {@code
  * mvn -Pmutation-it -pl proof-java-cli test}.

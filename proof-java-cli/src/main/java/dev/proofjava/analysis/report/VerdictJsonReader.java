@@ -29,7 +29,7 @@ import dev.proofjava.analysis.pertest.PerTestModuleEvidence;
 import dev.proofjava.analysis.vcs.VcsIdentity;
 
 /**
- * Reads a verdict JSON matching {@code schema/coverdict-verdict.schema.json}
+ * Reads a verdict JSON matching {@code schema/proof-verdict.schema.json}
  * back into a {@link VerdictDocument} - the read-side counterpart of {@link
  * VerdictJsonWriter}, for {@code render-html}'s "render an already-produced
  * document, no fresh analysis" mode (D-78). Field order in the input does

@@ -43,7 +43,7 @@ import dev.proofjava.analysis.report.ToolVersion;
  * other byte in the golden is the real analyzer's real output.
  *
  * <p>To regenerate after a deliberate output-format change: run this test
- * once with {@code -Dcoverdict.regenerateGoldens=true} (see {@link
+ * once with {@code -Dproof.regenerateGoldens=true} (see {@link
  * #compareOrRegenerate}), inspect the diff, then re-add the {@code
  * ${tool.version}} placeholder by hand before committing (the regenerated
  * file otherwise contains this build's literal version string).
@@ -52,7 +52,7 @@ class VerdictGoldenTest {
 
     private static final Path GOLDEN_DIR = Path.of("../fixtures/verdicts");
     private static final Path JACOCO_FIXTURE = Path.of("../fixtures/jacoco/mixed-coverage.xml").toAbsolutePath();
-    private static final Path SCHEMA_FILE = Path.of("../schema/coverdict-verdict.schema.json");
+    private static final Path SCHEMA_FILE = Path.of("../schema/proof-verdict.schema.json");
     private static final String VERSION_PLACEHOLDER = "${tool.version}";
 
     @TempDir
@@ -163,7 +163,7 @@ class VerdictGoldenTest {
         assertTrue(validate(producedOut).isEmpty(), "produced verdict must itself validate: " + validate(producedOut));
 
         Path goldenPath = GOLDEN_DIR.resolve(goldenFileName);
-        if (Boolean.getBoolean("coverdict.regenerateGoldens")) {
+        if (Boolean.getBoolean("proof.regenerateGoldens")) {
             Files.writeString(goldenPath, producedText, StandardCharsets.UTF_8);
             return;
         }
@@ -172,7 +172,7 @@ class VerdictGoldenTest {
         String goldenWithRealVersion = goldenText.replace(VERSION_PLACEHOLDER, toolVersion);
         assertEquals(goldenWithRealVersion, producedText,
             "golden mismatch for " + goldenFileName + " - if this is a deliberate output-format change, "
-                + "re-run with -Dcoverdict.regenerateGoldens=true and re-add the " + VERSION_PLACEHOLDER + " placeholder by hand");
+                + "re-run with -Dproof.regenerateGoldens=true and re-add the " + VERSION_PLACEHOLDER + " placeholder by hand");
     }
 
     private Set<ValidationMessage> validate(Path jsonFile) throws IOException {

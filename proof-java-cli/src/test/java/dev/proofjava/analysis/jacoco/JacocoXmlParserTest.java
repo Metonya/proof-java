@@ -154,7 +154,7 @@ class JacocoXmlParserTest {
         // marker never surfaces anywhere in the failure - not just that
         // some AnalysisException was thrown (SECURITY-POLICY.md #1: "never a
         // file read, never a network attempt").
-        String marker = "COVERDICT-XXE-CANARY-4f9d2b";
+        String marker = "PROOF-XXE-CANARY-4f9d2b";
         Path secretFile = tempDir.resolve("secret.txt");
         Files.writeString(secretFile, marker);
         String secretUri = secretFile.toUri().toString();

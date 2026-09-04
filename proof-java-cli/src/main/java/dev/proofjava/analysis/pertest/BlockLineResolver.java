@@ -18,7 +18,7 @@ import org.pitest.mutationtest.engine.Location;
 import dev.proofjava.analysis.model.AnalysisReason;
 
 /**
- * Resolves PIT's block-indexed {@link BlockCoverage} into coverdict's
+ * Resolves PIT's block-indexed {@link BlockCoverage} into proof-java's
  * line-indexed {@link PerTestEntry} shape via {@link LineMap} (D-47/D-49:
  * {@code linecoverage.xml}'s own {@code block} numbers are not source
  * lines). A source line can carry the same test twice across two blocks

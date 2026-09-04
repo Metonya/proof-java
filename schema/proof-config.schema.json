@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coverdict.dev/schema/coverdict-config.schema.json",
-  "title": "coverdict configuration file",
+  "$id": "https://raw.githubusercontent.com/Metonya/proof-java/v0.1.0/schema/proof-config.schema.json",
+  "title": "proof-java configuration file",
   "description": "Repo-level configuration (docs/M0-CLI-INPUT.md). Option precedence: command line > config file > documented defaults. Strict JSON: no comments, no unknown keys. Entries that need rationale carry an explicit reason field rather than a comment.",
   "type": "object",
   "additionalProperties": false,
@@ -41,7 +41,7 @@
       }
     },
     "modules": {
-      "description": "Module/report/classpath bindings (D-66), the same shape --module/--report/--per-test-classpath/--mutation-classpath express on the command line - 'coverdict doctor --write-config' generates this. Applies only when the command line declares zero --module flags; a single --module on the command line ignores this array entirely rather than partially merging with it (same all-or-nothing rule as coverageExclusions).",
+      "description": "Module/report/classpath bindings (D-66), the same shape --module/--report/--per-test-classpath/--mutation-classpath express on the command line - 'proof-java doctor --write-config' generates this. Applies only when the command line declares zero --module flags; a single --module on the command line ignores this array entirely rather than partially merging with it (same all-or-nothing rule as coverageExclusions).",
       "type": "array",
       "items": {
         "type": "object",

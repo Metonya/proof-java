@@ -7,7 +7,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 /**
- * Writes {@code coverdict.config.json}'s {@code modules} array (D-66) from
+ * Writes {@code proof.config.json}'s {@code modules} array (D-66) from
  * a diagnosed reactor - {@code doctor --write-config}'s output. Only
  * modules with a usable JaCoCo report are written; a module with a
  * BLOCKER is left out entirely rather than written with a broken binding,

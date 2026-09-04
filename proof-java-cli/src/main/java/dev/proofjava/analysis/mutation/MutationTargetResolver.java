@@ -18,7 +18,7 @@ import dev.proofjava.analysis.model.ModuleDefinition;
  * per module and a {@code className -> path} index for {@code
  * PSEUDO_TESTED_METHOD} to anchor its finding on, without ever touching
  * {@code ChangedClassTargets}/a diff (D-12/D-51: diff-scoped mutation is not
- * the only entry point coverdict supports).
+ * the only entry point proof-java supports).
  *
  * <p>All-or-nothing at the whole-invocation level (D-66's config-modules
  * precedent): {@code AnalyzeCommand} calls this only when at least one

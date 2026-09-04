@@ -19,17 +19,17 @@ import dev.proofjava.analysis.subprocess.ClasspathListFile;
  * {@code --per-test-classpath}/{@code --mutation-classpath} expect: the
  * module's own {@code target/classes} and {@code target/test-classes}
  * first, then every dependency jar Maven reports for the test scope - same
- * as {@code coverdict-per-test-classpath.txt}/{@code
- * coverdict-mutation-classpath.txt} in the dogfood runbook, both files
+ * as {@code proof-per-test-classpath.txt}/{@code
+ * proof-mutation-classpath.txt} in the dogfood runbook, both files
  * carrying identical content (PIT's {@code ReportOptions} takes the two as
  * separate flags, but there is no reason for L2 and L3 to see a different
  * runtime classpath for the same module).
  */
 public final class ClasspathFixer {
 
-    static final String DEPENDENCIES_FILE = "target/coverdict-dependencies.txt";
-    static final String PER_TEST_CLASSPATH_FILE = "target/coverdict-per-test-classpath.txt";
-    static final String MUTATION_CLASSPATH_FILE = "target/coverdict-mutation-classpath.txt";
+    static final String DEPENDENCIES_FILE = "target/proof-dependencies.txt";
+    static final String PER_TEST_CLASSPATH_FILE = "target/proof-per-test-classpath.txt";
+    static final String MUTATION_CLASSPATH_FILE = "target/proof-mutation-classpath.txt";
 
     private ClasspathFixer() {
     }

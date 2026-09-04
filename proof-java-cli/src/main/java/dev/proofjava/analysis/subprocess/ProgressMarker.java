@@ -19,7 +19,7 @@ import java.util.OptionalInt;
  */
 public final class ProgressMarker {
 
-    public static final String PREFIX = "##coverdict-progress ";
+    public static final String PREFIX = "##proof-progress ";
 
     private ProgressMarker() {
     }

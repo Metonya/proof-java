@@ -249,7 +249,7 @@ final class OracleRecognizer {
         @Override
         public void visit(LambdaExpr n, Void arg) {
             // documented limit: lambda bodies are not traversed (dynamic-test-style
-            // deferred code coverdict cannot safely attribute in v0.1)
+            // deferred code proof-java cannot safely attribute in v0.1)
         }
 
         @Override

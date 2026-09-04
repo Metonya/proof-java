@@ -20,7 +20,7 @@ import dev.proofjava.analysis.subprocess.ClasspathListFile;
 /**
  * Exercises {@link ClasspathFixer} without a real {@code mvn} subprocess: a
  * {@link MavenClient} subclass stands in for the Maven call and simply
- * writes the {@code target/coverdict-dependencies.txt} a real
+ * writes the {@code target/proof-dependencies.txt} a real
  * {@code dependency:build-classpath} run would have produced - the same
  * "fake the boundary, test the logic on our side of it" shape as this
  * repo's other subprocess-adjacent tests.

@@ -17,11 +17,11 @@ import com.fasterxml.jackson.core.StreamReadConstraints;
 import dev.proofjava.analysis.model.RuleIds;
 
 /**
- * Reads {@code coverdict.config.json} (M0-CLI-INPUT.md's config surface).
+ * Reads {@code proof.config.json} (M0-CLI-INPUT.md's config surface).
  *
  * <p><strong>Why a hand-written strict reader rather than the JSON Schema
  * validator (D-40):</strong> the schema
- * ({@code schema/coverdict-config.schema.json}) is checked in and is the
+ * ({@code schema/proof-config.schema.json}) is checked in and is the
  * contract, but {@code json-schema-validator} is a test-scope dependency, and
  * pulling it plus its transitive tree into the shipped jar to read one small
  * fixed-shape file is a poor trade - hard rule 9 makes every added runtime
@@ -39,7 +39,7 @@ import dev.proofjava.analysis.model.RuleIds;
 public final class ConfigLoader {
 
     /** M0-CLI-INPUT.md: used when {@code --config} is absent and this file exists at the repo root. */
-    public static final String DEFAULT_FILE_NAME = "coverdict.config.json";
+    public static final String DEFAULT_FILE_NAME = "proof.config.json";
 
     /** SECURITY-POLICY.md #2: a config file is untrusted input; a real one is well under a kilobyte. */
     private static final int MAX_CONFIG_BYTES = 1024 * 1024;

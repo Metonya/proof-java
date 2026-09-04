@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * True negative: well-formed tests with real oracles on real behavior.
- * expect: no findings from any coverdict rule for this file.
+ * expect: no findings from any proof-java rule for this file.
  */
 class CalculatorGoodTest {
 

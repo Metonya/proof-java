@@ -30,7 +30,7 @@ import dev.proofjava.analysis.vcs.VcsIdentity;
 /**
  * Writes a {@link VerdictDocument} field-by-field via Jackson's streaming
  * {@link JsonGenerator} - never string concatenation (SECURITY-POLICY.md
- * #4) - matching {@code schema/coverdict-verdict.schema.json} exactly,
+ * #4) - matching {@code schema/proof-verdict.schema.json} exactly,
  * including its declared field-ordering rules, so two runs on the same
  * input are byte-identical (hard rule: "Stable deterministic ordering").
  *
@@ -61,7 +61,7 @@ public final class VerdictJsonWriter {
             g.writeStringField("schemaVersion", doc.schemaVersion());
 
             g.writeObjectFieldStart("tool");
-            g.writeStringField("name", "coverdict");
+            g.writeStringField("name", "proof-java");
             g.writeStringField("version", doc.toolVersion());
             g.writeEndObject();
 

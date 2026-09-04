@@ -45,7 +45,7 @@ class TestSourceScannerTest {
         // create a symlink; skip rather than fail where that's unavailable -
         // this is the documented limit, not a silently green claim (hard
         // rule 3a applied to the test suite itself).
-        Path outsideDir = Files.createTempDirectory("coverdict-outside-repo");
+        Path outsideDir = Files.createTempDirectory("proof-java-outside-repo");
         Path outsideFile = outsideDir.resolve("Secret.java");
         Files.writeString(outsideFile, "class Secret {}\n");
 

@@ -14,7 +14,7 @@ import java.util.Set;
  * <p>D-59/D-63: originally {@code MutationDriver}-only, extracted here once
  * D-68's WTA dogfood evidence showed {@code PerTestDriver} needed the exact
  * same narrowing for a different reason. {@code MutationDriver} avoids
- * telling PIT that every test in the module (716 in coverdict's own repo)
+ * telling PIT that every test in the module (716 in proof-java's own repo)
  * is a candidate covering test, because {@code setFullMutationMatrix(true)}
  * re-gathers coverage per target method probed, and an unscoped candidate
  * set made that cost scale with (target methods) x (unscoped suite size).
@@ -25,7 +25,7 @@ import java.util.Set;
  * makes PIT try to run every test class on that JVM's own classpath as a
  * candidate too - not just the target repo's - which is exactly what
  * {@code PlaygroundMutationIT} hit running under {@code -Pmutation-it}:
- * PIT discovered and tried to execute coverdict's own {@code MainTest}/
+ * PIT discovered and tried to execute proof-java's own {@code MainTest}/
  * {@code PlaygroundFunctionalTest} alongside the playground fixture's real
  * tests, blowing well past the 120s per-test collection timeout.
  *

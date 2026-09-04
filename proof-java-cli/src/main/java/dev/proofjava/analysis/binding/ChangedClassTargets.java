@@ -13,7 +13,7 @@ import dev.proofjava.analysis.model.ModuleDefinition;
  * Diff-scoped FQCN globs for one module's changed production classes -
  * shared by every PIT-driving collector (L2 per-test coverage, L3 mutation).
  * Resolves O-05: PIT's own {@code scmMutationCoverage} goal was removed
- * (D-12), so this is coverdict's own git-diff-to-target mapping.
+ * (D-12), so this is proof-java's own git-diff-to-target mapping.
  */
 public final class ChangedClassTargets {
 

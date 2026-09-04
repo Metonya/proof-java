@@ -12,7 +12,7 @@ import com.fasterxml.jackson.core.JsonToken;
 /**
  * Reads back what {@link PerTestJsonWriter} wrote, via Jackson's streaming
  * {@link JsonParser} - the parent process's half of the exporter-to-driver
- * wire format. Not schema-validated (it is coverdict's own output, from the
+ * wire format. Not schema-validated (it is proof-java's own output, from the
  * same version of this code, never third-party input); malformed content
  * throws, converted by {@link PerTestRunner} into a warning like any other
  * per-test collection failure.

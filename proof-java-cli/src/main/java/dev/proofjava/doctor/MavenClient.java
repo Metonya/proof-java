@@ -44,7 +44,7 @@ public class MavenClient {
 
     /**
      * Runs {@code mvn -pl <moduleRoot> dependency:build-classpath
-     * -Dmdep.outputFile=target/coverdict-dependencies.txt
+     * -Dmdep.outputFile=target/proof-dependencies.txt
      * -Dmdep.includeScope=test} from the reactor root. The output path is
      * module-relative, not repo-relative - the WTA dogfood's first classpath
      * recipe used a repo-relative path together with {@code -pl}, which
@@ -57,7 +57,7 @@ public class MavenClient {
      */
     public Result buildClasspath(String moduleRoot) {
         return run("-pl", moduleRoot, "dependency:build-classpath",
-            "-Dmdep.outputFile=target/coverdict-dependencies.txt",
+            "-Dmdep.outputFile=target/proof-dependencies.txt",
             "-Dmdep.includeScope=test");
     }
 
@@ -77,7 +77,7 @@ public class MavenClient {
         }
 
         ProcessOutputTail output = ProcessOutputTail.tailOnly(process.getInputStream());
-        Thread outputThread = output.start("coverdict-doctor-mvn-output");
+        Thread outputThread = output.start("proof-doctor-mvn-output");
 
         boolean finished;
         try {

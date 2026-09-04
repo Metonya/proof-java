@@ -23,7 +23,7 @@ class ExclusionFilterTest {
 
     @Test
     void doubleStarSlashMatchesAnyDepthIncludingZero() {
-        // This exact pattern is coverdict's own pom.xml sonar.coverage.exclusions.
+        // This exact pattern is proof-java's own pom.xml sonar.coverage.exclusions.
         List<ResolvedSourceFile> files = List.of(
             file("proof-java-cli/src/main/java/dev/proofjava/cli/Main.java"),
             file("Main.java"),

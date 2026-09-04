@@ -58,7 +58,7 @@ public final class MutationRunner {
      */
     public static final Duration DEFAULT_BUDGET = Duration.ofMinutes(5);
 
-    private static final String TEMP_DIR_PREFIX = "coverdict-mutation-";
+    private static final String TEMP_DIR_PREFIX = "proof-mutation-";
 
     /**
      * How often a still-running module reports progress. Long enough not to
@@ -129,7 +129,7 @@ public final class MutationRunner {
             AtomicInteger classesDone = new AtomicInteger();
             ProcessOutputTail output = ProcessOutputTail.of(process.getInputStream(), log,
                 line -> ProgressMarker.parse(line).ifPresent(classesDone::set));
-            Thread outputThread = output.start("coverdict-mutation-output");
+            Thread outputThread = output.start("proof-mutation-output");
 
             return awaitAndRead(new Run(moduleId, process, outputThread, output, outputFile, budget,
                 targetClasses.size(), classesDone, diagnostics));

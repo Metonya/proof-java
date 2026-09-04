@@ -185,7 +185,7 @@ class VerdictJsonReaderTest {
 
     @Test
     void aDocumentMissingARequiredFieldThrowsRatherThanGuessing() {
-        String json = "{\"tool\": {\"name\": \"coverdict\", \"version\": \"0.1.0\"}}";
+        String json = "{\"tool\": {\"name\": \"proof-java\", \"version\": \"0.1.0\"}}";
         assertThrows(VerdictJsonReader.VerdictJsonReadException.class,
             () -> VerdictJsonReader.read(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))));
     }

@@ -63,9 +63,9 @@ class HtmlRendererTest {
     // ---- JSON extraction helper (jackson-core streaming; no jackson-databind dependency) ----
 
     private static Map<String, Object> parseData(String rendered) throws IOException {
-        String marker = "id=\"coverdict-data\" type=\"application/json\">";
+        String marker = "id=\"proof-data\" type=\"application/json\">";
         int start = rendered.indexOf(marker);
-        assertTrue(start >= 0, "coverdict-data script tag not found: " + rendered);
+        assertTrue(start >= 0, "proof-data script tag not found: " + rendered);
         start += marker.length();
         int end = rendered.indexOf("</script>", start);
         String embedded = rendered.substring(start, end);
@@ -128,7 +128,7 @@ class HtmlRendererTest {
         // The literal bytes that would end the <script> element must never occur.
         assertFalse(rendered.toLowerCase(java.util.Locale.ROOT).contains("</script><script>alert"), rendered);
         assertFalse(rendered.contains("<b>bold</b>"), rendered);
-        assertEquals(1, countOccurrences(rendered, "<script id=\"coverdict-data\""), rendered);
+        assertEquals(1, countOccurrences(rendered, "<script id=\"proof-data\""), rendered);
         assertEquals(1, countOccurrences(rendered.substring(rendered.indexOf("<script>\n")), "</script>"), rendered);
 
         // ... yet JSON.parse (simulated here by the same streaming reader a browser's JSON.parse would agree with)
@@ -320,7 +320,7 @@ class HtmlRendererTest {
         assertTrue(rendered.contains("'theme-toggle'"), rendered);
         assertTrue(rendered.contains("function toggleTheme"), rendered);
         assertTrue(rendered.contains(":root[data-theme=\"dark\"]"), rendered);
-        assertTrue(rendered.contains("coverdict-report-theme"), rendered);
+        assertTrue(rendered.contains("proof-report-theme"), rendered);
         // D-81: the user asked the report to open in light mode first - bare :root carries the light
         // token values directly and there is no media query auto-switching to dark on system preference,
         // so a first-time reader (no stored preference) always opens light regardless of OS theme.

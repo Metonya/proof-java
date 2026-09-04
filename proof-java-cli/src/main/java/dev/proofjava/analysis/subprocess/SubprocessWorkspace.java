@@ -14,7 +14,7 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Shared plumbing for coverdict's PIT-driving subprocesses (L2 per-test
+ * Shared plumbing for proof-java's PIT-driving subprocesses (L2 per-test
  * coverage, L3 mutation): a private temp work directory, argument-file
  * writing (sidesteps classpath-string length and OS argv quirks), and the
  * current JVM's own runtime classpath for the child's {@code -cp}. Each
@@ -120,7 +120,7 @@ public final class SubprocessWorkspace {
      * PIT classes on it (found running {@code MutationRunnerIT}:
      * {@code NoClassDefFoundError: org.pitest.mutationtest.config.ReportOptions}).
      * The child driver process needs this for its own {@code -cp} (to load
-     * PIT's {@code EntryPoint} and coverdict's own driver/listener classes);
+     * PIT's {@code EntryPoint} and proof-java's own driver/listener classes);
      * PIT's mutation minion needs it appended to {@code ReportOptions}'
      * classpath for the same reason, one entry at a time (never as one
      * {@code File.pathSeparator}-joined blob - PIT reads each collection

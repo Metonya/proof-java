@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import picocli.CommandLine;
 
 /**
- * Runs coverdict's real {@code analyze --no-vcs} against a checked-in copy of
- * coverdict-playground (a separate, private repo of deliberately constructed
+ * Runs proof-java's real {@code analyze --no-vcs} against a checked-in copy of
+ * proof-java-playground (a separate, private repo of deliberately constructed
  * test-quality scenarios, one per L0 rule - see that repo's README for the
  * scenario map). Unlike the synthetic two-line fixtures in {@link
  * dev.proofjava.cli.VerdictGoldenTest}, this exercises every L0 rule at once
@@ -67,7 +67,7 @@ class PlaygroundFunctionalTest {
         JsonNode doc = new ObjectMapper().readTree(Files.readAllBytes(out));
         List<String> findings = findingSummaries(doc);
 
-        // Ground truth verified by hand against coverdict-playground (private
+        // Ground truth verified by hand against proof-java-playground (private
         // repo): `analyze --base <first-commit> --report jacoco.xml
         // --mutation-report` produces these same seven L0 findings plus four L3
         // findings this test doesn't exercise. CalculatorGoodTest and

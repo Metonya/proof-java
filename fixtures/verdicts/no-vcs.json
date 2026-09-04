@@ -1,7 +1,7 @@
 {
   "schemaVersion" : "0.1.0",
   "tool" : {
-    "name" : "coverdict",
+    "name" : "proof-java",
     "version" : "${tool.version}"
   },
   "analysis" : {

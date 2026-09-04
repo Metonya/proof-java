@@ -25,7 +25,7 @@ import com.networknt.schema.SpecVersion.VersionFlag;
 
 class ConfigLoaderTest {
 
-    private static final Path SCHEMA_FILE = Path.of("../schema/coverdict-config.schema.json");
+    private static final Path SCHEMA_FILE = Path.of("../schema/proof-config.schema.json");
 
     @TempDir
     Path repoRoot;
@@ -99,8 +99,8 @@ class ConfigLoaderTest {
                 {"id": "app", "root": "app", "report": "app/target/site/jacoco/jacoco.xml"},
                 {"id": "data", "root": "data", "sourceRoots": ["data/src/main/java"],
                  "testRoots": ["data/src/test/java"], "report": "data/target/site/jacoco/jacoco.xml",
-                 "perTestClasspath": "data/target/coverdict-per-test-classpath.txt",
-                 "mutationClasspath": "data/target/coverdict-mutation-classpath.txt"}
+                 "perTestClasspath": "data/target/proof-per-test-classpath.txt",
+                 "mutationClasspath": "data/target/proof-mutation-classpath.txt"}
               ]
             }
             """);
@@ -117,8 +117,8 @@ class ConfigLoaderTest {
 
         ProofConfig.ModuleConfig data = config.modules().get(1);
         assertEquals(List.of("data/src/main/java"), data.sourceRoots());
-        assertEquals("data/target/coverdict-per-test-classpath.txt", data.perTestClasspath());
-        assertEquals("data/target/coverdict-mutation-classpath.txt", data.mutationClasspath());
+        assertEquals("data/target/proof-per-test-classpath.txt", data.perTestClasspath());
+        assertEquals("data/target/proof-mutation-classpath.txt", data.mutationClasspath());
     }
 
     @Test

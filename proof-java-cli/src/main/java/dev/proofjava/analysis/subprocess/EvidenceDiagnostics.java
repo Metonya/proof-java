@@ -29,7 +29,7 @@ import java.util.function.Consumer;
  *       the PIT drivers verbose and captures every line the subprocess
  *       writes. Answers "why did it fail?": PIT's own minion-crash message
  *       tells the user to enable verbose logging before reporting an
- *       issue, which until now coverdict had no way to do.</li>
+ *       issue, which until now proof-java had no way to do.</li>
  * </ul>
  *
  * @param logDir       directory for per-module subprocess logs, or null for none.
