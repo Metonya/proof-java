@@ -47,7 +47,7 @@ import dev.proofjava.analysis.redundancy.RedundancyRuleEngine;
 import dev.proofjava.analysis.subprocess.EvidenceDiagnostics;
 import dev.proofjava.config.ConfigException;
 import dev.proofjava.config.ConfigLoader;
-import dev.proofjava.config.CoverdictConfig;
+import dev.proofjava.config.ProofConfig;
 import dev.proofjava.analysis.report.FileCoverageBlock;
 import dev.proofjava.analysis.report.FileCoverageEntry;
 import dev.proofjava.analysis.report.HtmlRenderer;
@@ -179,7 +179,7 @@ class AnalyzeCommand implements Callable<Integer> {
      * CliUsageException} or {@link ConfigException}, both handled identically
      * by the one catch in {@link #call()}.
      */
-    private record Invocation(Path repoRoot, String diffMode, CoverdictConfig config, List<String> exclusions,
+    private record Invocation(Path repoRoot, String diffMode, ProofConfig config, List<String> exclusions,
                                List<ModuleDefinition> modules, Map<String, List<String>> reportPathsById,
                                Map<String, String> classpathFilesById, Map<String, String> perTestClasspathFilesById,
                                Map<String, List<String>> perTestTargetFqcnsById,
@@ -191,7 +191,7 @@ class AnalyzeCommand implements Callable<Integer> {
     private Invocation validateAndParseInvocation() {
         String diffMode = selectedDiffModeOrThrow();
         Path repoRoot = Path.of(repoOption != null ? repoOption : System.getProperty("user.dir"));
-        CoverdictConfig config = ConfigLoader.load(repoRoot, configOption);
+        ProofConfig config = ConfigLoader.load(repoRoot, configOption);
         applyConfigPrecedence(config);
         validateFindingsScope(diffMode);
 
@@ -325,7 +325,7 @@ class AnalyzeCommand implements Callable<Integer> {
      * merged: two half-lists from two sources would be a third list nobody
      * wrote down (D-05 keeps exclusions a single authored set).
      */
-    private void applyConfigPrecedence(CoverdictConfig config) {
+    private void applyConfigPrecedence(ProofConfig config) {
         if (config.languageLevel() != null && notTypedOnCommandLine("--language-level")) {
             languageLevel = config.languageLevel();
         }
@@ -378,12 +378,12 @@ class AnalyzeCommand implements Callable<Integer> {
     }
 
     /** {@code ConfigLoader} already rejects a duplicate id or a missing id/root - nothing left to validate here. */
-    private static ModuleSource fromConfigModules(CoverdictConfig config) {
+    private static ModuleSource fromConfigModules(ProofConfig config) {
         List<ModuleDefinition> modules = new ArrayList<>();
         Map<String, List<String>> reportPathsById = new LinkedHashMap<>();
         Map<String, String> perTestClasspathFilesById = new LinkedHashMap<>();
         Map<String, String> mutationClasspathFilesById = new LinkedHashMap<>();
-        for (CoverdictConfig.ModuleConfig m : config.modules()) {
+        for (ProofConfig.ModuleConfig m : config.modules()) {
             List<String> sourceRoots = m.sourceRoots() != null && !m.sourceRoots().isEmpty()
                 ? m.sourceRoots() : List.of(RepoPaths.join(m.root(), "src/main/java"));
             List<String> testRoots = m.testRoots() != null && !m.testRoots().isEmpty()
@@ -579,7 +579,7 @@ class AnalyzeCommand implements Callable<Integer> {
         List<ModuleDefinition> modules = inv.modules();
         Map<String, List<String>> reportPathsById = inv.reportPathsById();
         Map<String, String> classpathFilesById = inv.classpathFilesById();
-        CoverdictConfig config = inv.config();
+        ProofConfig config = inv.config();
         String diffMode = inv.diffMode();
 
         // A declared module with no bound report has no coverage evidence in

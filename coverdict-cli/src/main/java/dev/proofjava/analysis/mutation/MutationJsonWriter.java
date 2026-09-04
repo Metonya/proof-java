@@ -13,7 +13,7 @@ import dev.proofjava.analysis.model.AnalysisReason;
  * Writes a {@link MutationModuleEvidence} as JSON via Jackson's streaming
  * {@link JsonGenerator} - never a databind mapper, matching {@code
  * PerTestJsonWriter}'s style. This is the listener-to-collector wire format
- * {@link CoverdictMutationListener} writes and {@link MutationJsonReader}
+ * {@link ProofMutationListener} writes and {@link MutationJsonReader}
  * reads back in the parent process - never the verdict schema itself.
  *
  * <p>{@link #writeMethods} is also called directly by {@code

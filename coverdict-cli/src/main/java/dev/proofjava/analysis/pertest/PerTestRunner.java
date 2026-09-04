@@ -21,7 +21,7 @@ import dev.proofjava.analysis.subprocess.SubprocessWorkspace;
  * enforces the timeout D-51's spike could not avoid: PIT's mutation phase
  * can run for minutes after coverage finishes (PIT_SPIKE_PLAN note 2), so
  * this never waits for the child to exit cleanly. It polls for {@link
- * CoverdictLineExporter}'s output file - written the moment {@code
+ * ProofLineExporter}'s output file - written the moment {@code
  * recordCoverage()} fires, before any mutation work starts - and forcibly
  * destroys the process the moment that file appears or the timeout elapses,
  * whichever comes first. A process still running at timeout with no output
@@ -86,7 +86,7 @@ public final class PerTestRunner {
         try (Writer log = diagnostics.openLog(moduleId, "pertest")) {
             List<String> ownClasspathEntries = SubprocessWorkspace.ownRuntimeClasspathEntries();
             // The minion PIT spawns needs org.pitest.coverage.execute.CoverageMinion and
-            // CoverdictLineExporter on ITS OWN -cp (verified empirically: EntryPoint builds
+            // ProofLineExporter on ITS OWN -cp (verified empirically: EntryPoint builds
             // the minion's classpath from ReportOptions.getClassPathElements(), not from the
             // driver JVM's own classpath) - appending this JVM's own runtime classpath (the
             // shaded jar in production, D-55; the full Maven classpath under test/dev) covers
@@ -96,7 +96,7 @@ public final class PerTestRunner {
             Path classpathFile = writeLines(moduleId, workDir, "classpath.txt", classPathWithSelf);
             Path codePathsFile = writeLines(moduleId, workDir, "codepaths.txt", codePaths);
             Path targetClassesFile = writeLines(moduleId, workDir, "targetclasses.txt", targetClasses);
-            Path outputFile = workDir.resolve(CoverdictLineExporter.OUTPUT_FILE_NAME);
+            Path outputFile = workDir.resolve(ProofLineExporter.OUTPUT_FILE_NAME);
             Path classpathArgFile = writeClasspathArgFile(moduleId, workDir, ownClasspathEntries);
 
             ProcessBuilder pb = new ProcessBuilder(

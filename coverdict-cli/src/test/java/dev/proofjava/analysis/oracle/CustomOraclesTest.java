@@ -117,8 +117,8 @@ class CustomOraclesTest {
         assertEquals(1, result.findings().size(), result.findings().toString());
     }
 
-    private static dev.proofjava.config.CoverdictConfig config(String... customOracles) {
-        return new dev.proofjava.config.CoverdictConfig(
+    private static dev.proofjava.config.ProofConfig config(String... customOracles) {
+        return new dev.proofjava.config.ProofConfig(
             null, null, null, null, List.of(customOracles), List.of(), List.of());
     }
 }

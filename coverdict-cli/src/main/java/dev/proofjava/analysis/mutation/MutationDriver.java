@@ -35,7 +35,7 @@ import dev.proofjava.analysis.subprocess.TestGlobs;
  * outputFormats} or {@code EntryPoint} throws {@code PitError} (confirmed
  * via {@code javap} on {@code EntryPoint.checkMatrixMode}) - the resulting
  * {@code mutations.xml} is written to the private temp report dir and never
- * read; {@link CoverdictMutationListener#NAME} is the second requested
+ * read; {@link ProofMutationListener#NAME} is the second requested
  * output format, the one coverdict actually consumes.
  *
  * <p>Args (all file paths, one entry per line, to sidestep classpath-string
@@ -62,7 +62,7 @@ public final class MutationDriver {
         List<String> targetClasses = Files.readAllLines(Path.of(args[4]), StandardCharsets.UTF_8);
         boolean verbose = Boolean.parseBoolean(args[5]);
 
-        System.setProperty(CoverdictMutationListener.MODULE_ID_PROPERTY, moduleId);
+        System.setProperty(ProofMutationListener.MODULE_ID_PROPERTY, moduleId);
 
         ReportOptions options = new ReportOptions();
         options.setReportDir(reportDir);
@@ -79,7 +79,7 @@ public final class MutationDriver {
         options.setNumberOfThreads(1); // D-52 determinism gate held at exactly this setting
         options.setMutators(List.of("RETURNS", "VOID_METHOD_CALLS"));
         options.setFullMutationMatrix(true); // M4's kill-set needs every killing test, not just the first
-        options.addOutputFormats(List.of("XML", CoverdictMutationListener.NAME));
+        options.addOutputFormats(List.of("XML", ProofMutationListener.NAME));
         options.setShouldCreateTimestampedReports(false);
         options.setFailWhenNoMutations(false);
         // D-64: VERBOSE is the only setting whose showMinionOutput() is true,

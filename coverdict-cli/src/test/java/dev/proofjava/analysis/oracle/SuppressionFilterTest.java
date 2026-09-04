@@ -13,7 +13,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import dev.proofjava.analysis.model.AnalysisReason;
 import dev.proofjava.analysis.model.ModuleDefinition;
-import dev.proofjava.config.CoverdictConfig;
+import dev.proofjava.config.ProofConfig;
 
 /**
  * {@code suppressions} through the real engine. The load-bearing assertion in
@@ -53,13 +53,13 @@ class SuppressionFilterTest {
             "");
     }
 
-    private static OracleScanOptions with(CoverdictConfig.Suppression... suppressions) {
-        return OracleScanOptions.defaults().withConfig(new CoverdictConfig(
+    private static OracleScanOptions with(ProofConfig.Suppression... suppressions) {
+        return OracleScanOptions.defaults().withConfig(new ProofConfig(
             null, null, null, null, List.of(), List.of(), List.of(suppressions)));
     }
 
-    private static CoverdictConfig.Suppression suppression(String rule, String pathGlob, String methodPattern) {
-        return new CoverdictConfig.Suppression(rule, pathGlob, methodPattern, "documented reason");
+    private static ProofConfig.Suppression suppression(String rule, String pathGlob, String methodPattern) {
+        return new ProofConfig.Suppression(rule, pathGlob, methodPattern, "documented reason");
     }
 
     @Test

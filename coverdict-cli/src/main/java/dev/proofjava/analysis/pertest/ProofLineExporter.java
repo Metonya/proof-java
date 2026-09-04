@@ -58,7 +58,7 @@ import org.pitest.util.ResultOutputStrategy;
  * #MODULE_ID_PROPERTY} already used, since a system property is the only
  * way to reach an SPI-instantiated instance like this one.
  */
-public final class CoverdictLineExporter implements CoverageExporterFactory {
+public final class ProofLineExporter implements CoverageExporterFactory {
 
     static final String OUTPUT_FILE_NAME = "coverdict-line-tests.json";
 

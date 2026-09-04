@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.github.javaparser.resolution.TypeSolver;
 
-import dev.proofjava.config.CoverdictConfig;
+import dev.proofjava.config.ProofConfig;
 
 /**
  * Everything {@link OracleRuleEngine#scan} needs beyond the repo, its modules
@@ -29,7 +29,7 @@ import dev.proofjava.config.CoverdictConfig;
 public record OracleScanOptions(
     List<TypeSolver> extraTypeSolvers,
     List<String> customOracles,
-    List<CoverdictConfig.Suppression> suppressions,
+    List<ProofConfig.Suppression> suppressions,
     int findingsCap) {
 
     /** SECURITY-POLICY.md #2: 10,000 findings per run. */
@@ -43,7 +43,7 @@ public record OracleScanOptions(
         return new OracleScanOptions(solvers, customOracles, suppressions, findingsCap);
     }
 
-    public OracleScanOptions withConfig(CoverdictConfig config) {
+    public OracleScanOptions withConfig(ProofConfig config) {
         return new OracleScanOptions(extraTypeSolvers, config.customOracles(), config.suppressions(), findingsCap);
     }
 

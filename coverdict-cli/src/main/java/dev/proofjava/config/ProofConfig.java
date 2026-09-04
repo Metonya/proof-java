@@ -24,7 +24,7 @@ import java.util.List;
  *                           partially merging with it.
  * @param suppressions       never null; empty when unset
  */
-public record CoverdictConfig(
+public record ProofConfig(
     Integer languageLevel,
     String encoding,
     List<String> coverageExclusions,
@@ -33,8 +33,8 @@ public record CoverdictConfig(
     List<ModuleConfig> modules,
     List<Suppression> suppressions) {
 
-    public static CoverdictConfig empty() {
-        return new CoverdictConfig(null, null, null, null, List.of(), List.of(), List.of());
+    public static ProofConfig empty() {
+        return new ProofConfig(null, null, null, null, List.of(), List.of(), List.of());
     }
 
     /**

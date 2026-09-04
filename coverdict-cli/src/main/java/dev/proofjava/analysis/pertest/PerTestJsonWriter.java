@@ -12,7 +12,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
  * {@link JsonGenerator} - never a databind mapper (this codebase never
  * depends on jackson-databind, matching {@code VerdictJsonWriter}'s
  * deterministic field-by-field style). This is the exporter-to-driver wire
- * format {@link CoverdictLineExporter} writes and {@link PerTestJsonReader}
+ * format {@link ProofLineExporter} writes and {@link PerTestJsonReader}
  * reads back in the parent process - never the verdict schema itself.
  *
  * <p>{@link #writeEntries} is also called directly by {@code

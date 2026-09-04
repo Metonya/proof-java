@@ -23,13 +23,13 @@ import org.pitest.mutationtest.engine.MutationDetails;
 import org.pitest.mutationtest.engine.MutationIdentifier;
 
 /**
- * Exercises {@link CoverdictMutationListener} through PIT's real listener
+ * Exercises {@link ProofMutationListener} through PIT's real listener
  * interfaces without spawning PIT itself - {@link ListenerArguments} and
  * {@link ClassMutationResults}/{@link MutationResult} all have public
  * constructors (verified via javap), so the SPI contract is tested end to
  * end down to the wire JSON.
  */
-class CoverdictMutationListenerTest {
+class ProofMutationListenerTest {
 
     private static final String MODULE_ID_PROPERTY = "coverdict.mutation.moduleId";
 
@@ -42,7 +42,7 @@ class CoverdictMutationListenerTest {
     void writesAccumulatedResultsToTheOutputStrategyOnRunEnd() throws IOException {
         System.setProperty(MODULE_ID_PROPERTY, "demo-module");
         StringWriter captured = new StringWriter();
-        CoverdictMutationListener factory = new CoverdictMutationListener();
+        ProofMutationListener factory = new ProofMutationListener();
         MutationResultListener listener = factory.getListener(new Properties(),
             listenerArguments(name -> {
                 assertEquals("coverdict-mutants.json", name);
@@ -63,7 +63,7 @@ class CoverdictMutationListenerTest {
 
     @Test
     void nameMatchesTheConstantUsedForOutputFormatActivation() {
-        assertEquals("coverdict-mutation", new CoverdictMutationListener().name());
+        assertEquals("coverdict-mutation", new ProofMutationListener().name());
     }
 
     private static MutationResult mutationResult(String internalClassName, String methodName, String desc,

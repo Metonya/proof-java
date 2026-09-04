@@ -50,14 +50,14 @@ public final class ConfigLoader {
     /**
      * @param explicitPath the {@code --config} value, or null to fall back to
      *                     {@link #DEFAULT_FILE_NAME} at the repo root
-     * @return the parsed config, or {@link CoverdictConfig#empty()} when no
+     * @return the parsed config, or {@link ProofConfig#empty()} when no
      *         config applies. An explicitly named file that does not exist is
      *         an error; the implicit default one simply not being there is not.
      * @throws ConfigException on a missing explicit file, an oversized file,
      *                         malformed JSON, an unknown key, or a wrong value
      *                         type (all exit 2 - the invocation is invalid)
      */
-    public static CoverdictConfig load(Path repoRoot, String explicitPath) {
+    public static ProofConfig load(Path repoRoot, String explicitPath) {
         Path file;
         if (explicitPath != null) {
             file = repoRoot.resolve(explicitPath);
@@ -67,13 +67,13 @@ public final class ConfigLoader {
         } else {
             file = repoRoot.resolve(DEFAULT_FILE_NAME);
             if (!Files.isRegularFile(file)) {
-                return CoverdictConfig.empty();
+                return ProofConfig.empty();
             }
         }
         return parse(file);
     }
 
-    private static CoverdictConfig parse(Path file) {
+    private static ProofConfig parse(Path file) {
         byte[] bytes;
         try {
             long size = Files.size(file);
@@ -95,8 +95,8 @@ public final class ConfigLoader {
         List<String> coverageExclusions = null;
         String findingsScope = null;
         List<String> customOracles = List.of();
-        List<CoverdictConfig.ModuleConfig> modules = List.of();
-        List<CoverdictConfig.Suppression> suppressions = List.of();
+        List<ProofConfig.ModuleConfig> modules = List.of();
+        List<ProofConfig.Suppression> suppressions = List.of();
 
         try (JsonParser p = factory.createParser(new String(bytes, StandardCharsets.UTF_8))) {
             if (p.nextToken() != JsonToken.START_OBJECT) {
@@ -126,7 +126,7 @@ public final class ConfigLoader {
             throw new ConfigException("Config file is not valid JSON: " + e.getMessage());
         }
 
-        return new CoverdictConfig(languageLevel, encoding, coverageExclusions, findingsScope,
+        return new ProofConfig(languageLevel, encoding, coverageExclusions, findingsScope,
             customOracles, modules, suppressions);
     }
 
@@ -197,14 +197,14 @@ public final class ConfigLoader {
     }
 
     /** D-66: the config-file shape of a {@code --module}/{@code --report}/{@code --per-test-classpath}/{@code --mutation-classpath} binding. */
-    private static List<CoverdictConfig.ModuleConfig> moduleConfigArray(JsonParser p) throws IOException {
+    private static List<ProofConfig.ModuleConfig> moduleConfigArray(JsonParser p) throws IOException {
         if (p.currentToken() != JsonToken.START_ARRAY) {
             throw new ConfigException("Config key 'modules' must be an array of objects.");
         }
-        List<CoverdictConfig.ModuleConfig> result = new ArrayList<>();
+        List<ProofConfig.ModuleConfig> result = new ArrayList<>();
         Set<String> ids = new LinkedHashSet<>();
         while (p.nextToken() != JsonToken.END_ARRAY) {
-            CoverdictConfig.ModuleConfig module = oneModuleConfig(p);
+            ProofConfig.ModuleConfig module = oneModuleConfig(p);
             if (!ids.add(module.id())) {
                 throw new ConfigException("Duplicate module id '" + module.id()
                     + "' in 'modules' - each id may be declared at most once (same rule as --module on the command line).");
@@ -214,7 +214,7 @@ public final class ConfigLoader {
         return List.copyOf(result);
     }
 
-    private static CoverdictConfig.ModuleConfig oneModuleConfig(JsonParser p) throws IOException {
+    private static ProofConfig.ModuleConfig oneModuleConfig(JsonParser p) throws IOException {
         if (p.currentToken() != JsonToken.START_OBJECT) {
             throw new ConfigException("Config key 'modules' must contain only objects.");
         }
@@ -243,15 +243,15 @@ public final class ConfigLoader {
         if (id == null || root == null) {
             throw new ConfigException("Every modules entry needs 'id' and 'root'.");
         }
-        return new CoverdictConfig.ModuleConfig(id, root, sourceRoots, testRoots, report, perTestClasspath,
+        return new ProofConfig.ModuleConfig(id, root, sourceRoots, testRoots, report, perTestClasspath,
             mutationClasspath);
     }
 
-    private static List<CoverdictConfig.Suppression> suppressionArray(JsonParser p) throws IOException {
+    private static List<ProofConfig.Suppression> suppressionArray(JsonParser p) throws IOException {
         if (p.currentToken() != JsonToken.START_ARRAY) {
             throw new ConfigException("Config key 'suppressions' must be an array of objects.");
         }
-        List<CoverdictConfig.Suppression> result = new ArrayList<>();
+        List<ProofConfig.Suppression> result = new ArrayList<>();
         while (p.nextToken() != JsonToken.END_ARRAY) {
             if (p.currentToken() != JsonToken.START_OBJECT) {
                 throw new ConfigException("Config key 'suppressions' must contain only objects.");
@@ -277,7 +277,7 @@ public final class ConfigLoader {
                     "Every suppressions entry needs 'rule', 'pathGlob' and 'reason' (reason is mandatory: "
                         + "docs/rules/README.md).");
             }
-            result.add(new CoverdictConfig.Suppression(rule, pathGlob, testMethodPattern, reason));
+            result.add(new ProofConfig.Suppression(rule, pathGlob, testMethodPattern, reason));
         }
         return List.copyOf(result);
     }

@@ -38,7 +38,7 @@ class ConfigLoaderTest {
 
     @Test
     void noConfigFileAnywhereIsAnEmptyConfigNotAnError() {
-        CoverdictConfig config = ConfigLoader.load(repoRoot, null);
+        ProofConfig config = ConfigLoader.load(repoRoot, null);
 
         assertNull(config.languageLevel());
         assertNull(config.coverageExclusions(), "unset must stay distinguishable from an explicitly empty list");
@@ -50,7 +50,7 @@ class ConfigLoaderTest {
     void theDefaultFileAtTheRepoRootIsPickedUpWithoutBeingNamed() throws IOException {
         writeConfig("{\"languageLevel\": 11, \"encoding\": \"ISO-8859-9\"}");
 
-        CoverdictConfig config = ConfigLoader.load(repoRoot, null);
+        ProofConfig config = ConfigLoader.load(repoRoot, null);
 
         assertEquals(11, config.languageLevel());
         assertEquals("ISO-8859-9", config.encoding());
@@ -78,7 +78,7 @@ class ConfigLoaderTest {
             }
             """);
 
-        CoverdictConfig config = ConfigLoader.load(repoRoot, null);
+        ProofConfig config = ConfigLoader.load(repoRoot, null);
 
         assertEquals(17, config.languageLevel());
         assertEquals(List.of(), config.coverageExclusions(), "an authored empty list is not 'unset'");
@@ -105,17 +105,17 @@ class ConfigLoaderTest {
             }
             """);
 
-        CoverdictConfig config = ConfigLoader.load(repoRoot, null);
+        ProofConfig config = ConfigLoader.load(repoRoot, null);
 
         assertEquals(2, config.modules().size());
-        CoverdictConfig.ModuleConfig app = config.modules().get(0);
+        ProofConfig.ModuleConfig app = config.modules().get(0);
         assertEquals("app", app.id());
         assertEquals("app", app.root());
         assertNull(app.sourceRoots(), "unset stays null, distinct from an authored empty list");
         assertEquals("app/target/site/jacoco/jacoco.xml", app.report());
         assertNull(app.perTestClasspath());
 
-        CoverdictConfig.ModuleConfig data = config.modules().get(1);
+        ProofConfig.ModuleConfig data = config.modules().get(1);
         assertEquals(List.of("data/src/main/java"), data.sourceRoots());
         assertEquals("data/target/coverdict-per-test-classpath.txt", data.perTestClasspath());
         assertEquals("data/target/coverdict-mutation-classpath.txt", data.mutationClasspath());
@@ -127,7 +127,7 @@ class ConfigLoaderTest {
         // the analyzed set (MODULE_WITHOUT_REPORT) rather than rejected here.
         writeConfig("{\"modules\": [{\"id\": \"app\", \"root\": \"app\"}]}");
 
-        CoverdictConfig config = ConfigLoader.load(repoRoot, null);
+        ProofConfig config = ConfigLoader.load(repoRoot, null);
 
         assertNull(config.modules().get(0).report());
     }

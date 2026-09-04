@@ -32,7 +32,7 @@ import dev.proofjava.analysis.subprocess.TestGlobs;
  * like {@code NULL_RETURNS} too often finds zero mutable points on a small
  * diff-scoped target, and PIT skips the coverage phase entirely when its
  * mutation pre-scan finds nothing - verified empirically this session), and
- * {@link CoverdictLineExporter} writing its JSON the moment {@code
+ * {@link ProofLineExporter} writing its JSON the moment {@code
  * recordCoverage()} fires, before the mutation phase (which can hang for
  * minutes, PIT_SPIKE_PLAN note 2) has done any real work. {@link
  * PerTestRunner} does not wait for this process to exit cleanly - it polls
@@ -56,17 +56,17 @@ public final class PerTestDriver {
         List<String> targetClasses = Files.readAllLines(Path.of(args[4]), StandardCharsets.UTF_8);
         boolean verbose = args.length > 5 && Boolean.parseBoolean(args[5]);
 
-        System.setProperty(CoverdictLineExporter.MODULE_ID_PROPERTY, moduleId);
+        System.setProperty(ProofLineExporter.MODULE_ID_PROPERTY, moduleId);
         // D-68: the only channel available to tell the SPI-instantiated
         // exporter where to actually find the target module's class bytes -
         // this driver JVM's own -cp is coverdict's shaded jar alone (see
         // PerTestRunner), never the target repo's classes, so
-        // CoverdictLineExporter cannot rely on the JVM's ambient classpath.
-        System.setProperty(CoverdictLineExporter.CLASSPATH_FILE_PROPERTY, args[2]);
+        // ProofLineExporter cannot rely on the JVM's ambient classpath.
+        System.setProperty(ProofLineExporter.CLASSPATH_FILE_PROPERTY, args[2]);
         // D-74: lets the exporter atomically rename its temp export onto
         // OUTPUT_FILE_NAME instead of writing that name directly - see
-        // CoverdictLineExporter.renameIntoPlace's own javadoc for why.
-        System.setProperty(CoverdictLineExporter.REPORT_DIR_PROPERTY, reportDir);
+        // ProofLineExporter.renameIntoPlace's own javadoc for why.
+        System.setProperty(ProofLineExporter.REPORT_DIR_PROPERTY, reportDir);
 
         ReportOptions options = new ReportOptions();
         options.setReportDir(reportDir);

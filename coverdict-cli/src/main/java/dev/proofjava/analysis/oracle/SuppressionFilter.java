@@ -6,7 +6,7 @@ import java.util.regex.Pattern;
 
 import dev.proofjava.analysis.metrics.ExclusionFilter;
 import dev.proofjava.analysis.model.Finding;
-import dev.proofjava.config.CoverdictConfig;
+import dev.proofjava.config.ProofConfig;
 
 /**
  * Applies configured {@code suppressions} (docs/rules/README.md): a finding is
@@ -29,12 +29,12 @@ public final class SuppressionFilter {
     private SuppressionFilter() {
     }
 
-    public static Result apply(List<Finding> findings, List<CoverdictConfig.Suppression> suppressions) {
+    public static Result apply(List<Finding> findings, List<ProofConfig.Suppression> suppressions) {
         if (suppressions.isEmpty() || findings.isEmpty()) {
             return new Result(findings, 0);
         }
         List<Compiled> compiled = new ArrayList<>(suppressions.size());
-        for (CoverdictConfig.Suppression s : suppressions) {
+        for (ProofConfig.Suppression s : suppressions) {
             compiled.add(new Compiled(
                 s.rule(),
                 ExclusionFilter.compile(List.of(s.pathGlob())),

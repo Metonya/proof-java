@@ -104,7 +104,7 @@ public final class MutationRunner {
             Path classpathFile = writeLines(moduleId, workDir, "classpath.txt", classPathWithSelf);
             Path codePathsFile = writeLines(moduleId, workDir, "codepaths.txt", codePaths);
             Path targetClassesFile = writeLines(moduleId, workDir, "targetclasses.txt", targetClasses);
-            Path outputFile = workDir.resolve(CoverdictMutationListener.OUTPUT_FILE_NAME);
+            Path outputFile = workDir.resolve(ProofMutationListener.OUTPUT_FILE_NAME);
             Path classpathArgFile = writeClasspathArgFile(moduleId, workDir, ownClasspathEntries);
 
             ProcessBuilder pb = new ProcessBuilder(

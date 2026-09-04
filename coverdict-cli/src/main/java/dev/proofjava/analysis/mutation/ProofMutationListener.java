@@ -23,7 +23,7 @@ import dev.proofjava.analysis.subprocess.ProgressMarker;
  * phase finishes. Registered via {@code META-INF/services/
  * org.pitest.mutationtest.MutationResultListenerFactory}.
  *
- * <p>Activation is two-gated, unlike {@code CoverdictLineExporter}'s single
+ * <p>Activation is two-gated, unlike {@code ProofLineExporter}'s single
  * {@code Feature} gate: {@link org.pitest.mutationtest.config.SettingsFactory#createListener()}
  * only instantiates a listener whose {@link #name()} appears in {@code
  * ReportOptions.getOutputFormats()} (confirmed via {@code javap} - {@code
@@ -34,7 +34,7 @@ import dev.proofjava.analysis.subprocess.ProgressMarker;
  * activation is entirely through {@link #NAME} being requested, not a
  * feature toggle.
  */
-public final class CoverdictMutationListener implements MutationResultListenerFactory {
+public final class ProofMutationListener implements MutationResultListenerFactory {
 
     static final String NAME = "coverdict-mutation";
     static final String OUTPUT_FILE_NAME = "coverdict-mutants.json";
