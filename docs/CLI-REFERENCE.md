@@ -146,18 +146,18 @@ from a mutation phase that is merely slow (D-64).
   document rendered as a single self-contained, offline HTML file - a fixed
   sidebar + scroll-spy dashboard, opening in light mode by default.
   [`ReportDataWriter`](../coverdict-cli/src/main/java/dev/coverdict/analysis/report/ReportDataWriter.java)
-  turns the document into one Turkish-formatted, presentation-shaped JSON
+  turns the document into one presentation-shaped JSON
   object ([`docs/GLOSSARY.md`](GLOSSARY.md) has the friendly-name mapping for
   every rule id/reason code/enum/status it can show), embedded in a
   `<script type="application/json">` that a small static, interpolation-free
   `<script>` reads and renders into the DOM (`textContent`/`setAttribute`
-  only, never `innerHTML`/`eval`). Kapsama/Mutasyon/Bulgular/Dosyalar render
+  only, never `innerHTML`/`eval`). Coverage/Mutation/Findings/Files render
   as always-visible dashboard cards (a donut for `jacoco-line`, a mutation
-  kill-ratio card with a "Mutant detayı" spotlight for the most concerning
+  kill-ratio card with a "Highlighted mutant" spotlight for the most concerning
   mutant, per-rule finding groups with a soft "0" chip for rules that never
-  fired, a risk-sorted flat file list with Risk/Paket toggle + coverage-band
+  fired, a risk-sorted flat file list with Risk/Package toggle + coverage-band
   filter chips); sections with nothing to show (no changed files, no
-  warnings, ...) fold into one "bu koşuda boş kalan bölümler" line instead of
+  warnings, ...) fold into one "sections left empty in this run" line instead of
   each rendering (or hiding) its own empty card. The report never generates
   an interpretive verdict sentence about the run - only labeled numbers (hard
   rule 1: evidence over judgment; D-81 has the full reasoning). A
@@ -176,8 +176,8 @@ matching `schema/coverdict-verdict.schema.json` (`--in`, required) and
 renders it with the exact same `HtmlRenderer` (`--out`, required), doing no
 evidence collection at all. Built for callers that already have a verdict
 document on disk (or composed one from several) and want the HTML without
-paying for a re-scan — see D-78 for why `coverdict-vscode`'s "Raporu Dışa
-Aktar" uses this instead of re-running `analyze`. Exits `2` on a missing or
+paying for a re-scan — see D-78 for why `coverdict-vscode`'s "Export report"
+command uses this instead of re-running `analyze`. Exits `2` on a missing or
 malformed `--in` file (`VerdictJsonReader` never guesses at a partial
 document), `4` if `--out` can't be written, `0` on success.
 - Every percentage names its metric mode: `jacoco-line`, `strict-line`,

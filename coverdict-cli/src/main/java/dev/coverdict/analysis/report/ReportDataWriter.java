@@ -52,8 +52,8 @@ import dev.coverdict.analysis.vcs.VcsIdentity;
  */
 final class ReportDataWriter {
 
-    private static final Locale TR = new Locale("tr", "TR");
-    private static final DateTimeFormatter GENERATED_AT_FORMAT = DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm", TR);
+    private static final Locale REPORT_LOCALE = Locale.ENGLISH;
+    private static final DateTimeFormatter GENERATED_AT_FORMAT = DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm", REPORT_LOCALE);
     private static final JsonFactory FACTORY = new JsonFactory();
 
     private ReportDataWriter() {
@@ -96,7 +96,7 @@ final class ReportDataWriter {
         g.writeStringField("schemaVersion", doc.schemaVersion());
         g.writeStringField("generatedAt", GENERATED_AT_FORMAT.format(Instant.now().atZone(ZoneId.systemDefault())));
         g.writeBooleanField("complete", doc.complete());
-        g.writeStringField("statusLabel", doc.complete() ? "tamamlandı" : "eksik");
+        g.writeStringField("statusLabel", doc.complete() ? "complete" : "incomplete");
         g.writeStringField("modules", moduleSummary(doc.modules()));
         g.writeStringField("diffMode", diffModeLabel(doc.diffMode()));
         VcsIdentity identity = doc.identity();
@@ -164,18 +164,18 @@ final class ReportDataWriter {
 
     private static String diffModeLabel(String diffMode) {
         return switch (diffMode) {
-            case "no-vcs" -> "fark hesaplanmadı (no-vcs)";
-            case "working-tree" -> "commit bekleyen değişiklikler (uncommitted)";
-            case "base-ref" -> "belirtilen referansla fark (base-ref)";
+            case "no-vcs" -> "no diff computed (no-vcs)";
+            case "working-tree" -> "uncommitted changes (working tree)";
+            case "base-ref" -> "diff against the given ref (base-ref)";
             default -> diffMode;
         };
     }
 
     private static String findingsScopeLabel(String findingsScope) {
-        return "changed".equals(findingsScope) ? "sadece değişen test dosyaları" : "tüm test dosyaları";
+        return "changed".equals(findingsScope) ? "changed test files only" : "all test files";
     }
 
-    /** The full v0.1 rule catalog, sorted, always written in full - a rule with zero findings in this run still gets a soft "0" chip in the report (D-80: "0 bir bilgidir"), which needs to know the rule exists at all, not just the ones that fired. */
+    /** The full v0.1 rule catalog, sorted, always written in full - a rule with zero findings in this run still gets a soft "0" chip in the report (D-80: a zero is information), which needs to know the rule exists at all, not just the ones that fired. */
     private static void writeRuleIds(JsonGenerator g, Set<String> used) throws IOException {
         g.writeArrayFieldStart("ruleIds");
         List<String> sorted = new ArrayList<>(dev.coverdict.analysis.model.RuleIds.ALL);
@@ -234,11 +234,11 @@ final class ReportDataWriter {
     }
 
     private static String formatPercent(BigDecimal percent) {
-        return percent == null ? "n/a" : percent.toString().replace('.', ',') + "%";
+        return percent == null ? "n/a" : percent + "%";
     }
 
     private static String formatInt(int n) {
-        return String.format(TR, "%,d", n);
+        return String.format(REPORT_LOCALE, "%,d", n);
     }
 
     // ---- Changed files (D-80 fix: section is always present, even when empty - hard rule 3a) ----
@@ -371,7 +371,7 @@ final class ReportDataWriter {
         return entries.stream().mapToInt(e -> e.lines().size()).sum();
     }
 
-    // ---- Mutation (L3): per-status counts (no "diğer" catch-all bucket - D-80 fix), simplified signatures ----
+    // ---- Mutation (L3): per-status counts (no "other" catch-all bucket - D-80 fix), simplified signatures ----
 
     private static void writeMutation(JsonGenerator g, List<MutationModuleEvidence> mutation, Set<String> used)
         throws IOException {

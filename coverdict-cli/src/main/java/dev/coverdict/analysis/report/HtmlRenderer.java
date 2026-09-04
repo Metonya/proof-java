@@ -63,11 +63,11 @@ public final class HtmlRenderer {
         sb.append("<!doctype html>\n<html lang=\"tr\">\n<head>\n");
         sb.append("<meta charset=\"utf-8\">\n");
         sb.append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n");
-        sb.append("<title>coverdict raporu</title>\n");
+        sb.append("<title>coverdict report</title>\n");
         sb.append("<style>\n").append(CSS).append("\n</style>\n");
         sb.append("</head>\n<body>\n");
-        sb.append("<noscript><div class=\"noscript-warning\">Bu rapor JavaScript ile render edilir - ")
-            .append("tarayıcınızda JavaScript devre dışı görünüyor, bu yüzden içerik boş kalıyor.</div></noscript>\n");
+        sb.append("<noscript><div class=\"noscript-warning\">This report is rendered with JavaScript - ")
+            .append("it appears to be disabled in your browser, so the content stays empty.</div></noscript>\n");
         sb.append("<div id=\"app\"></div>\n");
         sb.append("<script id=\"coverdict-data\" type=\"application/json\">")
             .append(jsonEscapeForScript(dataJson)).append("</script>\n");
@@ -165,9 +165,9 @@ public final class HtmlRenderer {
         .main { margin-left: 236px; min-height: 100vh; }
         .wrap { max-width: 1420px; width: 100%; margin: 0 auto; padding: 34px 40px 40px; }
 
-        #ozet .eyebrow { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; font-weight: 700;
+        #summary .eyebrow { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; font-weight: 700;
           color: var(--ink3); }
-        #ozet .ozet-time { font-family: var(--mono); font-size: 11.5px; color: var(--ink3); margin-left: 14px; }
+        #summary .summary-time { font-family: var(--mono); font-size: 11.5px; color: var(--ink3); margin-left: 14px; }
         .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-top: 18px; }
         .stat-tile { background: var(--surf); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; }
         .stat-tile-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink3); font-weight: 600; }
@@ -188,7 +188,7 @@ public final class HtmlRenderer {
         .col-4 { grid-column: span 4; } .col-5 { grid-column: span 5; } .col-7 { grid-column: span 7; }
         .col-8 { grid-column: span 8; } .col-12 { grid-column: span 12; }
 
-        .kapsama-body { display: flex; gap: 30px; align-items: center; flex-wrap: wrap; }
+        .coverage-body { display: flex; gap: 30px; align-items: center; flex-wrap: wrap; }
         .donut-wrap { position: relative; width: 154px; height: 154px; flex: none; }
         .donut { width: 100%; height: 100%; transform: rotate(-90deg); }
         .donut-track { fill: none; stroke: var(--surf3); stroke-width: 7; }
@@ -404,7 +404,7 @@ public final class HtmlRenderer {
             return e;
           }
           function txt(s) { return document.createTextNode(s === null || s === undefined ? '' : String(s)); }
-          function fmtInt(n) { try { return n.toLocaleString('tr-TR'); } catch (e) { return String(n); } }
+          function fmtInt(n) { try { return n.toLocaleString('en-US'); } catch (e) { return String(n); } }
           function debounce(fn, ms) {
             var t = null;
             return function () {
@@ -432,7 +432,7 @@ public final class HtmlRenderer {
             return 'var(--good)';
           }
 
-          // ---------- Kapsama card ----------
+          // ---------- Coverage card ----------
           function donut(pct) {
             var r = 42, c = 2 * Math.PI * r;
             var offset = pct === null ? c : c * (1 - pct / 100);
@@ -458,13 +458,13 @@ public final class HtmlRenderer {
             row.appendChild(el('span', { class: 'metric-row-ratio', text: m.numeratorText + ' / ' + m.denominatorText }));
             return row;
           }
-          function buildKapsamaCard() {
-            var card = el('section', { id: 'kapsama', class: 'card col-8 card-accent-good' });
+          function buildCoverageCard() {
+            var card = el('section', { id: 'coverage', class: 'card col-8 card-accent-good' });
             var head = el('div', { class: 'card-head' });
-            head.appendChild(el('h2', { class: 'card-title', text: 'Genel kapsama' }));
+            head.appendChild(el('h2', { class: 'card-title', text: 'Overall coverage' }));
             card.appendChild(head);
-            card.appendChild(el('p', { class: 'card-sub', text: 'Aynı koşunun üç hesabı. Yüzde hiçbir yerde pay/payda olmadan yazılmıyor.' }));
-            var body = el('div', { class: 'kapsama-body' });
+            card.appendChild(el('p', { class: 'card-sub', text: 'Three counts of the same run. No percentage is shown anywhere without its numerator and denominator.' }));
+            var body = el('div', { class: 'coverage-body' });
             var jacoco = DATA.coverage.overall.filter(function (m) { return m.mode === 'jacoco-line'; })[0];
             body.appendChild(donut(jacoco ? jacoco.pct : null));
             var right = el('div', { style: 'flex:1 1 320px;min-width:0' });
@@ -472,13 +472,13 @@ public final class HtmlRenderer {
             DATA.coverage.overall.forEach(function (m) { list.appendChild(metricRow(m)); });
             right.appendChild(list);
             var nc = el('div', { class: 'newcode-row' });
-            nc.appendChild(el('code', { text: 'yeni kod' }));
+            nc.appendChild(el('code', { text: 'new code' }));
             if (DATA.coverage.newCode.available) {
               var m0 = DATA.coverage.newCode.metrics[0];
               nc.appendChild(el('span', { text: m0.pctText + ' (' + m0.numeratorText + ' / ' + m0.denominatorText + ')' }));
             } else {
               var span = el('span');
-              span.appendChild(el('span', { class: 'unavailable', text: 'hesaplanamadı' }));
+              span.appendChild(el('span', { class: 'unavailable', text: 'not available' }));
               span.appendChild(txt(' \\u2014 '));
               span.appendChild(codeBadge(DATA.coverage.newCode.unavailableStatus));
             nc.appendChild(span);
@@ -489,7 +489,7 @@ public final class HtmlRenderer {
             return card;
           }
 
-          // ---------- Mutasyon + Mutant detayı ----------
+          // ---------- Mutation + mutant detail ----------
           var CONCERN_RANK = { SURVIVED: 0, TIMED_OUT: 1, RUN_ERROR: 1, MEMORY_ERROR: 1, NON_VIABLE: 1, NOT_STARTED: 1, STARTED: 1, NO_COVERAGE: 2 };
           function findConcernMutant() {
             if (!DATA.mutation) { return null; }
@@ -517,16 +517,16 @@ public final class HtmlRenderer {
             Object.keys(DATA.mutation.totalsByStatus).forEach(function (k) { all += DATA.mutation.totalsByStatus[k]; });
             return { killed: killed, all: all };
           }
-          function buildMutasyonCard(concern) {
+          function buildMutationCard(concern) {
             var t = mutationTotals();
             var state = t.all === 0 ? 'none' : (t.killed === t.all ? 'good' : 'bad');
             var accentClass = state === 'good' ? 'card-accent-good' : (state === 'bad' ? 'card-accent-bad' : '');
-            var card = el('section', { id: 'mutasyon', class: 'card col-4 ' + accentClass });
+            var card = el('section', { id: 'mutation', class: 'card col-4 ' + accentClass });
             var summary = el('div', { class: 'mut-summary' });
             var badgeGlyph = state === 'good' ? '\\u2713' : (state === 'bad' ? '!' : '\\u2014');
             var badgeClass = state === 'good' ? 'mut-badge-good' : (state === 'bad' ? 'mut-badge-bad' : 'mut-badge-none');
             summary.appendChild(el('span', { class: 'mut-badge ' + badgeClass, text: badgeGlyph }));
-            var flagText = state === 'good' ? 'TEM\\u0130Z' : (state === 'bad' ? 'D\\u0130KKAT' : 'VER\\u0130 YOK');
+            var flagText = state === 'good' ? 'CLEAN' : (state === 'bad' ? 'ATTENTION' : 'NO DATA');
             var flagClass = state === 'good' ? 'mut-flag-good' : (state === 'bad' ? 'mut-flag-bad' : 'mut-flag-none');
             summary.appendChild(el('span', { class: 'mut-flag ' + flagClass, text: flagText }));
             card.appendChild(summary);
@@ -536,24 +536,24 @@ public final class HtmlRenderer {
             card.appendChild(scoreLine);
             var headlineClass = state === 'good' ? 'mut-headline-good' : (state === 'bad' ? 'mut-headline-bad' : '');
             card.appendChild(el('h2', { class: 'mut-headline ' + headlineClass,
-              text: state === 'none' ? 'Mutant üretilmedi' : (state === 'bad' ? 'Hayatta kalan mutant var' : 'Tüm mutantlar yakaland\\u0131') }));
+              text: state === 'none' ? 'No mutants generated' : (state === 'bad' ? 'Some mutants survived' : 'All mutants killed') }));
             var noteText = t.all === 0
-              ? 'Bu ko\\u015fuda hi\\u00e7 mutant \\u00fcretilmedi.'
-              : (t.killed + ' / ' + t.all + ' mutant testler taraf\\u0131ndan yakaland\\u0131.');
+              ? 'No mutants were generated in this run.'
+              : (t.killed + ' / ' + t.all + ' mutants killed by the tests.');
             card.appendChild(el('p', { class: 'mut-note', text: noteText }));
             if (concern) {
               var callout = el('div', { class: 'mut-callout' });
               callout.appendChild(el('span', { class: 'mut-callout-code', text: concern.className + '#' + concern.signatureShort }));
-              var killLabel = concern.killingTests.length ? (concern.killingTests.length + ' öldüren test') : 'öldüren test yok';
-              callout.appendChild(el('span', { class: 'mut-callout-meta', text: concern.mutator + ' \\u00b7 sat\\u0131r ' + concern.line + ' \\u00b7 ' + killLabel }));
+              var killLabel = concern.killingTests.length ? (concern.killingTests.length + ' killing tests') : 'no killing test';
+              callout.appendChild(el('span', { class: 'mut-callout-meta', text: concern.mutator + ' \\u00b7 line ' + concern.line + ' \\u00b7 ' + killLabel }));
               card.appendChild(callout);
-              var more = el('a', { href: '#detay', class: 'mut-more-link', text: 'Mutant detay\\u0131na git \\u2192' });
+              var more = el('a', { href: '#mutant-detail', class: 'mut-more-link', text: 'Go to mutant detail \\u2192' });
               card.appendChild(more);
             }
             return card;
           }
           function buildDetayCard(concern, otherCount) {
-            var card = el('section', { id: 'detay', class: 'card col-12' });
+            var card = el('section', { id: 'mutant-detail', class: 'card col-12' });
             var head = el('div', { style: 'margin:-22px -26px 18px;padding:18px 26px;background:var(--bad-dim);border-bottom:1px solid var(--line);border-radius:12px 12px 0 0;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap' });
             head.appendChild(el('span', { class: 'mut-flag mut-flag-bad', text: label(concern.status).name.toUpperCase() }));
             head.appendChild(el('span', { style: 'font-size:14px;font-weight:600', text: label(concern.status).name + ' mutant' }));
@@ -563,31 +563,31 @@ public final class HtmlRenderer {
             top.appendChild(el('span', { style: 'font-family:var(--mono);font-size:13px;font-weight:600;overflow-wrap:anywhere',
               text: concern.className + '#' + concern.signatureShort }));
             top.appendChild(el('span', { style: 'font-family:var(--mono);font-size:11.5px;color:var(--ink3);white-space:nowrap',
-              text: 'sat\\u0131r ' + concern.firstLine + '-' + concern.lastLine }));
+              text: 'line ' + concern.firstLine + '-' + concern.lastLine }));
             card.appendChild(top);
             var mutRow = el('div', { style: 'margin-top:12px;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;padding:10px 13px;border-radius:8px;background:var(--surf2);border:1px solid var(--line);font-family:var(--mono);font-size:12px' });
             mutRow.appendChild(el('span', { style: 'color:var(--bad);font-weight:600;min-width:0;overflow-wrap:anywhere', text: concern.mutator }));
             mutRow.appendChild(el('span', { style: 'color:var(--ink3);margin-left:auto;min-width:0;overflow-wrap:anywhere',
-              text: concern.killingTests.length ? concern.killingTests.join(', ') : 'öldüren test yok' }));
+              text: concern.killingTests.length ? concern.killingTests.join(', ') : 'no killing test' }));
             card.appendChild(mutRow);
             if (otherCount > 0) {
               card.appendChild(el('p', { style: 'margin:14px 0 0;font-size:12.5px;color:var(--ink2)',
-                text: 'Bu ko\\u015fuda incelenmeye de\\u011fer ' + (otherCount + 1) + ' mutant var; geri kalan\\u0131 i\\u00e7in Mutasyon kart\\u0131na bak\\u0131n.' }));
+                text: 'This run has ' + (otherCount + 1) + ' mutants worth reviewing; see the Mutation card for the rest.' }));
             }
             return card;
           }
           function mutantSearchText(className, methodName, m) {
             return (className + ' ' + methodName + ' ' + m.mutator + ' ' + m.status + ' ' + m.killingTests.join(' ')).toLowerCase();
           }
-          function buildMutasyonDetailCard() {
-            var card = el('section', { id: 'mutasyon-detay', class: 'card col-12' });
+          function buildMutationDetailCard() {
+            var card = el('section', { id: 'all-mutants', class: 'card col-12' });
             var head = el('div', { class: 'card-head' });
-            head.appendChild(el('h2', { class: 'card-title', text: 'Mutasyon kan\\u0131t\\u0131 \\u2014 t\\u00fcm mutantlar' }));
+            head.appendChild(el('h2', { class: 'card-title', text: 'Mutation evidence \\u2014 all mutants' }));
             var t = mutationTotals();
-            head.appendChild(el('span', { class: 'card-count', text: t.killed + ' / ' + t.all + ' yakaland\\u0131' }));
+            head.appendChild(el('span', { class: 'card-count', text: t.killed + ' / ' + t.all + ' killed' }));
             card.appendChild(head);
             var toolbar = el('div', { class: 'mut-toolbar' });
-            var search = el('input', { type: 'text', id: 'mut-search', placeholder: 's\\u0131n\\u0131f, metot, mutator veya \\u00f6ld\\u00fcren teste g\\u00f6re filtrele' });
+            var search = el('input', { type: 'text', id: 'mut-search', placeholder: 'filter by class, method, mutator or killing test' });
             toolbar.appendChild(search);
             var survivedOnly = el('input', { type: 'checkbox', id: 'mut-survived-only' });
             toolbar.appendChild(el('label', {}, [survivedOnly, ' sadece SURVIVED']));
@@ -620,12 +620,12 @@ public final class HtmlRenderer {
                 cls.methods.forEach(function (method) {
                   details.appendChild(el('h4', { style: 'margin:10px 0 4px;font-size:12.5px' }, [
                     el('code', { title: method.signatureFull, text: cls.className + '#' + method.signatureShort }),
-                    txt(' (sat\\u0131r ' + method.firstLine + '-' + method.lastLine + ')')
+                    txt(' (line ' + method.firstLine + '-' + method.lastLine + ')')
                   ]));
                   var tableWrap = el('div', { class: 'table-wrap' });
                   var table = el('table', { class: 'mutants' });
                   table.appendChild(el('thead', {}, [el('tr', {}, [
-                    el('th', { text: 'mutator' }), el('th', { text: 'sat\\u0131r' }), el('th', { text: 'durum' }), el('th', { text: '\\u00f6ld\\u00fcren testler' })
+                    el('th', { text: 'mutator' }), el('th', { text: 'line' }), el('th', { text: 'status' }), el('th', { text: 'killing tests' })
                   ])]));
                   var tbody = el('tbody');
                   method.mutants.forEach(function (m) {
@@ -647,21 +647,21 @@ public final class HtmlRenderer {
             return card;
           }
 
-          // ---------- Bulgular card ----------
-          function buildBulgularCard() {
+          // ---------- Findings card ----------
+          function buildFindingsCard() {
             var f = DATA.findings;
             var groups = {};
             f.items.forEach(function (it) { (groups[it.rule] = groups[it.rule] || []).push(it); });
 
-            var card = el('section', { id: 'bulgular', class: 'card col-12' });
+            var card = el('section', { id: 'findings', class: 'card col-12' });
             var head = el('div', { class: 'card-head' });
-            head.appendChild(el('h2', { class: 'card-title' }, ['Test bulgular\\u0131 ', el('span', { style: 'font-family:var(--mono);font-size:13px;color:var(--good)', text: String(f.items.length) })]));
-            head.appendChild(el('span', { class: 'card-count', text: 'kapsam: ' + f.scopeLabel + ' \\u00b7 ' + DATA.ruleIds.length + ' kural' }));
+            head.appendChild(el('h2', { class: 'card-title' }, ['Test findings ', el('span', { style: 'font-family:var(--mono);font-size:13px;color:var(--good)', text: String(f.items.length) })]));
+            head.appendChild(el('span', { class: 'card-count', text: 'scope: ' + f.scopeLabel + ' \\u00b7 ' + DATA.ruleIds.length + ' rules' }));
             card.appendChild(head);
             card.appendChild(el('p', { class: 'card-sub',
               text: f.items.length === 0
-                ? DATA.ruleIds.length + ' kural\\u0131n hi\\u00e7biri tetiklenmedi. Kural listesi s\\u0131f\\u0131rken de g\\u00f6r\\u00fcn\\u00fcr kal\\u0131yor \\u2014 hangi kontrollerin ger\\u00e7ekten \\u00e7al\\u0131\\u015ft\\u0131\\u011f\\u0131, sonu\\u00e7 bo\\u015f oldu\\u011funda daha \\u00f6nemlidir.'
-                : f.items.length + ' bulgu, ' + Object.keys(groups).length + ' kuralda topland\\u0131.' }));
+                ? DATA.ruleIds.length + ' rules ran, none of them triggered. The rule list stays visible at zero too \\u2014 which checks actually ran matters more when the result is empty.'
+                : f.items.length + ' findings, ' + Object.keys(groups).length + ' rules.' }));
 
             var pillRow = el('div', { class: 'pill-row' });
             DATA.ruleIds.forEach(function (rule) {
@@ -677,7 +677,7 @@ public final class HtmlRenderer {
 
             if (f.items.length > 0) {
               var toolbar = el('div', { class: 'mut-toolbar' });
-              var search = el('input', { type: 'text', id: 'finding-search', placeholder: 'kural, dosya, test veya mesaja g\\u00f6re filtrele' });
+              var search = el('input', { type: 'text', id: 'finding-search', placeholder: 'filter by rule, file, test or message' });
               toolbar.appendChild(search);
               card.appendChild(toolbar);
 
@@ -695,7 +695,7 @@ public final class HtmlRenderer {
                 group.appendChild(gsum);
                 group.appendChild(el('p', { class: 'finding-group-desc', text: l.description }));
                 var action = el('p', { class: 'finding-group-action' });
-                action.appendChild(el('strong', { text: '\\u00d6neri: ' }));
+                action.appendChild(el('strong', { text: 'Suggested: ' }));
                 action.appendChild(txt(items[0].suggestedAction));
                 group.appendChild(action);
                 var rows = el('div', { class: 'finding-rows' });
@@ -734,17 +734,17 @@ public final class HtmlRenderer {
             return card;
           }
 
-          // ---------- Değişen dosyalar card ----------
+          // ---------- Changed files card ----------
           function buildChangedFilesCard() {
-            var card = el('section', { id: 'degisen-dosyalar', class: 'card col-12' });
+            var card = el('section', { id: 'changed-files', class: 'card col-12' });
             var head = el('div', { class: 'card-head' });
-            head.appendChild(el('h2', { class: 'card-title', text: 'De\\u011fi\\u015fen dosyalar' }));
-            head.appendChild(el('span', { class: 'card-count', text: DATA.changedFiles.length + ' dosya' }));
+            head.appendChild(el('h2', { class: 'card-title', text: 'Changed files' }));
+            head.appendChild(el('span', { class: 'card-count', text: DATA.changedFiles.length + ' files' }));
             card.appendChild(head);
             var tableWrap = el('div', { class: 'table-wrap' });
             var table = el('table');
             var headRow = el('tr');
-            ['mod\\u00fcl', 'yol', 's\\u0131n\\u0131fland\\u0131rma', 'yeni sat\\u0131r', 'kapsanan', 'kapsanmayan aral\\u0131klar'].forEach(function (h) {
+            ['module', 'path', 'classification', 'new lines', 'covered', 'uncovered ranges'].forEach(function (h) {
               headRow.appendChild(el('th', { text: h }));
             });
             table.appendChild(el('thead', {}, [headRow]));
@@ -769,18 +769,18 @@ public final class HtmlRenderer {
             return card;
           }
 
-          // ---------- Dosyalar card (risk / paket, band filtreleri, arama) ----------
+          // ---------- Files card (risk / package, band filters, search) ----------
           var BANDS = [
-            ['all', 'T\\u00fcm\\u00fc', function (v) { return true; }],
+            ['all', 'All', function (v) { return true; }],
             ['zero', '%0', function (v) { return v !== null && v === 0; }],
-            ['low', '%70 alt\\u0131', function (v) { return v !== null && v < 70; }],
+            ['low', 'below 70%', function (v) { return v !== null && v < 70; }],
             ['mid', '%70\\u201390', function (v) { return v !== null && v >= 70 && v < 90; }],
-            ['high', '%90 \\u00fcst\\u00fc', function (v) { return v !== null && v >= 90; }]
+            ['high', '90% and above', function (v) { return v !== null && v >= 90; }]
           ];
           function computePackages() {
             var map = {};
             DATA.fileCoverage.files.forEach(function (f) {
-              var key = f.packagePath || '(k\\u00f6k)';
+              var key = f.packagePath || '(root)';
               if (!map[key]) { map[key] = { name: key, numerator: 0, denominator: 0, count: 0 }; }
               map[key].numerator += f.numerator;
               map[key].denominator += f.denominator;
@@ -789,31 +789,31 @@ public final class HtmlRenderer {
             return Object.keys(map).sort().map(function (k) {
               var p = map[k];
               var pct = p.denominator === 0 ? null : Math.round((p.numerator / p.denominator) * 1000) / 10;
-              return { name: p.name, sub: p.count + ' dosya', pct: pct,
+              return { name: p.name, sub: p.count + ' files', pct: pct,
                 pctText: pct === null ? 'n/a' : String(pct).replace('.', ',') + '%' };
             });
           }
-          function buildDosyalarCard() {
+          function buildFilesCard() {
             var state = { view: 'risk', q: '', band: 'all', asc: true };
-            var card = el('section', { id: 'dosyalar', class: 'card col-12' });
+            var card = el('section', { id: 'files', class: 'card col-12' });
             var head = el('div', { class: 'card-head' });
-            head.appendChild(el('h2', { class: 'card-title', text: 'Dosya bazl\\u0131 kapsama' }));
+            head.appendChild(el('h2', { class: 'card-title', text: 'Per-file coverage' }));
             card.appendChild(head);
             card.appendChild(el('p', { class: 'card-sub',
-              text: 'Varsay\\u0131lan s\\u0131ralama alfabe de\\u011fil, risk: en d\\u00fc\\u015f\\u00fck kapsama \\u00fcstte. Paket g\\u00f6r\\u00fcn\\u00fcm\\u00fc nerede yo\\u011funla\\u015ft\\u0131\\u011f\\u0131n\\u0131 g\\u00f6sterir.' }));
+              text: 'The default order is risk, not alphabet: lowest coverage on top. The package view shows where it concentrates.' }));
 
             var toolbar = el('div', { class: 'file-toolbar' });
             var toggle = el('div', { class: 'file-toggle' });
             var riskBtn = el('button', { type: 'button', text: 'Risk', 'data-on': '1' });
-            var pkgBtn = el('button', { type: 'button', text: 'Paket', 'data-on': '0' });
+            var pkgBtn = el('button', { type: 'button', text: 'Package', 'data-on': '0' });
             toggle.appendChild(riskBtn); toggle.appendChild(pkgBtn);
             toolbar.appendChild(toggle);
-            var search = el('input', { type: 'text', placeholder: 'dosya ara' });
+            var search = el('input', { type: 'text', placeholder: 'search files' });
             toolbar.appendChild(search);
             card.appendChild(toolbar);
 
             var bandRow = el('div', { class: 'file-band-row' });
-            bandRow.appendChild(el('span', { class: 'file-band-eyebrow', text: 'F\\u0130LTRE' }));
+            bandRow.appendChild(el('span', { class: 'file-band-eyebrow', text: 'FILTER' }));
             var bandBtns = {};
             var bandChips = el('div', { style: 'display:flex;gap:6px;flex-wrap:wrap' });
             BANDS.forEach(function (b) {
@@ -824,7 +824,7 @@ public final class HtmlRenderer {
             bandRow.appendChild(bandChips);
             var actions = el('div', { class: 'file-band-actions' });
             var sortBtn = el('button', { type: 'button', class: 'file-sort-btn' });
-            var resetBtn = el('button', { type: 'button', class: 'file-reset-btn', text: 'S\\u0131f\\u0131rla' });
+            var resetBtn = el('button', { type: 'button', class: 'file-reset-btn', text: 'Reset' });
             var countLabel = el('span', { class: 'file-count' });
             actions.appendChild(sortBtn); actions.appendChild(resetBtn); actions.appendChild(countLabel);
             bandRow.appendChild(actions);
@@ -834,14 +834,14 @@ public final class HtmlRenderer {
             card.appendChild(rowsWrap);
             var legend = el('div', { class: 'file-legend' });
             var legendLeft = el('span');
-            legendLeft.appendChild(txt('E\\u015fik: '));
-            legendLeft.appendChild(el('code', { style: 'color:var(--bad)', text: '%70 alt\\u0131' }));
+            legendLeft.appendChild(txt('Thresholds: '));
+            legendLeft.appendChild(el('code', { style: 'color:var(--bad)', text: 'below 70%' }));
             legendLeft.appendChild(txt(' \\u00b7 '));
             legendLeft.appendChild(el('code', { style: 'color:var(--warn)', text: '%70\\u201390' }));
             legendLeft.appendChild(txt(' \\u00b7 '));
-            legendLeft.appendChild(el('code', { style: 'color:var(--good)', text: '%90 \\u00fcst\\u00fc' }));
+            legendLeft.appendChild(el('code', { style: 'color:var(--good)', text: '90% and above' }));
             legend.appendChild(legendLeft);
-            var legendRight = el('code', { text: fmtInt(DATA.fileCoverage.totalFiles) + ' dosya \\u00b7 ' + fmtInt(DATA.fileCoverage.excluded.length) + ' hari\\u00e7 tutulan' });
+            var legendRight = el('code', { text: fmtInt(DATA.fileCoverage.totalFiles) + ' files \\u00b7 ' + fmtInt(DATA.fileCoverage.excluded.length) + ' excluded' });
             legend.appendChild(legendRight);
             card.appendChild(legend);
 
@@ -852,7 +852,7 @@ public final class HtmlRenderer {
                 ? DATA.fileCoverage.files.map(function (f) { return { name: f.displayPath, sub: f.module, pct: f.pct, pctText: f.pctText, fw: 500 }; })
                 : (packages || (packages = computePackages())).map(function (p) { return { name: p.name, sub: p.sub, pct: p.pct, pctText: p.pctText, fw: 600 }; });
               var total = src.length;
-              var unit = state.view === 'risk' ? 'dosya' : 'paket';
+              var unit = state.view === 'risk' ? 'files' : 'packages';
               var q = state.q.trim().toLowerCase();
               var matchQ = src.filter(function (r) { return q === '' || (r.name + ' ' + r.sub).toLowerCase().indexOf(q) !== -1; });
               var bandFn = (BANDS.filter(function (b) { return b[0] === state.band; })[0] || BANDS[0])[2];
@@ -874,7 +874,7 @@ public final class HtmlRenderer {
               });
 
               countLabel.textContent = kept.length + ' / ' + total + ' ' + unit;
-              sortBtn.textContent = state.asc ? '\\u2191 en d\\u00fc\\u015f\\u00fck \\u00f6nce' : '\\u2193 en y\\u00fcksek \\u00f6nce';
+              sortBtn.textContent = state.asc ? '\\u2191 lowest first' : '\\u2193 highest first';
               Object.keys(bandBtns).forEach(function (k) { bandBtns[k].setAttribute('data-on', k === state.band ? '1' : '0'); });
               riskBtn.setAttribute('data-on', state.view === 'risk' ? '1' : '0');
               pkgBtn.setAttribute('data-on', state.view === 'pkg' ? '1' : '0');
@@ -897,7 +897,7 @@ public final class HtmlRenderer {
             return card;
           }
 
-          // ---------- Uyarılar / Eksik nedenler / Test bazlı kanıt ----------
+          // ---------- Warnings / incomplete reasons / per-test evidence ----------
           function buildReasonCard(id, title, items) {
             var card = el('section', { id: id, class: 'card col-12' });
             var head = el('div', { class: 'card-head' });
@@ -917,15 +917,15 @@ public final class HtmlRenderer {
             return card;
           }
           function buildPerTestCard() {
-            var card = el('section', { id: 'test-kaniti', class: 'card col-7' });
+            var card = el('section', { id: 'per-test-evidence', class: 'card col-7' });
             var head = el('div', { class: 'card-head' });
-            head.appendChild(el('h2', { class: 'card-title', text: 'Test bazl\\u0131 kan\\u0131t (L2)' }));
+            head.appendChild(el('h2', { class: 'card-title', text: 'Per-test evidence (L2)' }));
             card.appendChild(head);
             card.appendChild(el('p', { class: 'card-sub',
-              text: 'Testlerin hangi \\u00fcretim sat\\u0131rlar\\u0131n\\u0131 \\u00e7al\\u0131\\u015ft\\u0131rd\\u0131\\u011f\\u0131na dair kan\\u0131t. \\u201cambient\\u201d: her testte ayn\\u0131 \\u015fekilde \\u00e7al\\u0131\\u015fan, o teste \\u00f6zg\\u00fc olmayan sat\\u0131rlar.' }));
+              text: 'Evidence of which production lines each test executes. \\u201cambient\\u201d: lines that run the same way in every test and belong to none of them.' }));
             var tableWrap = el('div', { class: 'table-wrap' });
             var table = el('table');
-            table.appendChild(el('thead', {}, [el('tr', {}, [el('th', { text: 'mod\\u00fcl' }), el('th', { text: 'metot-sat\\u0131r e\\u015fle\\u015fmesi' }), el('th', { text: 'ambient sat\\u0131r' })])]));
+            table.appendChild(el('thead', {}, [el('tr', {}, [el('th', { text: 'module' }), el('th', { text: 'method-line binding' }), el('th', { text: 'ambient lines' })])]));
             var tbody = el('tbody');
             DATA.perTest.forEach(function (m) {
               tbody.appendChild(el('tr', {}, [el('td', { text: m.moduleId }), el('td', { text: fmtInt(m.entryLineCount) }), el('td', { text: fmtInt(m.ambientLineCount) })]));
@@ -936,30 +936,30 @@ public final class HtmlRenderer {
             return card;
           }
 
-          // ---------- Koşu card ----------
+          // ---------- Run card ----------
           function buildKosuCard(emptyList) {
-            var card = el('section', { id: 'kosu', class: 'card col-5' });
-            card.appendChild(el('h2', { class: 'card-title', text: 'Ko\\u015fu ve te\\u015fhis' }));
+            var card = el('section', { id: 'run', class: 'card col-5' });
+            card.appendChild(el('h2', { class: 'card-title', text: 'Run and diagnostics' }));
             var m = DATA.meta;
             var dl = el('dl', { class: 'kv-grid' });
             function row(k, vNode) { dl.appendChild(el('dt', { text: k })); var dd = el('dd'); dd.appendChild(vNode); dl.appendChild(dd); }
-            row('mod\\u00fcl', txt(m.modules));
+            row('modules', txt(m.modules));
             row('fark modu', txt(m.diffMode));
             row('encoding', el('code', { text: m.encoding }));
             if (DATA.perTest) {
               var total = DATA.perTest.reduce(function (s, p) { return s + p.entryLineCount; }, 0);
               var ambient = DATA.perTest.reduce(function (s, p) { return s + p.ambientLineCount; }, 0);
-              row('test kan\\u0131t\\u0131', el('code', { text: 'L2 \\u00b7 ' + fmtInt(total) + ' giri\\u015f sat\\u0131r\\u0131 \\u00b7 ' + fmtInt(ambient) + ' ambient' }));
+              row('per-test evidence', el('code', { text: 'L2 \\u00b7 ' + fmtInt(total) + ' entry lines \\u00b7 ' + fmtInt(ambient) + ' ambient' }));
             }
             var warnNode = DATA.warnings.length
-              ? el('span', { style: 'color:var(--warn)', text: DATA.warnings.length + ' uyar\\u0131' })
+              ? el('span', { style: 'color:var(--warn)', text: DATA.warnings.length + ' warnings' })
               : el('span', { style: 'color:var(--good)', text: 'yok' });
-            row('uyar\\u0131', warnNode);
+            row('warnings', warnNode);
             card.appendChild(dl);
 
             if (emptyList.length) {
               var block = el('div', { class: 'empty-block' });
-              block.appendChild(el('div', { class: 'empty-block-eyebrow', text: 'BU KO\\u015eUDA BO\\u015e KALAN B\\u00d6L\\u00dcMLER' }));
+              block.appendChild(el('div', { class: 'empty-block-eyebrow', text: 'SECTIONS LEFT EMPTY IN THIS RUN' }));
               var list = el('div', { style: 'margin-top:9px;display:flex;flex-direction:column' });
               emptyList.forEach(function (e) {
                 var r = el('div', { class: 'empty-row' });
@@ -969,7 +969,7 @@ public final class HtmlRenderer {
               });
               block.appendChild(list);
               block.appendChild(el('p', { class: 'empty-block-note',
-                text: 'Bo\\u015f b\\u00f6l\\u00fcmler tam kart yerine tek sat\\u0131ra indi: rapor, dolu oldu\\u011fu kadar g\\u00f6r\\u00fcn\\u00fcyor.' }));
+                text: 'Empty sections collapse to one line instead of a full card: the report looks as full as it actually is.' }));
               card.appendChild(block);
             }
             return card;
@@ -1034,7 +1034,7 @@ public final class HtmlRenderer {
           function updateThemeButton() {
             var btn = document.getElementById('theme-toggle');
             if (!btn) { return; }
-            btn.textContent = '\\u25d0\\u00a0\\u00a0Tema de\\u011fi\\u015ftir';
+            btn.textContent = '\\u25d0\\u00a0\\u00a0Switch theme';
           }
           function setTheme(theme) {
             if (theme === 'dark') { document.documentElement.setAttribute('data-theme', 'dark'); }
@@ -1047,7 +1047,7 @@ public final class HtmlRenderer {
             try {
               var saved = window.localStorage.getItem('coverdict-report-theme');
               if (saved === 'dark') { document.documentElement.setAttribute('data-theme', 'dark'); }
-            } catch (e) { /* ayn\\u0131, sorun de\\u011fil - varsay\\u0131lan a\\u00e7\\u0131k temada kal */ }
+            } catch (e) { /* fine - stay on the default light theme */ }
             updateThemeButton();
           }
 
@@ -1062,7 +1062,7 @@ public final class HtmlRenderer {
 
           // ---------- Deep link ----------
           // Runs after init() builds the DOM - the browser's own load-time fragment scroll happens
-          // before that (#kosu/#detay/... don't exist yet at that point), so a shared/bookmarked URL
+          // before that (#run/#mutant-detail/... don't exist yet at that point), so a shared/bookmarked URL
           // needs this to still land on the right card or finding row.
           function applyDeepLink() {
             if (!location.hash || location.hash.length < 2) { return; }
@@ -1078,11 +1078,11 @@ public final class HtmlRenderer {
           }
 
           // ---------- Boot ----------
-          function buildOzet() {
-            var section = el('section', { id: 'ozet', style: 'scroll-margin-top:24px' });
+          function buildSummary() {
+            var section = el('section', { id: 'summary', style: 'scroll-margin-top:24px' });
             var top = el('div', { style: 'display:flex;align-items:baseline;gap:14px;flex-wrap:wrap' });
-            top.appendChild(el('span', { class: 'eyebrow', text: '\\u00d6ZET' }));
-            top.appendChild(el('span', { class: 'ozet-time', text: DATA.meta.diffMode + ' \\u00b7 ' + DATA.meta.generatedAt }));
+            top.appendChild(el('span', { class: 'eyebrow', text: 'SUMMARY' }));
+            top.appendChild(el('span', { class: 'summary-time', text: DATA.meta.diffMode + ' \\u00b7 ' + DATA.meta.generatedAt }));
             section.appendChild(top);
 
             var jacoco = DATA.coverage.overall.filter(function (m) { return m.mode === 'jacoco-line'; })[0];
@@ -1097,10 +1097,10 @@ public final class HtmlRenderer {
               if (sub) { a.appendChild(el('div', { class: 'stat-tile-sub', text: sub })); }
               return a;
             }
-            tiles.appendChild(tile('kapsama', 'Sat\\u0131r kapsama', jacoco ? jacoco.pctText : 'n/a', jacoco ? (jacoco.numeratorText + ' / ' + jacoco.denominatorText) : null));
-            if (t) { tiles.appendChild(tile('mutasyon', 'Mutasyon', t.killed + ' / ' + t.all, t.all === 0 ? 'mutant \\u00fcretilmedi' : 'yakalanan / toplam')); }
-            tiles.appendChild(tile('bulgular', 'Bulgular', String(DATA.findings.items.length), DATA.ruleIds.length + ' kural tarand\\u0131'));
-            if (DATA.fileCoverage) { tiles.appendChild(tile('dosyalar', '%0 kapsamada dosya', String(zeroFiles), fmtInt(DATA.fileCoverage.totalFiles) + ' dosya i\\u00e7inde')); }
+            tiles.appendChild(tile('coverage', 'Line coverage', jacoco ? jacoco.pctText : 'n/a', jacoco ? (jacoco.numeratorText + ' / ' + jacoco.denominatorText) : null));
+            if (t) { tiles.appendChild(tile('mutation', 'Mutation', t.killed + ' / ' + t.all, t.all === 0 ? 'no mutants generated' : 'killed / total')); }
+            tiles.appendChild(tile('findings', 'Findings', String(DATA.findings.items.length), DATA.ruleIds.length + ' rules scanned'));
+            if (DATA.fileCoverage) { tiles.appendChild(tile('files', 'files at 0% coverage', String(zeroFiles), fmtInt(DATA.fileCoverage.totalFiles) + ' files')); }
             section.appendChild(tiles);
             return section;
           }
@@ -1108,37 +1108,37 @@ public final class HtmlRenderer {
           function init() {
             var app = document.getElementById('app');
             var emptyList = [];
-            var navItems = [{ id: 'ozet', label: '\\u00d6zet', count: '', group: 'GENEL' }];
+            var navItems = [{ id: 'summary', label: 'Summary', count: '', group: 'OVERVIEW' }];
             var grid = el('div', { class: 'grid' });
 
-            grid.appendChild(buildKapsamaCard());
+            grid.appendChild(buildCoverageCard());
             var jacocoNav = DATA.coverage.overall.filter(function (m) { return m.mode === 'jacoco-line'; })[0];
-            navItems.push({ id: 'kapsama', label: 'Kapsama', count: jacocoNav ? jacocoNav.pctText : '', group: 'GENEL' });
+            navItems.push({ id: 'coverage', label: 'Coverage', count: jacocoNav ? jacocoNav.pctText : '', group: 'OVERVIEW' });
 
             var concern = findConcernMutant();
             if (DATA.mutation) {
-              grid.appendChild(buildMutasyonCard(concern));
+              grid.appendChild(buildMutationCard(concern));
               var t = mutationTotals();
-              navItems.push({ id: 'mutasyon', label: 'Mutasyon', count: t.killed + '/' + t.all, group: 'GENEL' });
+              navItems.push({ id: 'mutation', label: 'Mutation', count: t.killed + '/' + t.all, group: 'OVERVIEW' });
             } else {
-              emptyList.push({ name: 'Mutasyon kan\\u0131t\\u0131', why: 'toplanmad\\u0131' });
+              emptyList.push({ name: 'Mutation evidence', why: 'not collected' });
             }
 
-            grid.appendChild(buildBulgularCard());
-            navItems.push({ id: 'bulgular', label: 'Bulgular', count: String(DATA.findings.items.length), group: 'GENEL' });
+            grid.appendChild(buildFindingsCard());
+            navItems.push({ id: 'findings', label: 'Findings', count: String(DATA.findings.items.length), group: 'OVERVIEW' });
 
             if (DATA.changedFiles.length) {
               grid.appendChild(buildChangedFilesCard());
-              navItems.push({ id: 'degisen-dosyalar', label: 'De\\u011fi\\u015fen dosyalar', count: String(DATA.changedFiles.length), group: 'KAPSAMA DETAYI' });
+              navItems.push({ id: 'changed-files', label: 'Changed files', count: String(DATA.changedFiles.length), group: 'COVERAGE DETAIL' });
             } else {
-              emptyList.push({ name: 'De\\u011fi\\u015fen dosyalar', why: DATA.meta.diffMode });
+              emptyList.push({ name: 'Changed files', why: DATA.meta.diffMode });
             }
 
             if (DATA.fileCoverage) {
-              grid.appendChild(buildDosyalarCard());
-              navItems.push({ id: 'dosyalar', label: 'Dosyalar', count: fmtInt(DATA.fileCoverage.totalFiles), group: 'KAPSAMA DETAYI' });
+              grid.appendChild(buildFilesCard());
+              navItems.push({ id: 'files', label: 'Files', count: fmtInt(DATA.fileCoverage.totalFiles), group: 'COVERAGE DETAIL' });
             } else {
-              emptyList.push({ name: 'Dosya bazl\\u0131 kapsama', why: 'toplanmad\\u0131' });
+              emptyList.push({ name: 'Per-file coverage', why: 'not collected' });
             }
 
             var otherConcern = 0;
@@ -1148,46 +1148,46 @@ public final class HtmlRenderer {
               Object.keys(totals).forEach(function (s) { if (s !== 'KILLED') { concerning += totals[s]; } });
               otherConcern = Math.max(0, concerning - 1);
               grid.appendChild(buildDetayCard(concern, otherConcern));
-              navItems.push({ id: 'detay', label: '\\u00d6ne \\u00e7\\u0131kan mutant', count: String(otherConcern + 1), group: 'MUTASYON DETAYI' });
+              navItems.push({ id: 'mutant-detail', label: 'Highlighted mutant', count: String(otherConcern + 1), group: 'MUTATION DETAIL' });
             }
 
             if (DATA.mutation && DATA.mutation.modules.length) {
-              grid.appendChild(buildMutasyonDetailCard());
-              navItems.push({ id: 'mutasyon-detay', label: 'T\\u00fcm mutantlar', count: fmtInt(mutationTotals().all), group: 'MUTASYON DETAYI' });
+              grid.appendChild(buildMutationDetailCard());
+              navItems.push({ id: 'all-mutants', label: 'All mutants', count: fmtInt(mutationTotals().all), group: 'MUTATION DETAIL' });
             }
 
             if (DATA.warnings.length) {
-              grid.appendChild(buildReasonCard('uyarilar', 'Uyar\\u0131lar', DATA.warnings));
-              navItems.push({ id: 'uyarilar', label: 'Uyar\\u0131lar', count: String(DATA.warnings.length), group: 'TE\\u015eH\\u0130S' });
+              grid.appendChild(buildReasonCard('warnings', 'Warnings', DATA.warnings));
+              navItems.push({ id: 'warnings', label: 'Warnings', count: String(DATA.warnings.length), group: 'DIAGNOSTICS' });
             } else {
-              emptyList.push({ name: 'Uyar\\u0131lar', why: '0 kay\\u0131t' });
+              emptyList.push({ name: 'Warnings', why: '0 records' });
             }
 
             if (DATA.incompleteReasons.length) {
-              grid.appendChild(buildReasonCard('eksik-nedenler', 'Eksik nedenler', DATA.incompleteReasons));
-              navItems.push({ id: 'eksik-nedenler', label: 'Eksik nedenler', count: String(DATA.incompleteReasons.length), group: 'TE\\u015eH\\u0130S' });
+              grid.appendChild(buildReasonCard('incomplete-reasons', 'Incomplete reasons', DATA.incompleteReasons));
+              navItems.push({ id: 'incomplete-reasons', label: 'Incomplete reasons', count: String(DATA.incompleteReasons.length), group: 'DIAGNOSTICS' });
             } else {
-              emptyList.push({ name: 'Eksik nedenler', why: '0 kay\\u0131t' });
+              emptyList.push({ name: 'Incomplete reasons', why: '0 records' });
             }
 
             var perTestTotal = DATA.perTest ? DATA.perTest.reduce(function (s, p) { return s + p.entryLineCount; }, 0) : 0;
             if (DATA.perTest && perTestTotal > 0) {
               grid.appendChild(buildPerTestCard());
-              navItems.push({ id: 'test-kaniti', label: 'Test bazl\\u0131 kan\\u0131t', count: fmtInt(perTestTotal), group: 'TE\\u015eH\\u0130S' });
+              navItems.push({ id: 'per-test-evidence', label: 'Per-test evidence', count: fmtInt(perTestTotal), group: 'DIAGNOSTICS' });
             } else {
-              emptyList.push({ name: 'Test bazl\\u0131 kan\\u0131t (L2)', why: DATA.perTest ? '0 kay\\u0131t' : 'toplanmad\\u0131' });
+              emptyList.push({ name: 'Per-test evidence (L2)', why: DATA.perTest ? '0 records' : 'not collected' });
             }
 
             grid.appendChild(buildKosuCard(emptyList));
-            navItems.push({ id: 'kosu', label: 'Ko\\u015fu ve te\\u015fhis', count: '', group: 'TE\\u015eH\\u0130S' });
+            navItems.push({ id: 'run', label: 'Run and diagnostics', count: '', group: 'DIAGNOSTICS' });
 
             app.appendChild(buildSidebar(navItems));
             var main = el('div', { class: 'main' });
             var wrap = el('div', { class: 'wrap' });
-            wrap.appendChild(buildOzet());
+            wrap.appendChild(buildSummary());
             wrap.appendChild(grid);
             var footer = el('div', { class: 'footer-strip' });
-            footer.appendChild(el('span', { text: 'coverdict ' + DATA.meta.toolVersion + ' \\u00b7 schema ' + DATA.meta.schemaVersion + ' \\u00b7 tek dosya, \\u00e7evrimd\\u0131\\u015f\\u0131, harici istek yok' }));
+            footer.appendChild(el('span', { text: 'coverdict ' + DATA.meta.toolVersion + ' \\u00b7 schema ' + DATA.meta.schemaVersion + ' \\u00b7 single file, offline, no external requests' }));
             footer.appendChild(el('span', { text: DATA.meta.generatedAt }));
             wrap.appendChild(footer);
             main.appendChild(wrap);

@@ -108,7 +108,7 @@ class PlaygroundMutationIT {
     }
 
     /**
-     * Plan.md M6 Faz 2's own "bitti sayılır" criterion: a class outside any
+     * The done-criterion for mutation outside a diff: a class outside any
      * diff - here, no git repo exists at all, {@code --no-vcs} - still gets
      * mutated and produces a path-resolved {@code PSEUDO_TESTED_METHOD}
      * finding. Proves {@code SourceRootClassIndex}/{@code

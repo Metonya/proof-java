@@ -148,7 +148,7 @@ class HtmlRendererTest {
         Map<String, Object> data = parseData(rendered);
         Map<String, Object> meta = obj(data.get("meta"));
         assertEquals(Boolean.TRUE, meta.get("complete"));
-        assertEquals("tamamlandı", meta.get("statusLabel"));
+        assertEquals("complete", meta.get("statusLabel"));
         assertEquals("0.1.0-TEST", meta.get("toolVersion"));
         assertTrue(arr(obj(data.get("findings")).get("items")).isEmpty());
     }
@@ -348,8 +348,8 @@ class HtmlRendererTest {
 
         assertNotNull(meta.get("generatedAt"));
         assertEquals("root (.)", meta.get("modules"));
-        assertEquals("belirtilen referansla fark (base-ref)", meta.get("diffMode"));
-        assertEquals("tüm test dosyaları", meta.get("findingsScopeLabel"));
+        assertEquals("diff against the given ref (base-ref)", meta.get("diffMode"));
+        assertEquals("all test files", meta.get("findingsScopeLabel"));
         assertEquals(List.of("**/generated/**"), arr(meta.get("exclusions")));
         assertEquals(Boolean.TRUE, meta.get("dirty"));
 

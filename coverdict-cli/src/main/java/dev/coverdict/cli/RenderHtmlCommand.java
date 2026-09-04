@@ -25,7 +25,7 @@ import dev.coverdict.analysis.report.VerdictJsonReader;
  * exact same document shape, this time read back from disk instead of
  * built in-process).
  *
- * <p>Built for {@code coverdict-vscode}'s "Raporu Dışa Aktar" command: the
+ * <p>Built for {@code coverdict-vscode}'s "Export report" command: the
  * extension composes a verdict JSON from whatever coverage/per-test/mutation
  * state it currently holds and hands it here for rendering, at zero
  * re-analysis cost - see D-78 for why a fresh diff-derived re-scan is the

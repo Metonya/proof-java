@@ -79,7 +79,7 @@ class VerdictJsonReaderTest {
     void roundTripsBaseRefModeIdentityAndAnIncompleteReason() throws IOException {
         VcsIdentity identity = new VcsIdentity("abc123abc123abc123abc123abc123abc123ab1", "main",
             "abc123abc123abc123abc123abc123abc123ab1", "abc123abc123abc123abc123abc123abc123ab1", true);
-        AnalysisReason reason = new AnalysisReason("SOME_CODE", "eksik bir şey", "src/Foo.java", "root", 3);
+        AnalysisReason reason = new AnalysisReason("SOME_CODE", "something missing", "src/Foo.java", "root", 3);
 
         VerdictDocument doc = new VerdictDocument("0.1.0", "0.1.0-TEST", false, List.of(reason),
             17, "UTF-8", List.of(), List.of(module()), "base-ref", "all", identity,
