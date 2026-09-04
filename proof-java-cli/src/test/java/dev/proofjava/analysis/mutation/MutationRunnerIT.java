@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
  * Drives a real PIT mutation run against coverdict's own repository - not
  * bound to the default {@code mvn verify} gate (minutes, not milliseconds;
  * needs a real classpath), only to the {@code mutation-it} profile: {@code
- * mvn -Pmutation-it -pl coverdict-cli test}.
+ * mvn -Pmutation-it -pl proof-java-cli test}.
  *
  * <p>This is the concrete check for D-57 and D-58: the M2 spike's {@code
  * MINION_DIED}/{@code agent library failed to init: instrument} cascade
@@ -72,7 +72,7 @@ class MutationRunnerIT {
         // mutators can meaningfully act on.
         List<String> targetClasses = List.of("dev.proofjava.analysis.binding.ChangedClassTargets*");
 
-        Optional<MutationModuleEvidence> result = MutationRunner.run("coverdict-cli-it", repoRoot,
+        Optional<MutationModuleEvidence> result = MutationRunner.run("proof-java-cli-it", repoRoot,
             classPathElements, codePaths, targetClasses, BUDGET);
         assertTrue(result.isPresent(), "expected PIT to find at least one mutable point in a real production class");
         assertFalse(result.get().methods().isEmpty(), "expected at least one mutated method");

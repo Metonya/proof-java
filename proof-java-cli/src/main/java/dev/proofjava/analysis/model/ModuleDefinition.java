@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * A module as declared on the CLI (docs/M0-CLI-INPUT.md): a stable id plus
  * repo-relative, forward-slash-normalized paths. {@code sourceRoots} are
- * already full repo-relative paths (e.g. {@code "coverdict-cli/src/main/java"},
+ * already full repo-relative paths (e.g. {@code "proof-java-cli/src/main/java"},
  * matching the documented default {@code <module-root>/src/main/java}) - not
  * fragments relative to {@code root} that would need a second join.
  */

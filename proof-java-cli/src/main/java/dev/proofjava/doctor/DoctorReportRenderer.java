@@ -46,7 +46,7 @@ public final class DoctorReportRenderer {
 
     private static String suggestedCommand(List<ModuleDiagnosis> usable) {
         StringBuilder sb = new StringBuilder();
-        sb.append("  java -jar coverdict.jar analyze \\\n");
+        sb.append("  java -jar proof-java.jar analyze \\\n");
         sb.append("    --base <ref> \\\n");
         for (ModuleDiagnosis d : usable) {
             sb.append("    --module ").append(d.module().id()).append('=').append(d.module().root()).append(" \\\n");

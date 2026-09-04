@@ -29,7 +29,7 @@ class UnifiedDiffParserTest {
     @Test
     void accumulatesAllHunksOfAMultiHunkFile() throws IOException {
         Map<String, SortedSet<Integer>> result = parse("multi-hunk.diff");
-        assertEquals(Set.of("coverdict-cli/src/test/java/dev/proofjava/analysis/jacoco/JacocoXmlParserTest.java"), result.keySet());
+        assertEquals(Set.of("proof-java-cli/src/test/java/dev/proofjava/analysis/jacoco/JacocoXmlParserTest.java"), result.keySet());
         SortedSet<Integer> lines = result.values().iterator().next();
         assertEquals(Set.of(86, 87, 88, 89, 90, 93, 94, 95, 96, 97, 98, 102, 103, 104, 105, 106, 107), lines);
     }

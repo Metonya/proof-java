@@ -25,13 +25,13 @@ class ExclusionFilterTest {
     void doubleStarSlashMatchesAnyDepthIncludingZero() {
         // This exact pattern is coverdict's own pom.xml sonar.coverage.exclusions.
         List<ResolvedSourceFile> files = List.of(
-            file("coverdict-cli/src/main/java/dev/proofjava/cli/Main.java"),
+            file("proof-java-cli/src/main/java/dev/proofjava/cli/Main.java"),
             file("Main.java"),
-            file("coverdict-cli/src/main/java/dev/proofjava/cli/AnalyzeCommand.java")
+            file("proof-java-cli/src/main/java/dev/proofjava/cli/AnalyzeCommand.java")
         );
         List<ResolvedSourceFile> kept = ExclusionFilter.apply(files, List.of("**/Main.java"));
         assertEquals(1, kept.size());
-        assertEquals("coverdict-cli/src/main/java/dev/proofjava/cli/AnalyzeCommand.java", kept.get(0).repoRelativePath());
+        assertEquals("proof-java-cli/src/main/java/dev/proofjava/cli/AnalyzeCommand.java", kept.get(0).repoRelativePath());
     }
 
     @Test

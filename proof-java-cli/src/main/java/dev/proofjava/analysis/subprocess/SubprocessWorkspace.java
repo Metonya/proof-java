@@ -111,7 +111,7 @@ public final class SubprocessWorkspace {
 
     /**
      * The current JVM's own runtime classpath, split into entries. In
-     * production ({@code java -jar coverdict.jar ...}) this is the single
+     * production ({@code java -jar proof-java.jar ...}) this is the single
      * shaded jar, which already contains PIT (D-55). Under Maven/Surefire
      * (tests, {@code -Pmutation-it}) it is instead the full multi-jar
      * compile+test classpath - correctly including PIT's separate

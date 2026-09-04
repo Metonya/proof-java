@@ -1,7 +1,7 @@
-diff --git a/coverdict-cli/src/test/java/dev/proofjava/analysis/jacoco/JacocoXmlParserTest.java b/coverdict-cli/src/test/java/dev/proofjava/analysis/jacoco/JacocoXmlParserTest.java
+diff --git a/proof-java-cli/src/test/java/dev/proofjava/analysis/jacoco/JacocoXmlParserTest.java b/proof-java-cli/src/test/java/dev/proofjava/analysis/jacoco/JacocoXmlParserTest.java
 index ddd99fa..0eb7482 100644
---- a/coverdict-cli/src/test/java/dev/proofjava/analysis/jacoco/JacocoXmlParserTest.java
-+++ b/coverdict-cli/src/test/java/dev/proofjava/analysis/jacoco/JacocoXmlParserTest.java
+--- a/proof-java-cli/src/test/java/dev/proofjava/analysis/jacoco/JacocoXmlParserTest.java
++++ b/proof-java-cli/src/test/java/dev/proofjava/analysis/jacoco/JacocoXmlParserTest.java
 @@ -85,0 +86,5 @@ class JacocoXmlParserTest {
 +     *   <li>{@code wrong-root-element.xml} - well-formed XML whose root is
 +     *       not {@code <report>} at all.</li>

@@ -4,12 +4,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>dev.coverdict</groupId>
-  <artifactId>coverdict-parent</artifactId>
+  <groupId>dev.proofjava</groupId>
+  <artifactId>proof-java-parent</artifactId>
   <version>0.1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
-  <name>coverdict</name>
+  <name>proof-java</name>
   <description>Deterministic verdict layer for Java test suites.</description>
 
   <licenses>
@@ -20,7 +20,7 @@
   </licenses>
 
   <modules>
-    <module>coverdict-cli</module>
+    <module>proof-java-cli</module>
   </modules>
 
   <properties>
@@ -37,7 +37,7 @@
     <json-schema-validator.version>1.5.6</json-schema-validator.version>
     <javaparser.version>3.26.2</javaparser.version>
 
-    <!-- D-51/D-55: L2's engine, embedded and shaded into coverdict.jar itself -
+    <!-- D-51/D-55: L2's engine, embedded and shaded into proof-java.jar itself -
          never a build-tool plugin the target repo installs (Apache-2.0, hard
          rule 9 clear). Pinned to 1.15.8, the version M2's four gates were
          proven against (D-53); 1.25.9 lifts the Java 25 ASM ceiling but hits
@@ -61,7 +61,7 @@
 
     <!-- coverdict scans itself with a local SonarQube; host URL and token stay
          outside the repo (SONAR_HOST_URL / SONAR_TOKEN). -->
-    <sonar.projectKey>coverdict</sonar.projectKey>
+    <sonar.projectKey>proof-java</sonar.projectKey>
     <sonar.coverage.exclusions>**/Main.java</sonar.coverage.exclusions>
 
     <compiler.plugin.version>3.14.0</compiler.plugin.version>
@@ -123,7 +123,7 @@
         <!-- SPI-only: registers org.pitest.testapi.TestPluginFactory so PIT's
              own test discovery finds JUnit5 suites. Its META-INF/services
              file collides by name with pitest-core's JUnit4 registration -
-             ServicesResourceTransformer in coverdict-cli's shade config
+             ServicesResourceTransformer in proof-java-cli's shade config
              merges them; see D-55. -->
         <groupId>org.pitest</groupId>
         <artifactId>pitest-junit5-plugin</artifactId>

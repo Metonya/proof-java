@@ -5,13 +5,13 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>dev.coverdict</groupId>
-    <artifactId>coverdict-parent</artifactId>
+    <groupId>dev.proofjava</groupId>
+    <artifactId>proof-java-parent</artifactId>
     <version>0.1.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>coverdict-cli</artifactId>
-  <name>coverdict-cli</name>
+  <artifactId>proof-java-cli</artifactId>
+  <name>proof-java-cli</name>
   <description>Command line entry point and exit-code contract.</description>
 
   <dependencies>
@@ -39,7 +39,7 @@
       <groupId>org.pitest</groupId>
       <artifactId>pitest-junit5-plugin</artifactId>
     </dependency>
-    <!-- Compile scope (shaded into coverdict.jar), not test-only: PIT's
+    <!-- Compile scope (shaded into proof-java.jar), not test-only: PIT's
          coverage minion always launches through the JUnit Platform
          Launcher, even for a plain JUnit4 target module, and fails with
          "Cannot create Launcher without at least one TestEngine" if none
@@ -141,7 +141,7 @@
             <phase>package</phase>
             <goals><goal>shade</goal></goals>
             <configuration>
-              <finalName>coverdict</finalName>
+              <finalName>proof-java</finalName>
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                   <mainClass>dev.proofjava.cli.Main</mainClass>
@@ -210,7 +210,7 @@
                       <fileset file="${inventory}"/>
                     </concat>
 
-                    <copy file="${project.build.directory}/coverdict.jar" todir="${releaseDir}"/>
+                    <copy file="${project.build.directory}/proof-java.jar" todir="${releaseDir}"/>
                     <copy file="${maven.multiModuleProjectDirectory}/LICENSE" todir="${releaseDir}"/>
 
                     <!-- Integrity: every artifact ships a SHA-256SUMS file.
@@ -220,11 +220,11 @@
                          property per file and the two-column format is written
                          explicitly, matching validation/SHA256SUMS's own
                          layout so one `sha256sum -c` works on both. -->
-                    <checksum algorithm="SHA-256" property="jar.sha256" file="${releaseDir}/coverdict.jar"/>
+                    <checksum algorithm="SHA-256" property="jar.sha256" file="${releaseDir}/proof-java.jar"/>
                     <checksum algorithm="SHA-256" property="notice.sha256" file="${releaseDir}/NOTICE"/>
                     <checksum algorithm="SHA-256" property="thirdparty.sha256" file="${releaseDir}/THIRD-PARTY.txt"/>
                     <checksum algorithm="SHA-256" property="license.sha256" file="${releaseDir}/LICENSE"/>
-                    <echo file="${releaseDir}/SHA-256SUMS" encoding="UTF-8" append="false">${license.sha256} *LICENSE${line.separator}${notice.sha256} *NOTICE${line.separator}${thirdparty.sha256} *THIRD-PARTY.txt${line.separator}${jar.sha256} *coverdict.jar${line.separator}</echo>
+                    <echo file="${releaseDir}/SHA-256SUMS" encoding="UTF-8" append="false">${license.sha256} *LICENSE${line.separator}${notice.sha256} *NOTICE${line.separator}${thirdparty.sha256} *THIRD-PARTY.txt${line.separator}${jar.sha256} *proof-java.jar${line.separator}</echo>
 
                     <echo message="Release bundle ready: ${releaseDir}"/>
                   </target>
@@ -242,7 +242,7 @@
         stay fast). *IT.java doesn't match Surefire's default include
         patterns, so this profile's own execution is the only way it runs.
 
-        Run with: mvn -Pmutation-it -pl coverdict-cli test
+        Run with: mvn -Pmutation-it -pl proof-java-cli test
       -->
       <id>mutation-it</id>
       <build>
