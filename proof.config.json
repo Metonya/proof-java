@@ -1,0 +1,15 @@
+{
+  "modules": [
+    {
+      "id": "root",
+      "root": ".",
+      "sourceRoots": ["proof-java-cli/src/main/java"],
+      "testRoots": ["proof-java-cli/src/test/java"],
+      "report": "proof-java-cli/target/site/jacoco/jacoco.xml"
+    }
+  ],
+  "coverageExclusions": [
+    "**/proof-java-cli/src/test/resources/**",
+    "**/Main.java"
+  ]
+}
