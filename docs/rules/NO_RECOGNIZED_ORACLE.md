@@ -27,7 +27,7 @@ All of the following hold for a recognized test method:
 
 ## Never fires on
 
-- `@TestFactory` methods (dynamic tests carry oracles in lambdas coverdict
+- `@TestFactory` methods (dynamic tests carry oracles in lambdas proof-java
   cannot safely traverse in v0.1 — always skipped, listed as a documented
   limit, not INCONCLUSIVE noise).
 - Methods whose only statements delegate to a resolved allowlisted oracle

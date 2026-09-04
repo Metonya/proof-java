@@ -23,7 +23,7 @@ Deliverables:
 1. Name one primary persona and one canonical pre-push workflow. Record three
    real dogfood repositories, their build tools, current workaround, and setup
    tolerance. Resolve O-04 from this evidence.
-   **Done** (2026-08-23): `docs/M0-PERSONA.md` — AI-agent-loop persona, three
+   **Done** (2026-08-23): `docs/PERSONA.md` — AI-agent-loop persona, three
    public Maven proxies (no in-house repos available), O-04 → D-23.
 2. Specify the CLI input model: repository, an explicit base-branch diff mode
    *and* an uncommitted working-tree diff mode (both first-class, not
@@ -31,12 +31,12 @@ Deliverables:
    coverage fails closed per hard rule 3a), report to module binding,
    main/test source roots, language level, classpath, exclusions, and
    supported/unsupported input matrix.
-   **Done** (2026-08-23): `docs/M0-CLI-INPUT.md`.
+   **Done** (2026-08-23): `docs/INPUT-MODEL.md`.
 3. Check in a draft JSON Schema and golden examples containing schema/tool
    versions, evidence provenance, analysis status, module/source identity,
    named metric numerators and denominators, findings, warnings, and stable
    deterministic ordering. Paths are normalized repo-relative paths.
-   **Done** (2026-08-23): `schema/coverdict-verdict.schema.json` + three
+   **Done** (2026-08-23): `schema/proof-verdict.schema.json` + three
    goldens; `schema/validate-goldens.py` (discardable spike) passes and six
    invalid variants are rejected.
 4. Specify every L0 rule with positive, negative, and unresolved fixtures;
@@ -47,7 +47,7 @@ Deliverables:
 5. Check in a reproducible validation manifest: repository commit, JDK, build
    command, report command, fixture hashes, labeling protocol, benchmark machine,
    and cold/warm measurement commands.
-   **Done** (2026-08-23): `docs/M0-VALIDATION-MANIFEST.md` +
+   **Done** (2026-08-23): `docs/VALIDATION.md` +
    `validation/SHA256SUMS`.
 6. Write the untrusted-input policy: secure XML parsing, resource limits, safe
    process invocation, output escaping/path handling, and no network or telemetry
@@ -79,7 +79,7 @@ exit-code contract wired and tested, self-scan green.
 end to end - JaCoCo XML parsing (secure StAX, D-16 duplicate-class
 rejection), module/source-root binding with on-disk verification, the D-05
 single-exclusion-layer, all three metric modes, and schema-valid JSON/text
-output, all real (not stubbed). Verified against coverdict's own real
+output, all real (not stubbed). Verified against proof-java's own real
 `jacoco.xml`: `jacoco-line` matches JaCoCo's report-level LINE counter
 exactly (518/549, D-04 parity), two runs are byte-identical.
 
@@ -90,7 +90,7 @@ hunk headers, `ChangedFileClassifier` sorts every changed `.java`/`.kt`/
 `.scala` path into mapped/excluded/non-executable/unsupported/unknown
 (D-27), and `coverage.newCode` is a real `MetricSet` computed by the same
 `MetricsEngine.compute` as `overall`, over a line-restricted projection
-(hard rule 4). Verified against coverdict's own history: the
+(hard rule 4). Verified against proof-java's own history: the
 `sum(changedFiles[mapped].newLines) == newCode.denominator` invariant holds
 on a real run, changed test files classify `excluded` (not incomplete) as
 designed, and a genuinely untracked Java file correctly produces
@@ -103,9 +103,9 @@ measure `sonar-compatible` new-code parity against the real SonarQube UI
 (criterion 2) once the validation corpus work starts.
 
 - ~~Standalone HTML is deferred until dogfood proves a need.~~ Done, D-75: `analyze --html-report <path>` renders the same verdict document as `--out`/stdout (hard rule 7) as a self-contained, offline HTML file.
-- coverdict's own codebase is scanned by a local, self-hosted SonarQube
+- proof-java's own codebase is scanned by a local, self-hosted SonarQube
   (Docker, `localhost:9001`; token via `SONAR_TOKEN` env var, never
-  committed) as coverdict's own quality gate — run via
+  committed) as proof-java's own quality gate — run via
   `mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar ...`
   (`mvn sonar:sonar` fails, plugin prefix isn't registered); currently 0 open
   issues, ~87% real line coverage (2026-08-24, after M1b). Separate from the `sonar-compatible`
@@ -116,7 +116,7 @@ measure `sonar-compatible` new-code parity against the real SonarQube UI
 
 **Engine + four rules done (2026-08-24):** `analyze` now runs real L0 oracle
 detection over test sources - JavaParser AST + Symbol Solver
-(`dev.coverdict.analysis.oracle`), a two-tier call-resolution scheme (D-28:
+(`dev.proofjava.analysis.oracle`), a two-tier call-resolution scheme (D-28:
 Symbol Solver first, then import-anchoring so a run with no `--classpath`
 still resolves the JUnit/AssertJ/Mockito/Hamcrest allowlist with certainty),
 same-compilation-unit private-helper traversal, and all four rules
@@ -128,7 +128,7 @@ test sources are scanned. Verified two ways: a fixture-driven test
 (`OracleRuleEngineFixturesTest`) executes every `docs/rules/**` fixture and
 asserts its `// expect:` header against the real engine output - the M0 rule
 specs are now executable, not aspirational prose - and a real run against
-coverdict's own 14 test files / 103 `@Test` methods found zero false
+proof-java's own 14 test files / 103 `@Test` methods found zero false
 positives while a dedicated negative-test fixture confirms the detector does
 fire on a genuinely oracle-less test.
 
@@ -138,7 +138,7 @@ fire on a genuinely oracle-less test.
   `CLASSPATH_ENTRY_UNUSABLE`) rather than failing the run - D-17's direction
   holds: a missing classpath degrades resolution, a present one never
   silently upgrades confidence.
-- `--config` is implemented (D-40): strict `coverdict.config.json`, schema
+- `--config` is implemented (D-40): strict `proof.config.json`, schema
   checked in, precedence command line > config > defaults.
 - `customOracles` is implemented (D-41), closing the "D-17 territory" gap all
   four corpus phases marked out of scope.
@@ -202,7 +202,7 @@ now real, each behind the negative test §6's table names. A repeated
 (hard rule 3a) instead of a silent last-one-wins. See D-29.
 
 Still open, all requiring the pinned M1c validation corpus
-(`docs/M0-VALIDATION-MANIFEST.md`) and therefore separate steps: criterion 2
+(`docs/VALIDATION.md`) and therefore separate steps: criterion 2
 (`sonar-compatible` parity against the real SonarQube UI), criterion 4
 (rule precision labeling), criterion 5 (the four real-repo phases), and
 criterion 6 (analyzer-only benchmark harness - none exists yet).
@@ -310,7 +310,7 @@ instead the chain's **terminal** link, rooted at the test's own private
 helper - `isChainAnchor` never checks anything but the root. A same-session
 fix attempt (checking the terminal separately) was implemented,
 fixture-verified, and regression-clean - then **reverted** once real-world
-testing showed coverdict's real `analyze` path has no classpath mechanism
+testing showed proof-java's real `analyze` path has no classpath mechanism
 at all to resolve the terminal's owning type, and the affected files never
 literally import it either (only ever an inferred chain-return type) - no
 fact-based path remained short of a name-only heuristic or real classpath
@@ -333,7 +333,7 @@ whole 30+-module checkout; not investigated further.
 real-repo phases are now run. Corpus harness gained real multi-module
 binding (D-37): `run-corpus-phase.ps1` and `sonar-parity.ps1` both take
 module-id/root arrays instead of a single scalar pair, one reactor build
-(`mvn -pl modA,modB -am`), one coverdict invocation binding every module's
+(`mvn -pl modA,modB -am`), one proof-java invocation binding every module's
 own `--module`/`--source-roots`/`--test-roots`/`--report`. Modules:
 `dropwizard-util` (leaf, no `dropwizard-*` dependency) + `dropwizard-
 validation` (depends on `dropwizard-util`) - a real reactor dependency
@@ -361,13 +361,13 @@ JUnit 4+5"; verified false at the pinned commit (`git grep` for JUnit 4
 imports/annotations across the whole repo returns nothing, every module
 pom excludes `junit:junit`, all 321 `@Test` methods are JUnit 5) -
 `release/4.0.x` is fully migrated. Corrected in
-`docs/M0-VALIDATION-MANIFEST.md` to "multi-module Maven, report-to-module
+`docs/VALIDATION.md` to "multi-module Maven, report-to-module
 binding"; JUnit 4 handling stays validated by gson (phase 1) instead.
 
 **Criterion 2 (overall) closed on all four phases (2026-08-25):** phase 3's
 parity, deferred in D-36 as "a Gradle equivalent needs its own design", turned
 out to need no Gradle design at all - the standalone `sonar-scanner` CLI takes
-sources, tests and the JaCoCo XML directly, which is exactly coverdict's own
+sources, tests and the JaCoCo XML directly, which is exactly proof-java's own
 input model (D-01/D-02), so `sonar-parity.ps1` gained a `-Scanner Cli` branch
 instead (D-45). Result: exact match, 54.8 vs 54.8 (jacoco-line/line_coverage
 also exact, 58.8 vs 58.8). All four phases now: gson 91.0, assertj 74.4,
@@ -375,7 +375,7 @@ junit-framework 54.8, dropwizard 81.1 - every one an exact match.
 
 **Criterion-2 new-code parity is deferred, not open against M1** (2026-08-25,
 user decision): it needs branch/PR analysis, which Community Edition does not
-support at any configuration. It is not a coverdict defect and no amount of
+support at any configuration. It is not a proof-java defect and no amount of
 work here closes it - it needs a Developer/Enterprise instance. Recorded as a
 follow-up to run on such an instance when one is available; M1 does not wait
 on it. The metric-id and numerator/denominator half of criterion 2 (which
@@ -402,12 +402,12 @@ failure.
 
 ## Testing infrastructure (2026-08-25)
 
-`coverdict-playground` (private, separate repo, testing infra only - not a
+`proof-java-playground` (private, separate repo, testing infra only - not a
 public demo) is a small Java project with one deliberately constructed test
 scenario per L0/L3 rule and a documented expected finding for each,
 verified by hand with a real `analyze --base <ref> --mutation-report` run.
 A checked-in copy of its source and JaCoCo report backs
-`PlaygroundFunctionalTest` (`coverdict-cli`), which pins the six real L0
+`PlaygroundFunctionalTest` (`proof-java-cli`), which pins the six real L0
 findings on every default `mvn verify` run. The L3 scenarios (mutation
 evidence) need a real PIT subprocess and are not yet wired into an
 automated test - next step, alongside `MutationRunnerIT`'s existing
@@ -416,7 +416,7 @@ and the bug-repro workflow (shrink a real finding into a new scenario there).
 
 ## Agent skill — the primary persona finally has a surface (2026-08-29)
 
-`docs/M0-PERSONA.md` names the primary persona as **an AI coding agent in a
+`docs/PERSONA.md` names the primary persona as **an AI coding agent in a
 developer's local session**, and its canonical workflow as a loop: write tests →
 build with JaCoCo → `analyze` → **act on findings** → repeat until clean or the
 human accepts the residue. Every surface built until now (the VS Code extension,
@@ -424,13 +424,13 @@ Faz 4-28) serves the *secondary* persona - the human developer in an IDE. The
 primary persona had no surface at all, and **that loop had never been run end to
 end, once**.
 
-`skills/coverdict/` (D-72) is that surface: `SKILL.md` plus three reference files
+`skills/proof-java/` (D-72) is that surface: `SKILL.md` plus three reference files
 (`rules.md`, `invocations.md`, `loop-log-template.md`), bound by the same hard
 rules as every other surface - it renders verdict JSON and never authors a
 finding.
 
 The gap this closes is not only a missing surface. Six WTA dogfood rounds
-(2026-08-27, see below) each ended as a coverdict bug-fix or a setup diagnosis:
+(2026-08-27, see below) each ended as a proof-java bug-fix or a setup diagnosis:
 productive for the tool (they produced D-64 through D-69 and the whole `doctor`
 subcommand) but they recorded **zero** test-quality findings, zero accept/waive
 decisions, and no `validation/runs/wta/` directory at all. The kill criterion
@@ -446,7 +446,7 @@ it was **useful** (response). Different question, different denominator.
 
 ### Loop run 01 (2026-08-29) — the workflow works, and one false green found
 
-First end-to-end run: `validation/runs/loop/coverdict-01/`. An agent was asked,
+First end-to-end run: `validation/runs/loop/proof-java-01/`. An agent was asked,
 with no test-quality coaching, to raise `SubprocessWorkspace`'s coverage (39.1%
 LINE). It wrote 8 tests, reaching 76.1%; L0 found nothing (a true negative - the
 tests carry real oracles). L3 then found `PSEUDO_TESTED_METHOD` HIGH on
@@ -477,7 +477,7 @@ evidence):
 2. **`newCode` is inert when an agent only writes tests** - the changed file is a
    test file, correctly `excluded` (D-27), so `newCode` is `0/0`/`null` in all
    three modes. Not a defect, but the whole L1 half is silent in that branch of
-   `M0-PERSONA.md` step 1, which matters for any M3 gate built on `newCode`.
+   `PERSONA.md` step 1, which matters for any M3 gate built on `newCode`.
 
 **Kill criterion, first time it is answerable rather than unfalsifiable:** 0 of 6
 findings waived or false-positive; the one HIGH finding was acted on and produced
@@ -527,7 +527,7 @@ repeat is still unmeasured and needs run 02 on a corpus repo.
   mismatch), and 2e (3/3 ablation) all passed cleanly. **2c (determinism)
   found real, bounded instability** (2240/2241, mean J=0.9998) traced to
   the corpus repo's own test code - `SelfValidatingValidatorTest` iterates
-  JDK-reflection method lists with no ordering guarantee - not a coverdict
+  JDK-reflection method lists with no ordering guarantee - not a proof-java
   or PIT defect, but a real class of risk for reflection-heavy test
   fixtures, worth a documented product limitation at M4.
 
@@ -539,14 +539,14 @@ repeat is still unmeasured and needs run 02 on a corpus repo.
   empty. But `junit-vintage-engine`'s test/testFixtures source sets
   compile at Java 25 (no `--release` constraint, unlike its main source
   set's Java 7 target) and PIT 1.15.8's ASM cannot read that bytecode - the
-  same ceiling Faz 0 hit in coverdict's own build, this time in code
-  coverdict doesn't control. A recompile workaround (reading, not writing,
+  same ceiling Faz 0 hit in proof-java's own build, this time in code
+  proof-java doesn't control. A recompile workaround (reading, not writing,
   the target repo) fixed one module's testFixtures before uncovering the
   same problem in a sibling module's - stopped rather than chasing a
   cascading fix.
 
   **M2's spike is complete on three corpus repos with an honest, mixed
-  result:** clean pass (coverdict, assertj), pass with one root-caused
+  result:** clean pass (proof-java, assertj), pass with one root-caused
   bounded exception (dropwizard), and one real, documented ceiling
   (junit-framework) that ROADMAP's kill criterion already anticipates -
   "cut for that repo's shape." Not a mechanism failure: the calling model
@@ -557,10 +557,10 @@ repeat is still unmeasured and needs run 02 on a corpus repo.
   **CLI evidence layer done (D-55):** `--per-test-report` calls
   `EntryPoint.execute()` (not the coverage-phase bypass D-47/D-51 implied -
   that hit an unreproduced minion crash) from a dedicated `PerTestDriver`
-  subprocess `PerTestRunner` force-kills the moment `CoverdictLineExporter`
+  subprocess `PerTestRunner` force-kills the moment `ProofLineExporter`
   writes its output file or a timeout elapses, whichever first - never
   waits for PIT's own mutation phase. Verified end-to-end against
-  coverdict's own repo. Now optional enrichment for M4's `SUBSUMED_TEST`
+  proof-java's own repo. Now optional enrichment for M4's `SUBSUMED_TEST`
   (D-61) rather than a required evidence layer - see M4 below.
 - **M3 — First build integration + CI.** Ship Maven or Gradle first as decided
   from M0 dogfood, then the other only on demand. Add report provenance manifest,
@@ -570,7 +570,7 @@ repeat is still unmeasured and needs run 02 on a corpus repo.
   equivalence gate (L2 overlap + L0 assertion match + L3 kill-set match, all
   required): that design fired almost exclusively on near-literal copy-paste
   tests SonarQube CPD already finds for free, and its L0 gate discarded the
-  one finding shape coverdict's other evidence cannot get elsewhere -
+  one finding shape proof-java's other evidence cannot get elsewhere -
   textually different tests proven behaviorally identical. `SUBSUMED_TEST`
   asks a directional question over L3 alone - does test A kill any mutant no
   other test also kills - computed as one kill-matrix intersection per test,
@@ -636,7 +636,7 @@ repeat is still unmeasured and needs run 02 on a corpus repo.
   actually completes rather than degrading further. Checked in code while
   answering: no `-Xmx`/heap limit is ever passed to PIT's child JVMs (the
   observed ~1.25 GB peak RSS is the JVM's own default sizing, not a
-  coverdict-imposed cap) - `ReportOptions.addChildJVMArgs` exists and is
+  proof-java-imposed cap) - `ReportOptions.addChildJVMArgs` exists and is
   unused, a real but likely-not-the-bottleneck lever (see the Spring-cache
   explanation above), backlogged below rather than reached for reflexively.
   `grpc` still not re-run this round (skipped in favor of the `service`
@@ -647,7 +647,7 @@ repeat is still unmeasured and needs run 02 on a corpus repo.
   finished at 3350s (55m49s) under a 7200s budget - real PIT summary in
   the log (13522 mutations, 5172 killed 38%, 68893 tests), confirming
   round 3's Spring-context-caching theory rather than any runaway cost.
-  `grpc`'s minion crash was never a coverdict-side bug: the verbose log
+  `grpc`'s minion crash was never a proof-java-side bug: the verbose log
   showed the minion's own `java.lang.NoClassDefFoundError` for
   `service.contract.ApiCallService` - `grpc` depends on `service` as a
   real cross-module Maven dependency, and `dependency:build-classpath`
@@ -669,7 +669,7 @@ repeat is still unmeasured and needs run 02 on a corpus repo.
   WTA run finally gave the answer: PIT's minion genuinely gathered
   coverage ("Found 143 tests", "All 143 tests were executed", real
   `ActionDAOImpl` log output), so the bug was never in collection.
-  `CoverdictLineExporter` was resolving class bytes through the wrong
+  `ProofLineExporter` was resolving class bytes through the wrong
   classpath (`new ClassPathByteArraySource()`'s no-arg constructor reads
   the *running JVM's own* `-cp`, confirmed by disassembling PIT's
   bytecode - not the target module's classes at all, which the
@@ -697,7 +697,7 @@ repeat is still unmeasured and needs run 02 on a corpus repo.
   shared `CanonicalPaths.canonicalize()` helper applied in
   `MutationDriver`/`PerTestDriver`/`ClasspathListFile`. See D-69.
 - **M6 (IDE surface) prep, not yet a declared milestone (D-01 gate) - Faz 0
-  and Faz 1 of `coverdict-corpus/Plan.md` done (2026-08-27).** Faz 0: real
+  and Faz 1 of `proof-java-corpus/Plan.md` done (2026-08-27).** Faz 0: real
   `@types/vscode@1.134.0` `.d.ts` confirms `FileCoverage`/`StatementCoverage`/
   `BranchCoverage`/`DeclarationCoverage` signatures match the plan's
   assumptions (`FileCoverage.fromDetails()` static factory included); Cursor/
@@ -709,7 +709,7 @@ repeat is still unmeasured and needs run 02 on a corpus repo.
   (D-71, 2026-08-27): `--mutation-target <id>=<FQCN>` mutates an explicit
   class independent of the diff, lifting `--mutation-report`'s `--no-vcs`
   restriction when used - verified end to end with a real PIT subprocess
-  against coverdict-playground (`PlaygroundMutationIT`, `-Pmutation-it`): a
+  against proof-java-playground (`PlaygroundMutationIT`, `-Pmutation-it`): a
   class named this way under bare `--no-vcs` (no git repo at all) produces a
   real, path-resolved `PSEUDO_TESTED_METHOD` finding. Faz 2's open item
   (`RedundancyRuleEngine`/`TestLocator` changed-files assumption) checked
@@ -717,28 +717,28 @@ repeat is still unmeasured and needs run 02 on a corpus repo.
 
   **Faz 3's formal v1-freeze ceremony (schema 1.0.0, D-01 gate, dual
   distribution channel, npm license policy) is deliberately skipped for now
-  - user decision, 2026-08-27**: `coverdict-vscode` is private dogfood only,
+  - user decision, 2026-08-27**: `proof-vscode` is private dogfood only,
   not published or shared, so there is nothing yet that needs a frozen
   public contract. Revisit before any real distribution. The extension repo
-  (`coverdict-vscode`, separate, private) proceeded straight to Faz 4-6
+  (`proof-vscode`, separate, private) proceeded straight to Faz 4-6
   against the current 0.1.x schema:
   - **Faz 4 (skeleton, done):** esbuild-bundled build, tsc test harness
     (`node:test` for `verdict`/`model`, `@vscode/test-cli` for a real
     Extension Host), `extension.ts` registration-only. Verified: a real
     Extension Host activates cleanly.
-  - **Faz 5 / F1 (self-scan, done):** `coverdict.analyze` command drives the
+  - **Faz 5 / F1 (self-scan, done):** `proof-java.analyze` command drives the
     real jar (`cli/jarLocator`, `cli/argsBuilder`, `cli/runner`) and parses
     the result (`verdict/parse`, `Result<>`, never throws). Verified two
-    ways: an automated real self-scan of coverdict-cli itself (JSON percent
+    ways: an automated real self-scan of proof-java-cli itself (JSON percent
     byte-matches the CLI's own stdout percent, same real run) and a manual
-    run against coverdict-playground through the real command (7 real
+    run against proof-java-playground through the real command (7 real
     findings, 94.4% jacoco-line).
   - **Faz 6 / F2 (gutter, done - confirmed working by the user, 2026-08-27):**
     `fileCoverage.files[]` -> real `vscode.FileCoverage`/`StatementCoverage`/
     `BranchCoverage` via a `TestRun` (no test items needed). Native API
     existence is detected, not assumed (`hasNativeCoverageApi()`), and
     `addCoverage` is wrapped in try/catch. Verified for real in a live
-    Extension Host (`coverageApi.test.ts`) and visually in coverdict-
+    Extension Host (`coverageApi.test.ts`) and visually in proof-java-
     playground: Explorer file-percentage badges and editor gutter marks both
     render. Real branch data (JaCoCo's `mb`/`cb`) is exactly what makes
     `sonar-compatible` read lower than `jacoco-line` (D-04's formula) -
@@ -746,15 +746,15 @@ repeat is still unmeasured and needs run 02 on a corpus repo.
     the only ones with `mb>0`) - those lines are the same ones the gutter
     already paints yellow, now labeled in the hover so it's self-explanatory.
     Three metric modes (not just jacoco-line) now shown side by side; a new
-    `coverdict.coverageExclusions` setting passes `--coverage-exclusions`
+    `proof-java.coverageExclusions` setting passes `--coverage-exclusions`
     through (same glob syntax as `sonar.coverage.exclusions`).
   - **Faz 7 (fallback + F4 toggle, done 2026-08-27):** `verdict/
     coverageMapping.ts`'s `classifyLine()` is the one classification both
     the native path and a decoration-based fallback (`ui/decorationFallback
     .ts`, colored left border per line) render from - "İki yol da özdeş
-    durum üretiyor" holds by construction. `coverdict.gutter.forceFallback`
+    durum üretiyor" holds by construction. `proof-java.gutter.forceFallback`
     exercises the fallback without needing an old VS Code build.
-    `coverdict.toggleCoverageGutter` (F4) republishes or clears the last
+    `proof-java.toggleCoverageGutter` (F4) republishes or clears the last
     run's data without re-scanning. The native-path clear was a real,
     confirmed bug, not just an open risk: publishing an empty `TestRun`
     does NOT clear a prior run's Explorer file-percentage badges - the user
@@ -763,24 +763,24 @@ repeat is still unmeasured and needs run 02 on a corpus repo.
     Code actually offers. ^1.88.0 engine floor and both target forks
     (Cursor/Windsurf) remain unmeasured (open risk 1) - neither installed
     on this machine.
-  - **Faz 8 / F3 (line->tests panel, done 2026-08-27):** `coverdict.
+  - **Faz 8 / F3 (line->tests panel, done 2026-08-27):** `proof-java.
     analyzePerTest` runs a diff-mode scan with `--per-test-report` (still
-    paints the gutter, one CLI call); `coverdict.showLineTests` opens a
+    paints the gutter, one CLI call); `proof-java.showLineTests` opens a
     webview showing, per line of the active file, which tests cover it.
     `model/lineIndex.ts` (`testsForClass`) and `verdict/testIdentity.ts`
-    (ported from coverdict-cli's `TestIdentity.java`) are both pure.
+    (ported from proof-java-cli's `TestIdentity.java`) are both pure.
     Verified against Plan.md's own completion criterion with a real
-    `--per-test-report` run against coverdict-playground: real perTest
+    `--per-test-report` run against proof-java-playground: real perTest
     data parsed, `testsForClass` found `Calculator`'s real lines, and
     `testIdentity` correctly handled a real-world id shape neither the
     Java original's doc comment nor this port's own tests anticipated (PIT
     prefixed the JUnit5 `UniqueId` with a bare class name - the port's
     regex still found `[class:]`/`[method:]` anywhere in the string and
     resolved it correctly).
-  - Also fixed the same session: `coverdict.coverageExclusions` setting
+  - Also fixed the same session: `proof-java.coverageExclusions` setting
     (passes `--coverage-exclusions`, Sonar-glob syntax), all three metric
     modes shown (not just jacoco-line - `sonar-compatible` reading lower
-    was traced to real evidence: coverdict-playground's `Calculator.java`
+    was traced to real evidence: proof-java-playground's `Calculator.java`
     lines 26/30/33, its only lines with a real missed JaCoCo branch), and
     `verdict-current.json` is read back on activation so a window reload no
     longer forces a fresh CLI run just to see the last result again.
@@ -799,15 +799,15 @@ repeat is still unmeasured and needs run 02 on a corpus repo.
     rollups - `model/metrics.ts`, the one arithmetic operation the plan
     allows the extension itself) and `ui/gutterRenderer.ts` (plain
     `TextEditorDecorationType`s, `setDecorations(type, [])` reliably
-    clears). `coverdict.show.explorerBadges`/`coverdict.show.lineGutter`
-    are now genuinely independent; `coverdict.toggleCoverageGutter` ->
-    `coverdict.toggleCoverage` toggles both together.
+    clears). `proof-java.show.explorerBadges`/`proof-java.show.lineGutter`
+    are now genuinely independent; `proof-java.toggleCoverageGutter` ->
+    `proof-java.toggleCoverage` toggles both together.
   - **Faz 10 (promptless runs + real startup activation, done 2026-08-27,
     commit `6d393a9`):** every analyze run asked for the report path (and
     per-test asked for the classpath file) via an input box, every single
-    time. Replaced with `coverdict.reportPath`/`coverdict.perTestClasspathPath`/
-    `coverdict.diffMode`/`coverdict.baseRef` settings - a run only prompts
-    if the configured file is genuinely missing. `coverdict.diffMode` also
+    time. Replaced with `proof-java.reportPath`/`proof-java.perTestClasspathPath`/
+    `proof-java.diffMode`/`proof-java.baseRef` settings - a run only prompts
+    if the configured file is genuinely missing. `proof-java.diffMode` also
     makes `--base` reachable from the UI for the first time (it was fully
     implemented and unit-tested in `argsBuilder` but unreachable).
     `activationEvents` was `[]`, so "restore last run on window reopen"
@@ -820,7 +820,7 @@ repeat is still unmeasured and needs run 02 on a corpus repo.
     in `verdict/types.ts`/`parse.ts` (previously `findings[]` wasn't
     modeled at all despite the extension's own description promising it,
     and `newCode` was typed but silently unvalidated). Each finding becomes
-    a real `vscode.Diagnostic` in the Problems panel. A `coverdict` Activity
+    a real `vscode.Diagnostic` in the Problems panel. A `proof-java` Activity
     Bar container adds three TreeViews (Çalıştır/Kapsama/Test Kalitesi) so
     no step requires the Command Palette - Kapsama shows overall + new-code
     metrics in all three modes and every changed file's uncovered new line
@@ -832,8 +832,8 @@ repeat is still unmeasured and needs run 02 on a corpus repo.
 - **Backlog:** Faz 12 (F5/F6 mutation view + single-target mutation UI,
   planned next) · ~~standalone HTML~~ done, D-75 &#x2713; ~~AI-assistant skill (agent reads
   verdict JSON, writes tests for gaps it names, reruns, interprets the result
-  through coverdict again)~~ done, D-72 - `skills/coverdict/`; the loop it
-  drives is recorded under `validation/runs/loop/` · `coverdict skill install`
+  through proof-java again)~~ done, D-72 - `skills/proof-java/`; the loop it
+  drives is recorded under `validation/runs/loop/` · `proof-java skill install`
   subcommand (installation is a manual copy today) · VS Code extension (inline
   per-line coverage gutter
   annotations, toggleable) · IntelliJ plugin (same gutter/panel concept as the
@@ -841,10 +841,10 @@ repeat is still unmeasured and needs run 02 on a corpus repo.
   action from either IDE extension, aimed at popular in-IDE AI tools
   (Copilot, Cursor, Windsurf, ...) so they can read and act on findings
   without the user copy-pasting JSON · installable CLI distribution (so
-  people can actually get and run coverdict, not just build it from source)
+  people can actually get and run proof-java, not just build it from source)
   · separate **public** playground repos (distinct from the private
-  `coverdict-playground` testing fixture) seeded with realistic test-quality
-  issues, used for outreach - opening coverdict-found issues against them -
+  `proof-java-playground` testing fixture) seeded with realistic test-quality
+  issues, used for outreach - opening proof-java-found issues against them -
   once the tool itself is public · second build integration if not justified
   in M3 · non-Java languages · Truth-specific `NULL_CHECK_ONLY`/`TAUTOLOGICAL_ORACLE`
   weak-oracle patterns (D-31 added Truth as a recognized oracle for
@@ -881,15 +881,15 @@ repeat is still unmeasured and needs run 02 on a corpus repo.
   L2 message enrichment (dominator's assertions noted as textually identical
   vs. structurally different when `--per-test-report` is present) is not
   implemented - `SubsumedTestRule` never reads `perTest` evidence today;
-  confirmed by a real coverdict-playground run where enabling
+  confirmed by a real proof-java-playground run where enabling
   `--per-test-report` added an (empty, for that scenario) `perTest` block to
   the JSON but left the `SUBSUMED_TEST` finding's message byte-identical.
-  · ~~L2/L3 classpath UX gap~~ **closed, D-65 (2026-08-27):** new `coverdict
+  · ~~L2/L3 classpath UX gap~~ **closed, D-65 (2026-08-27):** new `proof-java
   doctor` command diagnoses a Maven reactor before `analyze` runs (stale
   JaCoCo report, empty classpath list, generated sources outside
   `src/main/java`, ...) and prints a copy-pasteable invocation;
   `doctor --fix` regenerates a broken classpath list via a real `mvn
-  dependency:build-classpath` call. Verified end to end against coverdict's
+  dependency:build-classpath` call. Verified end to end against proof-java's
   own reactor.
   · `doctor` cross-module staleness check (found in WTA round 5, D-67):
   a module's classpath list can reference a sibling reactor module through
@@ -932,7 +932,7 @@ repeat is still unmeasured and needs run 02 on a corpus repo.
   5%; 2a calling model, zero target-repo build-file changes) fails
   unexplained on a dogfood repository, L2 is cut for that repo's shape; if
   it fails on all of them, L2 is cut and the product remains L0+L1(+L3).
-  Passed on coverdict and assertj; passed with one root-caused, bounded
+  Passed on proof-java and assertj; passed with one root-caused, bounded
   exception on dropwizard; cut for junit-framework's shape specifically
   (D-53 - PIT's ASM cannot read that repo's test-source bytecode), which
   is this criterion resolving as designed, not an open question. M2's

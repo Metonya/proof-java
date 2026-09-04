@@ -48,7 +48,7 @@
     <!-- Test-only fixture harness (docs/rules/README.md fixture convention): downloaded
          as jars via maven-dependency-plugin, never added as project dependencies, so the
          oracle engine's own resolution never accidentally benefits from these being on
-         coverdict's own classpath (K4) - the import-anchored resolution tier (D-28) is
+         proof-java's own classpath (K4) - the import-anchored resolution tier (D-28) is
          what a real, classpath-less user run actually exercises. -->
     <fixture.junit4.version>4.13.2</fixture.junit4.version>
     <fixture.assertj.version>3.26.3</fixture.assertj.version>
@@ -59,7 +59,7 @@
     <license.plugin.version>2.5.0</license.plugin.version>
     <antrun.plugin.version>3.1.0</antrun.plugin.version>
 
-    <!-- coverdict scans itself with a local SonarQube; host URL and token stay
+    <!-- proof-java scans itself with a local SonarQube; host URL and token stay
          outside the repo (SONAR_HOST_URL / SONAR_TOKEN). -->
     <sonar.projectKey>proof-java</sonar.projectKey>
     <sonar.coverage.exclusions>**/Main.java</sonar.coverage.exclusions>
@@ -185,7 +185,7 @@
     </pluginManagement>
 
     <plugins>
-      <!-- coverdict's own coverage, consumed by the local SonarQube scan. -->
+      <!-- proof-java's own coverage, consumed by the local SonarQube scan. -->
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
@@ -237,7 +237,7 @@
                   <includeTransitiveDependencies>true</includeTransitiveDependencies>
                   <excludedScopes>test</excludedScopes>
                   <sortArtifactByName>true</sortArtifactByName>
-                  <!-- Dual-licensed artifacts: which option coverdict elects.
+                  <!-- Dual-licensed artifacts: which option proof-java elects.
                        See the file's own header - an election, not a bypass. -->
                   <overrideFile>${maven.multiModuleProjectDirectory}/license-overrides.properties</overrideFile>
                   <!-- hard rule 9 / D-20: LGPL must not appear at any scope.

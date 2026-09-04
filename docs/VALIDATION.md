@@ -1,12 +1,12 @@
-# Validation manifest (M0 deliverable 5)
+# Validation manifest
 
-Everything needed to reproduce a coverdict validation run. Any number
+Everything needed to reproduce a proof-java validation run. Any number
 published from these repositories must cite this manifest and the commit of
-the coverdict version that produced it.
+the proof-java version that produced it.
 
 ## Validation corpus (M1c criterion 5)
 
-Distinct from the dogfood proxies in `M0-PERSONA.md`: dogfood observes the
+Distinct from the dogfood proxies in `PERSONA.md`: dogfood observes the
 workflow, this corpus proves correctness at pinned commits. Each repo is
 pinned by SHA; a re-pin is a manifest edit, never a silent bump.
 
@@ -23,7 +23,7 @@ host build tool is irrelevant to it.
 
 ## Toolchain (pinned)
 
-- **JDK for building coverdict and the corpus:** Temurin 17.0.17+10.
+- **JDK for building proof-java and the corpus:** Temurin 17.0.17+10.
   `<release>17</release>`; source encoding UTF-8 declared explicitly (the
   benchmark machine's platform encoding is Cp1254 — never rely on the
   default).
@@ -47,10 +47,10 @@ Phase 3's `./gradlew build` in practice (D-36): `run-corpus-phase.ps1
 (off by default in Gradle's own plugin). JaCoCo XML lands at
 `<module>/build/reports/jacoco/test/jacocoTestReport.xml`.
 
-Then, from the coverdict checkout:
+Then, from the proof-java checkout:
 
 ```bash
-java -jar coverdict.jar analyze --repo <corpus-repo> \
+java -jar proof-java.jar analyze --repo <corpus-repo> \
   --base <pinned-sha>~50 --report <jacoco-xml> --out verdict.json
 ```
 
@@ -72,7 +72,7 @@ each corpus phase's commands above without new code per phase (D-30):
 - `run-corpus-phase.ps1` — clone/checkout the pinned commit, bind JaCoCo via
   CLI goals (no permanent pom edit) or, for a Gradle repo (`-BuildTool
   Gradle`, D-36), via a temp `--init-script` (never a checkout edit), run
-  coverdict in `--base <pin>~50` and `--no-vcs`.
+  proof-java in `--base <pin>~50` and `--no-vcs`.
 - `sonar-parity.ps1` — overall-scope `sonar-compatible` vs SonarQube UI
   comparison. Three modes: a single Maven module (run from inside the
   module's own directory, not via reactor `-pl`), a Maven reactor subset
@@ -82,7 +82,7 @@ each corpus phase's commands above without new code per phase (D-30):
   parity still needs a non-Community-Edition instance and is deferred as a
   follow-up, not an open M1 item.
 - `benchmark-phase.ps1` — cold + 5-warm wall time and peak working-set
-  memory around a coverdict invocation.
+  memory around a proof-java invocation.
 - `scaffold_labels.py` — seeded 100-sample (per rule) CSV scaffold from a
   verdict JSON's `findings[]`, per the labeling protocol below.
 
@@ -112,7 +112,7 @@ over a synthetic in-repo fixture repo by `VerdictGoldenTest`. Regenerate
 after a deliberate, reviewed output-format change:
 
 ```bash
-mvn -q -pl coverdict-cli -am test -Dtest=VerdictGoldenTest -Dcoverdict.regenerateGoldens=true
+mvn -q -pl proof-java-cli -am test -Dtest=VerdictGoldenTest -Dproof.regenerateGoldens=true
 ```
 
 Then hand-edit each regenerated file to replace its literal `tool.version`
@@ -138,7 +138,7 @@ substitutes it back in at comparison time), and regenerate
 - **Machine:** Windows 11 Pro 26200, x86-64. Exact CPU/RAM recorded in the
   first run log (M1c criterion 6 requires hardware with the numbers).
 - **Analyzer-only** median and p95 wall time plus peak memory. Test count is
-  never the performance proxy — coverdict does not run tests. Recorded
+  never the performance proxy — proof-java does not run tests. Recorded
   alongside: XML size, Java LOC, module count, JDK, exact command.
 - **Cold:** fresh JVM, OS file cache dropped, first run discarded is *not*
   allowed — the first run *is* the cold number.

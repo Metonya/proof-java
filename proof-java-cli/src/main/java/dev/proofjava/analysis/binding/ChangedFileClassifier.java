@@ -21,7 +21,7 @@ import dev.proofjava.analysis.model.ResolvedSourceFile;
 
 /**
  * Classifies every changed path from a {@link dev.proofjava.analysis.vcs.DiffResult}
- * into exactly one of the five buckets docs/M0-CLI-INPUT.md requires (D-27).
+ * into exactly one of the five buckets docs/INPUT-MODEL.md requires (D-27).
  * First match wins, checked in this order for a reason:
  *
  * <ol>

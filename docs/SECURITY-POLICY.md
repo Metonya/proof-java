@@ -1,11 +1,11 @@
-# Untrusted-input policy (M0 deliverable 6)
+# Untrusted-input policy
 
-Threat model: coverdict parses files it did not produce — JaCoCo XML, git
+Threat model: proof-java parses files it did not produce — JaCoCo XML, git
 output, Java sources, configuration — from repositories that may contain
 adversarial content (e.g. a malicious PR an agent is asked to review). The
 CLI runs locally with the user's privileges. The policy goal: no parsed input
 can execute code, read files outside the analysis inputs, make the process
-hang unboundedly, or inject content into coverdict's own output.
+hang unboundedly, or inject content into proof-java's own output.
 
 ## 1. Secure XML parsing
 
@@ -24,7 +24,7 @@ hang unboundedly, or inject content into coverdict's own output.
 - Report size cap: 256 MB per XML file by default; exceeding it is a
   structured failure (`REPORT_TOO_LARGE`), not silent truncation.
   Configurable only via the `JacocoXmlParser` constructor today — there is no
-  `--config`/CLI surface for it yet (M0-CLI-INPUT.md).
+  `--config`/CLI surface for it yet (INPUT-MODEL.md).
 - Findings cap: 10,000 findings per run; beyond that, analysis stops with an
   explicit truncation warning in the JSON (`status` reflects it) — a capped
   run is never presented as a complete clean run.

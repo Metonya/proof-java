@@ -19,7 +19,7 @@ import dev.proofjava.analysis.model.ModuleDefinition;
 
 /**
  * Configures one {@link JavaParser} for a whole analysis run:
- * {@code --language-level}/{@code --encoding} (M0-CLI-INPUT.md, now actually
+ * {@code --language-level}/{@code --encoding} (INPUT-MODEL.md, now actually
  * consumed rather than only recorded as provenance) plus a
  * {@link JavaSymbolSolver} combining a {@link ReflectionTypeSolver} (JDK
  * classes - always resolvable, no classpath needed) with one
@@ -53,7 +53,7 @@ final class JavaSourceParser {
         this.parser = new JavaParser(config);
     }
 
-    /** @return empty when the file could not even be read, or was read but did not parse at the configured language level (M0-CLI-INPUT.md: classify unsupported, never crash). */
+    /** @return empty when the file could not even be read, or was read but did not parse at the configured language level (INPUT-MODEL.md: classify unsupported, never crash). */
     java.util.Optional<CompilationUnit> parse(Path absolutePath) {
         try {
             ParseResult<CompilationUnit> result = parser.parse(absolutePath);

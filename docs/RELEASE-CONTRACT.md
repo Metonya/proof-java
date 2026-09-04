@@ -1,6 +1,6 @@
-# Release contract (M0 deliverable 7)
+# Release contract
 
-What every coverdict release ships and promises. Applies from v0.1.
+What every proof-java release ships and promises. Applies from v0.1.
 
 ## License and notices
 

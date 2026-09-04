@@ -56,7 +56,7 @@ awareness, and no mutation-testing integration. The gap we're filling is
 specifically: fast local CLI + diff-aware + coverage/mutation fusion, not
 "no Java tool exists." See RESEARCH.md §7 for the full competitive scan.
 
-## What coverdict is
+## What proof-java is
 
 A **verdict layer** over existing engines. One CLI, one stable JSON output,
 rendered as terminal text, HTML, IDE annotations, or fed to an AI agent.
@@ -69,7 +69,7 @@ aggregate changed-code coverage and conservative static oracle findings in one
 contract, but cannot link a weak test to the production lines it covered. Until
 L2/L3 are validated, "how much is real" is the mission, not a release claim.
 
-## What coverdict is not
+## What proof-java is not
 
 - Not a coverage engine, not a mutation engine, not a test runner.
 - Not an LLM judge. No model call ever decides a finding.

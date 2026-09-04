@@ -1,25 +1,25 @@
 # Invocation recipes and traps
 
-`CJ` below means `java -jar <path-to>/coverdict.jar`. Flag reference:
-`docs/CLI-REFERENCE.md`; input model: `docs/M0-CLI-INPUT.md`.
+`CJ` below means `java -jar <path-to>/proof-java.jar`. Flag reference:
+`docs/CLI-REFERENCE.md`; input model: `docs/INPUT-MODEL.md`.
 
 ## Preflight (Maven)
 
 ```bash
 CJ doctor --repo .                        # read-only: checks + a suggested analyze command
-CJ doctor --repo . --write-config         # writes coverdict.config.json (do this once)
+CJ doctor --repo . --write-config         # writes proof.config.json (do this once)
 CJ doctor --repo . --fix                  # regenerates a broken L2/L3 classpath list
 ```
 
 Exit `0` = every module clean, `3` = at least one BLOCKER. `--fix` is the only
-place coverdict shells out to a build tool.
+place proof-java shells out to a build tool.
 
 ## L0 + L1 — the default loop pass
 
 Single module, shorthand (module id becomes `root`):
 ```bash
 CJ analyze --repo . --uncommitted --findings-scope changed \
-  --report target/site/jacoco/jacoco.xml --out coverdict-verdict.json
+  --report target/site/jacoco/jacoco.xml --out proof-verdict.json
 ```
 
 After `doctor --write-config`, no binding flags are needed at all:
@@ -47,14 +47,14 @@ legitimately have several reports.
 | `--classpath <id>=<file>` | Jar list for symbol solving. Improves resolution; **never** silently upgrades confidence |
 | `--language-level <n>` | JavaParser level, default `17`. Global only in v0.1 |
 | `--encoding <charset>` | Test-source charset, default `UTF-8` |
-| `--config <path>` | Defaults to `coverdict.config.json` at the repo root |
+| `--config <path>` | Defaults to `proof.config.json` at the repo root |
 | `--findings-scope all\|changed` | `all` is the default; `changed` requires a diff mode |
 
 ## L2 — per-test evidence
 
 ```bash
 CJ analyze --repo . --uncommitted \
-  --per-test-report --per-test-classpath root=target/coverdict-classpath.txt
+  --per-test-report --per-test-classpath root=target/proof-java-classpath.txt
 ```
 
 Diff-scoped automatically. To target a class independent of the diff (this also
@@ -71,9 +71,9 @@ list spanning many classes at once can need raising.
 
 ```bash
 CJ analyze --repo . --uncommitted \
-  --mutation-report --mutation-classpath root=target/coverdict-classpath.txt \
+  --mutation-report --mutation-classpath root=target/proof-java-classpath.txt \
   --mutation-target root=com.example.Service \
-  --mutation-timeout 300 --diagnostics-dir .coverdict-diag
+  --mutation-timeout 300 --diagnostics-dir .proof-java-diag
 ```
 
 `--mutation-timeout` is a per-module wall-clock budget in seconds, default `300`.

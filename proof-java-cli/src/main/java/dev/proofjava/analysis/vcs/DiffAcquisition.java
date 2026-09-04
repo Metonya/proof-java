@@ -1,7 +1,7 @@
 package dev.proofjava.analysis.vcs;
 
 /**
- * Orchestrates {@link GitClient} into the two diff modes docs/M0-CLI-INPUT.md
+ * Orchestrates {@link GitClient} into the two diff modes docs/INPUT-MODEL.md
  * defines (D-16 merge-base semantics). Both methods throw the same {@link
  * dev.proofjava.analysis.AnalysisException} codes {@link GitClient}'s
  * individual calls already throw ({@code UNRESOLVABLE_HEAD}, {@code

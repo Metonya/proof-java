@@ -55,11 +55,11 @@ Finding-response rate, useful-finding rate.
 Iterations to converge per target. Total wall clock, split L0+L1 vs L3.
 
 ## What the loop actually produced
-The concrete test changes coverdict caused that would not have happened
+The concrete test changes proof-java caused that would not have happened
 otherwise. **If the answer is "none", say so plainly** — that is the single
 most important result this artifact can carry.
 
-## Where coverdict was wrong, slow, or useless
+## Where proof-java was wrong, slow, or useless
 False positives, preflight friction, anything that could not be acted on.
 Bugs found here are recorded, not fixed — fixing mid-loop is what turned six
 earlier dogfood rounds into debugging sessions with zero workflow evidence.
@@ -72,7 +72,7 @@ was voluntarily repeated.
 
 ## Limits of this run
 A self-run loop on your own repository measures the mechanism, not demand
-(M0-PERSONA.md states this limit for proxy repos; it applies here too).
+(PERSONA.md states this limit for proxy repos; it applies here too).
 
 ## Recommendation (not implemented in this session — out of scope)
 Feeds ROADMAP backlog one-liners.

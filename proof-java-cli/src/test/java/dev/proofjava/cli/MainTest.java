@@ -38,7 +38,7 @@ class MainTest {
 
     @Test
     void analyzeWithoutADiffModeIsInvalidInvocation() {
-        // M0-CLI-INPUT.md: exactly one diff mode is required; none is exit 2,
+        // INPUT-MODEL.md: exactly one diff mode is required; none is exit 2,
         // not a passing/incomplete analysis. Deep behavior of --no-vcs itself
         // (parsing, binding, the incomplete-verdict contract) lives in
         // AnalyzeCommandTest - this only proves Main dispatches into it.

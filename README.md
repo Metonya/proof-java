@@ -1,6 +1,6 @@
-# coverdict — test verdict layer for Java
+# proof-java — test verdict layer for Java
 
-Long-term mission: coverage says 80%; coverdict explains how much confidence
+Long-term mission: coverage says 80%; proof-java explains how much confidence
 that evidence deserves.
 
 A verdict layer for Java test suites: it consumes evidence from existing
@@ -37,7 +37,7 @@ gate (SonarQube) answers too late and only partially. Full argument:
 
 ## GitHub setup (once the repo is created)
 
-- **Repository name:** `coverdict`
+- **Repository name:** `proof-java`
 - **About / short description:** Deterministic verdict layer for Java test
   suites — turns JaCoCo coverage, git diffs, and PIT/Descartes mutation
   evidence into per-test findings.
@@ -56,15 +56,15 @@ gate (SonarQube) answers too late and only partially. Full argument:
 | `docs/ROADMAP.md` | milestones, exit criteria, later sketches, kill criteria |
 | `docs/CLI-REFERENCE.md` | what each `analyze` flag does, why, and what it changes in the output |
 | `docs/RESEARCH.md` | distilled evidence: measurements, models, licenses, competitive scan |
-| `docs/M0-*.md` | closed M0 gate artifacts: persona/dogfood, CLI input model, validation manifest |
+| `docs/PERSONA.md, docs/INPUT-MODEL.md, docs/VALIDATION.md` | closed M0 gate artifacts: persona/dogfood, CLI input model, validation manifest |
 | `docs/SECURITY-POLICY.md`, `docs/RELEASE-CONTRACT.md` | untrusted-input policy; what a release ships |
 | `docs/rules/` | L0 rule specifications (shared contract + one file per rule) |
 | `schema/` | verdict JSON Schema, golden examples, validation spike |
 | `fixtures/` | per-rule positive/negative/unresolved Java fixtures |
 | `validation/` | checksums pinning fixtures and schema files |
 | `docs/research-raw/` | full deep-research source reports (~120 KB) — reference only, not for routine reading; see AGENTS.md |
-| `coverdict-cli/` | CLI entry point and exit-code contract (M1a, in progress) |
-| `skills/coverdict/` | agent skill: drives the M0-PERSONA loop against a target repo (D-72) |
+| `proof-java-cli/` | CLI entry point and exit-code contract (M1a, in progress) |
+| `skills/proof-java/` | agent skill: drives the M0-PERSONA loop against a target repo (D-72) |
 | `prototype/` | validated proof of concept (reference only, not the foundation) |
 
 ## Building
@@ -75,7 +75,7 @@ Requires JDK 17 (D-03) and Maven 3.9+.
 mvn verify
 ```
 
-Produces `coverdict-cli/target/coverdict.jar`. `analyze` currently exits 3
+Produces `proof-java-cli/target/proof-java.jar`. `analyze` currently exits 3
 (incomplete) by design — the analysis itself lands with M1a, and an
 unimplemented run must never report success (hard rule 3a).
 
@@ -87,7 +87,7 @@ python schema/validate-goldens.py && sha256sum -c validation/SHA256SUMS
 
 ### Self-scan (optional)
 
-coverdict scans its own code with a local SonarQube. With the server running
+proof-java scans its own code with a local SonarQube. With the server running
 and `SONAR_TOKEN` exported:
 
 ```bash
@@ -96,15 +96,15 @@ mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.host.url=http
 
 ## Agent skill
 
-`skills/coverdict/` is the surface for coverdict's primary persona (D-72,
-`docs/M0-PERSONA.md`): an AI coding agent that writes tests, runs coverdict, and
+`skills/proof-java/` is the surface for proof-java's primary persona (D-72,
+`docs/PERSONA.md`): an AI coding agent that writes tests, runs proof-java, and
 acts on the findings in a loop. It renders verdict JSON and never authors a
 finding of its own.
 
 Install it by copying it into the host tool's skills directory, e.g.:
 
 ```bash
-cp -r skills/coverdict ~/.claude/skills/coverdict
+cp -r skills/proof-java ~/.claude/skills/proof-java
 ```
 
 ## Running the prototype

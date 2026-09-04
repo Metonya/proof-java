@@ -1,7 +1,7 @@
 # CLI reference — `analyze`
 
 What each flag does, why it exists, and what it changes in the output.
-Source of truth for behavior is `AnalyzeCommand.java`, `docs/M0-CLI-INPUT.md`,
+Source of truth for behavior is `AnalyzeCommand.java`, `docs/INPUT-MODEL.md`,
 and `docs/rules/`; this page is a navigable summary, not a duplicate spec.
 
 ## Evidence levels
@@ -40,12 +40,12 @@ Zero or more than one of these is rejected with exit `2` before any JSON is writ
 | `--module <id>=<root-dir>` | Module definition, repo-relative root | single module `root=.` |
 | `--source-roots <id>=<dir>[,<dir>...]` | Module's source root(s) | `<root>/src/main/java` |
 | `--test-roots <id>=<dir>[,<dir>...]` | Module's test root(s) | `<root>/src/test/java` |
-| `--config` | Path to `coverdict.config.json` | auto-detected at repo root |
+| `--config` | Path to `proof.config.json` | auto-detected at repo root |
 | `--classpath <id>=<file>` | Jar list (one path per line) for JavaParser symbol solving. Never silently upgrades confidence — missing degrades resolution, present never guarantees HIGH | — |
 | `--language-level` | Java language level for JavaParser | `17` |
 | `--encoding` | Charset for reading test sources | `UTF-8` |
 | `--coverage-exclusions` | Comma-separated `sonar.coverage.exclusions` globs — one filter layer | — |
-| `--out` | Verdict JSON output path | `coverdict-verdict.json` |
+| `--out` | Verdict JSON output path | `proof-verdict.json` |
 | `--html-report` | Optional human-readable HTML report path, rendered from the same verdict document as `--out`/stdout (hard rule 7, D-75) | off |
 
 A repeated id in `--module`/`--source-roots`/`--test-roots` is a rejected
@@ -97,7 +97,7 @@ through its installed jar in the local repository (`~/.m2`), never through
 the sibling's freshly-built `target/classes` - `verify` never installs
 that jar, so a stale or missing one produces a real
 `java.lang.NoClassDefFoundError` inside PIT's own minion (visible only
-with `--diagnostics-dir`, D-64) rather than a coverdict-side failure. This
+with `--diagnostics-dir`, D-64) rather than a proof-java-side failure. This
 is a generic Maven multi-module property, not specific to any one repo -
 `doctor` cannot detect it today (see ROADMAP.md backlog).
 
@@ -145,7 +145,7 @@ from a mutation phase that is merely slow (D-64).
 - **HTML** (`--html-report`, opt-in, D-75/D-76/D-77/D-79/D-80/D-81): the same
   document rendered as a single self-contained, offline HTML file - a fixed
   sidebar + scroll-spy dashboard, opening in light mode by default.
-  [`ReportDataWriter`](../coverdict-cli/src/main/java/dev/coverdict/analysis/report/ReportDataWriter.java)
+  [`ReportDataWriter`](../proof-java-cli/src/main/java/dev/proofjava/analysis/report/ReportDataWriter.java)
   turns the document into one presentation-shaped JSON
   object ([`docs/GLOSSARY.md`](GLOSSARY.md) has the friendly-name mapping for
   every rule id/reason code/enum/status it can show), embedded in a
@@ -168,15 +168,15 @@ from a mutation phase that is merely slow (D-64).
 ## `render-html` — render an existing verdict JSON, no fresh analysis
 
 ```bash
-java -jar coverdict-cli/target/coverdict.jar render-html --in coverdict-verdict.json --out report.html
+java -jar proof-java-cli/target/proof-java.jar render-html --in proof-verdict.json --out report.html
 ```
 
 D-78: the read-side counterpart of `analyze --html-report` — takes any file
-matching `schema/coverdict-verdict.schema.json` (`--in`, required) and
+matching `schema/proof-verdict.schema.json` (`--in`, required) and
 renders it with the exact same `HtmlRenderer` (`--out`, required), doing no
 evidence collection at all. Built for callers that already have a verdict
 document on disk (or composed one from several) and want the HTML without
-paying for a re-scan — see D-78 for why `coverdict-vscode`'s "Export report"
+paying for a re-scan — see D-78 for why `proof-vscode`'s "Export report"
 command uses this instead of re-running `analyze`. Exits `2` on a missing or
 malformed `--in` file (`VerdictJsonReader` never guesses at a partial
 document), `4` if `--out` can't be written, `0` on success.
@@ -190,15 +190,15 @@ document), `4` if `--out` can't be written, `0` on success.
 
 **Overall coverage only (L0+L1, no-vcs mode):**
 ```bash
-java -jar coverdict-cli/target/coverdict.jar analyze \
-  --no-vcs --report jacoco.xml --out coverdict-verdict.json
+java -jar proof-java-cli/target/proof-java.jar analyze \
+  --no-vcs --report jacoco.xml --out proof-verdict.json
 ```
 Produces `overall` plus L0 findings across every test file. `newCode` is
 `unavailable_no_vcs`.
 
 **Changed-code coverage, findings scoped to changed tests (working-tree mode):**
 ```bash
-java -jar coverdict-cli/target/coverdict.jar analyze \
+java -jar proof-java-cli/target/proof-java.jar analyze \
   --uncommitted --report jacoco.xml --findings-scope changed
 ```
 Produces `overall` + a real diff-restricted `newCode`, plus L0 findings only
@@ -206,7 +206,7 @@ for test files the diff touched.
 
 **Base-ref mode with mutation evidence (L0+L1+L3):**
 ```bash
-java -jar coverdict-cli/target/coverdict.jar analyze \
+java -jar proof-java-cli/target/proof-java.jar analyze \
   --base main --report jacoco.xml \
   --mutation-report --mutation-classpath root=classpath.txt \
   --mutation-timeout 300
@@ -217,13 +217,13 @@ Produces all of the above plus a `mutation` evidence block and any
 ## `doctor` — diagnose a Maven repo before `analyze` runs
 
 ```bash
-java -jar coverdict.jar doctor --repo .                  # read-only: checks + a suggested command
-java -jar coverdict.jar doctor --repo . --fix            # also regenerates broken L2/L3 classpath lists
-java -jar coverdict.jar doctor --repo . --write-config   # writes coverdict.config.json (D-66)
+java -jar proof-java.jar doctor --repo .                  # read-only: checks + a suggested command
+java -jar proof-java.jar doctor --repo . --fix            # also regenerates broken L2/L3 classpath lists
+java -jar proof-java.jar doctor --repo . --write-config   # writes proof.config.json (D-66)
 ```
 
 `--write-config` writes every usable module's `id`/`root`/`report`/
-`perTestClasspath`/`mutationClasspath` to `coverdict.config.json`'s
+`perTestClasspath`/`mutationClasspath` to `proof.config.json`'s
 `modules` array - after that, `analyze` needs no `--module`/`--report`
 flags at all (command-line `--module` still overrides the config's
 `modules` entirely if given, never a partial merge).
@@ -236,5 +236,5 @@ output, JaCoCo report presence *and freshness* (older than the newest
 is a BLOCKER here too, D-64/D-65). Ends with a copy-pasteable `analyze`
 invocation built only from modules with no BLOCKER. `--fix` regenerates a
 missing/broken classpath list via a real `mvn dependency:build-classpath`
-call - the only place coverdict shells out to a build tool (D-65). Exit `0`
+call - the only place proof-java shells out to a build tool (D-65). Exit `0`
 if every module is clean, `3` if any has a BLOCKER.

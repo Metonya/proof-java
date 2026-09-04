@@ -93,7 +93,7 @@ are M3 (pre-CI) work.
 
 `sha256(ruleId + " " + moduleId + " " + repoRelativePath +
 " " + anchorSignature)`, first 16 hex chars, lowercase. Shared with L3
-(`dev.coverdict.analysis.model.Fingerprint`, M5): the anchor is a fully
+(`dev.proofjava.analysis.model.Fingerprint`, M5): the anchor is a fully
 qualified test method signature for these four L0 rules, a fully qualified
 production method signature for `PSEUDO_TESTED_METHOD`. Line numbers are
 excluded, so unrelated edits and moves don't change identity. One finding

@@ -12,7 +12,7 @@ explicitly experimental during 0.x; breaking changes increment its major and
 need a decision. No IDE/CI/agent surface starts before v1 schema stability.
 
 **D-02 · Verdict layer over engines, never own engines** (2026-08)
-JaCoCo for coverage, git for diffs, PIT/Descartes for mutation. coverdict parses
+JaCoCo for coverage, git for diffs, PIT/Descartes for mutation. proof-java parses
 their outputs and adds interpretation. Re-implementing an engine is out of
 scope permanently.
 
@@ -50,9 +50,9 @@ on HIGH findings. Shipping the riskiest feature first is the likeliest way to
 lose user trust permanently.
 
 **D-09 · Descartes runs as a separate process, never as a declared dependency** (2026-08, tightened 2026-08)
-Descartes is LGPL-3.0; coverdict targets Apache-2.0 and adopts the conservative
+Descartes is LGPL-3.0; proof-java targets Apache-2.0 and adopts the conservative
 policy clarified in D-20. It never appears in a build descriptor at any scope;
-coverdict invokes a user-installed process and parses reports. JaCoCo EPL-2.0
+proof-java invokes a user-installed process and parses reports. JaCoCo EPL-2.0
 distribution obligations and the full dependency inventory apply at release.
 
 **D-10 · Static analysis uses JavaParser, not regex** (2026-08)
@@ -111,7 +111,7 @@ The prototype also required `mb == 0`, silently adding branch completeness; its
 56.3% result does not validate `strict-line`. Recompute before publishing it.
 
 **D-20 · D-09 is project policy, not ASF jurisdiction** (2026-08-23)
-coverdict is not an ASF project; ASF Category X is not governing law here. We
+proof-java is not an ASF project; ASF Category X is not governing law here. We
 voluntarily adopt its conservative distribution boundary: no LGPL dependency
 at any scope, and Descartes remains user-installed and out of process.
 
@@ -120,7 +120,7 @@ D-06's identical-coverage clusters become `COVERAGE_EQUIVALENT_CANDIDATE`.
 Identical probe sets and syntactic oracle subsets do not prove behavioral or
 oracle equivalence and cannot suggest deletion without stronger evidence.
 
-**D-22 · coverdict is OS-independent by design** (2026-08-23)
+**D-22 · proof-java is OS-independent by design** (2026-08-23)
 Java CLI jar, JaCoCo XML, git, and JavaParser have no OS-specific code path;
 Windows/macOS/Linux are all first-class. The one known platform-sensitive
 area is path handling, already required as an automated test in M1c
@@ -128,7 +128,7 @@ criterion 7. No decision changes this unless a real OS-specific blocker appears.
 
 **D-23 · O-04 resolved: Maven-first** (2026-08-23)
 All three M0 dogfood proxies (commons-lang, Gson, Dropwizard — see
-`docs/M0-PERSONA.md`) are Maven, as is the M1c corpus's multi-module member.
+`docs/PERSONA.md`) are Maven, as is the M1c corpus's multi-module member.
 M3's first build integration is Maven; Gradle waits for demand evidence.
 M1's CLI stays build-tool-agnostic (D-01/D-02).
 
@@ -156,7 +156,7 @@ report) is counted and warned, never inferred from file mtime — a timestamp
 would break byte-determinism across checkouts and is easy to spoof.
 
 **D-27 · Five-way changed-file classification, checked in a fixed order** (2026-08-24)
-`unknown`/`excluded`/`non-executable`/`mapped`/`unsupported` (M0-CLI-INPUT.md),
+`unknown`/`excluded`/`non-executable`/`mapped`/`unsupported` (INPUT-MODEL.md),
 resolved module-first (longest declared root wins), report-presence before
 name-based rules (`module-info.java` sometimes has real report data - the
 name is only a fallback excuse for zero data). A changed test file is
@@ -212,7 +212,7 @@ diff modes only via two-run byte equality) was not needed.
 **D-30 · M1c-2 phase 1: corpus harness design, edition limit, calibration
 round 1 result** (2026-08-24)
 Three reusable PowerShell/Python scripts (`validation/scripts/`) drive every
-M1c-2 phase: `run-corpus-phase.ps1` (clone/checkout/JaCoCo-bind/coverdict-run),
+M1c-2 phase: `run-corpus-phase.ps1` (clone/checkout/JaCoCo-bind/proof-java-run),
 `sonar-parity.ps1`, `benchmark-phase.ps1`, plus `scaffold_labels.py` for the
 labeling-protocol sample. Exercised end to end on the gson canary; phases
 2-4 are parameter changes, not new code. JaCoCo is bound via CLI goals
@@ -404,7 +404,7 @@ toolchain repository is configured for Windows/x86_64 in this repo).
 **Module scope**: `junit-team/junit-framework` splits every Jupiter/platform
 component into a main-only module (no local tests) with all tests
 centralized in separate `jupiter-tests`/`platform-tests` modules, bound via
-JaCoCo's whole-repo aggregation plugin - incompatible with coverdict's
+JaCoCo's whole-repo aggregation plugin - incompatible with proof-java's
 one-module-owns-its-own-main+test model, and would require building/testing
 30+ modules just to analyze one. `junit-vintage-engine` is the only
 component with its own self-contained `src/main/java`+`src/test/java`, and
@@ -432,9 +432,9 @@ precision-summary.md` and `labels.csv`.
 **A same-session fix attempt for the chain-terminal gap was implemented,
 verified against the fixture harness (a new `testkitEventsChainTerminal`
 fixture, `junit-platform-testkit` added to the fixture-harness jar list),
-regression-clean on gson/assertj/coverdict's own suite - and then reverted**
+regression-clean on gson/assertj/proof-java's own suite - and then reverted**
 after real-world testing against junit-vintage-engine showed it does not
-actually help: coverdict's real `analyze` path has no `--classpath`
+actually help: proof-java's real `analyze` path has no `--classpath`
 mechanism at all (only source-roots + JDK reflection + the file's own
 import statements - the fixture harness's `JarTypeSolver` is a test-only
 mechanism, never present for a real corpus run), and the affected test
@@ -485,7 +485,7 @@ findings; multi-module sonar parity PASS on the first attempt** (2026-08-25)
 `-ModuleIds`/`-ModuleRoots` arrays: one `mvn -pl modA,modB -am` reactor
 build, one jacoco.xml resolved per module, and every `--module`/
 `--source-roots`/`--test-roots`/`--report` flag repeated once per module in
-a single coverdict invocation - proving `ModuleBinder`'s real multi-module
+a single proof-java invocation - proving `ModuleBinder`'s real multi-module
 path for the first time (previously only unit-tested via a degenerate
 same-root case, see `ModuleBinderTest`). `sonar-parity.ps1` gained the same
 shape (`-ModuleDirs`/`-JacocoXmlRelativePaths` arrays): more than one module
@@ -529,7 +529,7 @@ of scope for a measurement phase).
 
 **D-38 · dropwizard corpus pin has no JUnit 4 - manifest's "mixed JUnit 4+5"
 forces claim corrected** (2026-08-25)
-`docs/M0-VALIDATION-MANIFEST.md`'s phase-4 row listed dropwizard's forces as
+`docs/VALIDATION.md`'s phase-4 row listed dropwizard's forces as
 "multi-module Maven, mixed JUnit 4+5, report-to-module binding". Checked
 directly against the pinned checkout: `git grep` for
 `import org.junit.Test;`, `@RunWith`, `import org.junit.Rule;`, and
@@ -543,7 +543,7 @@ allowlist's own D-24 coverage, not by this phase.
 
 **D-39 · `--classpath` implemented; per-module ids accepted but solvers are
 unioned** (2026-08-25)
-`M0-CLI-INPUT.md`'s `--classpath <id>=<file>` was specified in M0 and never
+`INPUT-MODEL.md`'s `--classpath <id>=<file>` was specified in M0 and never
 built - D-28 shipped import-anchoring precisely because a real run had no
 classpath, and D-36's chain-terminal fix was later abandoned for the same
 reason. Now real: `ClasspathLoader` reads each list file (one jar path per
@@ -578,13 +578,13 @@ not a fixed bug. Re-measuring it is corpus work, not this change.
 
 **D-40 · `--config` implemented with a hand-written strict reader, not the
 schema validator** (2026-08-25)
-`M0-CLI-INPUT.md` specified `--config <path>` (falling back to
-`coverdict.config.json` at the repo root) in M0 and it was never built - which
+`INPUT-MODEL.md` specified `--config <path>` (falling back to
+`proof.config.json` at the repo root) in M0 and it was never built - which
 also silently blocked `customOracles` and `suppressions`, since both are
 config-file features. The gap was not recorded anywhere; only an incidental
 javadoc aside in `JacocoXmlParser` mentioned it.
 
-`schema/coverdict-config.schema.json` is checked in as the contract, but the
+`schema/proof-config.schema.json` is checked in as the contract, but the
 **reader is hand-written against `jackson-core`** rather than pulling
 `json-schema-validator` (today test-scope) into the shipped jar: hard rule 9
 makes every runtime dependency a licensing and inventory obligation, and that
@@ -603,7 +603,7 @@ type, malformed JSON, a `customOracles` entry that is not
 exit 2. A misspelled `supressions` that silently suppressed nothing is exactly
 the failure hard rule 3a exists to prevent.
 
-Precedence (`M0-CLI-INPUT.md`: command line > config file > defaults) is
+Precedence (`INPUT-MODEL.md`: command line > config file > defaults) is
 implemented by asking picocli's `ParseResult.hasMatchedOption` whether the user
 actually typed the option, since the bound field alone cannot distinguish a
 typed value from a default. `coverageExclusions` is **replaced, never merged**
@@ -734,10 +734,10 @@ found by running it rather than by reading:**
 **Dual-license elections** live in `license-overrides.properties` at the repo
 root. JavaParser is `LGPL-3.0 OR Apache-2.0` and lists LGPL first, so the gate
 fired on it - correctly, since nothing had ever recorded which option
-coverdict exercises beyond a prose comment. Javassist turned out to be
+proof-java exercises beyond a prose comment. Javassist turned out to be
 *triple*-licensed (`Apache-2.0 OR LGPL-2.1 OR MPL-1.1`) and was passing only
 because its pom happens to list Apache first; that election is now recorded
-too, so an upstream reordering cannot silently change what coverdict ships
+too, so an upstream reordering cannot silently change what proof-java ships
 under. These are elections on genuinely multi-licensed artifacts, never a way
 to silence the gate - a single-licensed LGPL dependency has no Apache option
 to elect and still fails the build (D-20).
@@ -751,7 +751,7 @@ project tree by default, and this repo's Isolated Projects mode makes scoping
 it down non-trivial". That framing assumed the scanner had to be driven
 through the build tool. It does not: the standalone `sonar-scanner` CLI takes
 `sonar.sources`, `sonar.tests` and `sonar.coverage.jacoco.xmlReportPaths`
-directly - the same three facts coverdict itself takes, which is precisely
+directly - the same three facts proof-java itself takes, which is precisely
 D-01/D-02's point that the host build tool is irrelevant to this analysis.
 
 `sonar-parity.ps1` gained a `-Scanner Cli` branch. Phase 3 parity: **exact
@@ -768,7 +768,7 @@ cheap path existed.
 
 **New-code parity remains deferred** (user decision, same date): it needs
 branch/PR analysis, which Community Edition does not support at any
-configuration. Not a coverdict defect and not closable by work in this repo -
+configuration. Not a proof-java defect and not closable by work in this repo -
 it is a follow-up for a Developer/Enterprise instance, and M1 does not wait
 on it.
 
@@ -789,26 +789,26 @@ which was silent on what evidence composes a finding.
 JaCoCo reset profile** (2026-08-25)
 Supersedes D-13's "opt-in sequential analysis profile with reset() per
 test." M2 Faz 0 (`validation/runs/pit-spike/FINDINGS.md`) ran PIT 1.15.8's
-mutation-coverage goal against coverdict's own `analysis.oracle.*` package
+mutation-coverage goal against proof-java's own `analysis.oracle.*` package
 and against gson's `internal.LazilyParsedNumber`: PIT's coverage-collection
 phase already builds a per-test line map internally (`LineMapper` +
 `CoverageExporterFactory`, both real, documented PIT APIs), takes ~1 second
-on coverdict's ~40-test-class scope, and needs no probe-reset choreography
+on proof-java's ~40-test-class scope, and needs no probe-reset choreography
 of our own - PIT's own minion process handles isolation.
 
 This is *not* "parse `linecoverage.xml`" as first hypothesized (D-12's
 mention, and the research report's B1 claim) - that file exposes PIT's
 internal block index, not source line numbers (see D-49's schema note).
 The real integration point is `org.pitest.coverage.CoverageExporterFactory`,
-a `ToolClasspathPlugin` SPI coverdict must implement and ship as a small jar
+a `ToolClasspathPlugin` SPI proof-java must implement and ship as a small jar
 on PIT's tool classpath, using `LineMapper` to resolve each block to real
-source lines before writing coverdict's own JSON. This is more invasive
+source lines before writing proof-java's own JSON. This is more invasive
 than pure report-file parsing, but still consumes PIT's own public
 extension point rather than reimplementing bytecode instrumentation -
 consistent with D-02's "verdict layer over engines, never own engines," but
 close enough to the line that the distinction is recorded here rather than
 assumed. A working proof-of-concept (`validation/runs/pit-spike/
-exporter-poc/CoverdictLineExporter.java`) exists and resolved 1996/1996
+exporter-poc/ProofLineExporter.java`) exists and resolved 1996/1996
 blocks to correct source lines on the first real target.
 
 If a corpus repo cannot get PIT's coverage phase green within the M2 Faz 2
@@ -862,18 +862,18 @@ profile - never touches the target repo's build files** (2026-08-25)
 M2 Faz 0's spike drove PIT through a throwaway `pitest-maven` Maven profile
 patched into the target module's `pom.xml` and reverted afterward
 (`git checkout`) - workable for a spike, wrong for the product: it would
-mean asking every coverdict user to accept a temporary build-file edit, and
+mean asking every proof-java user to accept a temporary build-file edit, and
 it has no answer at all for a Gradle target (junit-framework, an M2 Faz 2
 corpus repo). M2 Faz 2a verified `org.pitest.mutationtest.tooling.
 EntryPoint.execute(File, ReportOptions, PluginServices, Map)` - confirmed
 present, public, and functional in `pitest-entry:1.15.8` - drives the
 identical coverage-collection phase with zero repo modification: `git
-status` on coverdict's own repo stayed empty across the run. Same finding
+status` on proof-java's own repo stayed empty across the run. Same finding
 as D-45 (the standalone `sonar-scanner` CLI beating the build-tool-integrated
 scanner): the engine never needed the host build tool, only its own
 inputs - classpath, source dirs, target class/test globs, report directory,
 all of which `ReportOptions`'s setters take directly and all of which
-coverdict already collects from `--classpath`/`--module`/`--source-roots`/
+proof-java already collects from `--classpath`/`--module`/`--source-roots`/
 `--test-roots`.
 
 Two non-obvious `ReportOptions` requirements found only by running it, not
@@ -904,13 +904,13 @@ concatenated). Confirmed real: the coverage-phase output contained classes
 genuinely from both modules (18 from `util`, 43 from `validation`), and the
 target repo's `pom.xml` files were untouched (`git status` empty). PIT has
 no concept of a Maven module - a multi-module target is exactly "give it
-the union," no special handling needed on coverdict's or PIT's side beyond
-building that union from coverdict's existing `--module` bindings.
+the union," no special handling needed on proof-java's or PIT's side beyond
+building that union from proof-java's existing `--module` bindings.
 
 2c (determinism) found its first real gap here: 2240/2241 records were
 byte-identical across two independent runs (mean Jaccard 0.9998), one
 mismatched. Root-caused, not hand-waved: `SelfValidatingValidatorTest.
-getMethod()` (dropwizard's own test code, not coverdict's or PIT's) iterates
+getMethod()` (dropwizard's own test code, not proof-java's or PIT's) iterates
 `ResolvedTypeWithMembers.getMemberMethods()`, backed by JDK reflection with
 no ordering guarantee; the shared `hasSignature()` helper's guard line is
 hit for whichever candidate methods get checked before a match, and that
@@ -918,7 +918,7 @@ candidate order varies run to run. This is exactly the class of instability
 the original (dropped, D-51-adjacent) shuffled-test-order gate was meant to
 surface - caught instead by plain determinism, without needing PIT to
 support test-order control at all. Recorded as a real, bounded (0.045% of
-records in this corpus) source of instability that is not a coverdict or
+records in this corpus) source of instability that is not a proof-java or
 PIT defect: a real user's own reflection-based test fixtures can carry the
 same risk, worth a documented product limitation later (M4), not a blocker
 now.
@@ -951,8 +951,8 @@ set targets Java 7 (major version 51, the library's own compatibility
 policy), but its test and testFixtures source sets carry no `--release`
 constraint and compile at whatever JDK the Gradle daemon uses (major
 version 69, Java 25, on this machine) - the same class-file-version
-ceiling Faz 0 hit and fixed in coverdict's own build (`windows-dev-
-environment` memory note), except this time in code coverdict does not
+ceiling Faz 0 hit and fixed in proof-java's own build (`windows-dev-
+environment` memory note), except this time in code proof-java does not
 control. A repo-external fix was attempted (recompiling test +
 testFixtures sources with our own `javac --release 21`, reading but never
 writing into the target repo) and worked for the module's own
@@ -967,7 +967,7 @@ via PIT 1.15.8 cannot currently analyze a repo whose test/testFixtures
 bytecode exceeds what PIT's bundled ASM reads, and junit-framework's test
 infrastructure does, on this toolchain. Not necessarily permanent - a
 future PIT release with newer ASM, or a general (not per-module)
-recompile-to-match-main-release mechanism in coverdict itself, could lift
+recompile-to-match-main-release mechanism in proof-java itself, could lift
 it - but out of M2's scope. Evidence: `validation/runs/pit-spike/
 junit-framework/`.
 
@@ -978,9 +978,9 @@ out at `V22=66`, 1.25.9 adds `V25=69` through `V27=71`. But driving 1.25.9's
 coverage phase under JDK 25 (this session's ad hoc probe, not a corpus
 repo) produced `totalBlocks=0 classesSeen=0` - the agent ran, discovered
 tests, and returned nothing. Not reproduced under JDK 17 with JDK 17
-bytecode (coverdict's own shape); the failure is specific to the
+bytecode (proof-java's own shape); the failure is specific to the
 JDK25-driver combination D-53 needed. 1.25.9 also breaks API compatibility
-coverdict would depend on: `ReportOptions.setUseClasspathJar()`/
+proof-java would depend on: `ReportOptions.setUseClasspathJar()`/
 `useClasspathJar()` is removed outright, and `DefaultCoverageGenerator`'s
 constructor gains a mandatory `TestStatListener` parameter - a real,
 verified cost independent of the zero-block finding. D-53's "a future PIT
@@ -1011,20 +1011,20 @@ actual reason an early attempt produced no output, not a wiring bug).
 
 The real fix for note 2's hang is process-level, not API-level:
 `PerTestRunner` spawns a dedicated `PerTestDriver` subprocess, polls for
-`CoverdictLineExporter`'s output file (written the moment `recordCoverage()`
+`ProofLineExporter`'s output file (written the moment `recordCoverage()`
 fires, before any mutation work starts), and force-destroys the process the
 moment that file appears or a 120s timeout elapses - whichever first. This
-also resolves D-47's "coverdict must ship a small jar on PIT's tool
+also resolves D-47's "proof-java must ship a small jar on PIT's tool
 classpath": since `EntryPoint` is called in-process by `PerTestDriver`
-(itself launched from `coverdict.jar`), the exporter is compiled directly
-into `coverdict-cli` and registered via `META-INF/services/
+(itself launched from `proof-java.jar`), the exporter is compiled directly
+into `proof-java-cli` and registered via `META-INF/services/
 org.pitest.coverage.CoverageExporterFactory` in the shaded jar - no
-separate artifact. Verified end-to-end against coverdict's own repo
+separate artifact. Verified end-to-end against proof-java's own repo
 (`RepoPaths.java`, 3 real per-test entries, `9.8`s wall time including a
 full 214-class test-suite discovery/execution PIT itself performs).
 
 Shading requires `maven-shade-plugin`'s `ServicesResourceTransformer`
-(`coverdict-cli/pom.xml`): `pitest`'s own JUnit4 `TestPluginFactory`
+(`proof-java-cli/pom.xml`): `pitest`'s own JUnit4 `TestPluginFactory`
 registration and `pitest-junit5-plugin`'s JUnit5 one collide by filename in
 `META-INF/services`, and the default shade behavior keeps only one -
 verified by unzipping the built jar and confirming both survive.
@@ -1032,7 +1032,7 @@ verified by unzipping the built jar and confirming both survive.
 The minion PIT spawns needs `org.pitest.coverage.execute.CoverageMinion`
 and the exporter class on its own `-cp` - built from `ReportOptions.
 getClassPathElements()`, not the driver JVM's classpath - so `PerTestRunner`
-appends coverdict's own jar location (self-located via
+appends proof-java's own jar location (self-located via
 `getProtectionDomain().getCodeSource().getLocation()`) to the classpath
 file it writes for the module under analysis.
 
@@ -1057,11 +1057,11 @@ when `VOID_METHOD_CALLS` is mixed in.
 throws `PitError("Full mutation matrix is only supported in the output
 format XML.")` unless `"XML"` is in `outputFormats` - not optional, and the
 resulting `mutations.xml` lands in the private per-run temp directory and
-is never read (`CoverdictMutationListener`, registered under the second,
+is never read (`ProofMutationListener`, registered under the second,
 real output-format name, is what's actually consumed). Listener
 activation is two-gated: `javap` on `SettingsFactory.findListeners()`
 shows the SPI-discovered listener set is filtered by output-format *name*
-before `provides()` is even consulted, so `CoverdictMutationListener.name()`
+before `provides()` is even consulted, so `ProofMutationListener.name()`
 must appear in `outputFormats` - its `provides()` is deliberately left at
 the interface's default `LEGACY_MODE` feature rather than a custom one.
 
@@ -1084,7 +1084,7 @@ every subsequent minion PIT spawns then fails to attach with `agent
 library failed to init: instrument`, repeating every ~15s until the log
 ends - a cascade, not a root cause, and specific to the spike's
 classpath, which never included `commons-text` (a `pitest-entry` compile
-dependency the spike never declared). `coverdict.jar`'s shaded classpath
+dependency the spike never declared). `proof-java.jar`'s shaded classpath
 carries it correctly (confirmed: `unzip -l` shows `org/apache/commons/
 text/StringEscapeUtils.class` present). Not corrected as a silent edit to
 FINDINGS.md's original text (docs conventions: a reversal gets a new
@@ -1097,7 +1097,7 @@ JVM's own `java.class.path`, launched via a backslash-normalized
 `-cp`** (2026-08-25)
 The L2/L3 subprocess launch (originally D-55's design, `PerTestRunner`/
 `MutationRunner`) resolved the child driver's own `-cp` by self-locating
-one class's protection domain. That is `coverdict.jar` in production -
+one class's protection domain. That is `proof-java.jar` in production -
 correct, since D-55 shaded PIT into it - but resolves to a bare `target/
 classes` directory with no PIT jars on it when running under Maven/
 Surefire, since PIT stays an unshaded separate dependency there. First
@@ -1125,7 +1125,7 @@ JVM accepts `/` in classpath entries on Windows exactly like `\`.
 unpredictably in at least one dogfood environment - root cause not
 isolated, budget lowered as a safety margin instead of a fix**
 (2026-08-25, root-caused and fixed same-day by D-63)
-Running `MutationRunnerIT` against coverdict's own repo (a single diff-
+Running `MutationRunnerIT` against proof-java's own repo (a single diff-
 scoped target, `setFullMutationMatrix(true)`, `numberOfThreads=1`) after
 D-58's fixes: process count climbed past 60 `java.exe` processes within
 roughly two minutes, consuming multiple GB and twice bringing free system
@@ -1160,7 +1160,7 @@ sizing, or profiling one real run with `Verbosity.VERBOSE` end-to-end
 rather than killed mid-flight) is unresolved follow-up work, not done
 here.
 
-**D-60 · O-05 resolved: coverdict builds its own diff-scoped mutation
+**D-60 · O-05 resolved: proof-java builds its own diff-scoped mutation
 target mapping, ArcMutate rejected** (2026-08-25)
 `ChangedClassTargets.globsFor` (originally `PerTestCollector`'s private
 `targetClassGlobs`, extracted for reuse) already does the git-diff-to-
@@ -1170,7 +1170,7 @@ to `ReportOptions.setTargetClasses`. No new mechanism needed for M5 - the
 same mapping that scopes L2's `--per-test-report` targets scopes L3's.
 ArcMutate stays rejected: it is a commercial dependency D-02's "verdict
 layer over engines, never own engines, but the engines stay open where
-we can reach them" stance does not need, and coverdict's own mapping was
+we can reach them" stance does not need, and proof-java's own mapping was
 already proven working before M5 started.
 
 One limit carries forward undiminished: `setTargetTests` stays
@@ -1193,7 +1193,7 @@ copy-paste tests, a case `SonarQube` CPD already finds for free on this
 same self-scanned codebase (see M1a) - the expensive three-engine motor
 was being built for a case a cheaper tool already covers. Second, and more
 fundamentally, the L0 assertion-structure gate was cutting the one finding
-shape coverdict's other evidence *cannot* get elsewhere: two tests that
+shape proof-java's other evidence *cannot* get elsewhere: two tests that
 look textually different but exercise identical behavior. Requiring L0
 agreement discards exactly that signal, leaving only the copy-paste case
 Sonar already has - the "extra evidence layer" was actually a narrowing
@@ -1254,7 +1254,7 @@ process count grow so fast in the first place, before any budget or
 cleanup logic ever runs."
 
 **Correction, same session, found live:** the first three watchdog runs of
-`mvn -Pmutation-it -pl coverdict-cli test` all reported "peak 1 process,
+`mvn -Pmutation-it -pl proof-java-cli test` all reported "peak 1 process,
 ~260MB, clean 90s timeout" - and were wrong. The watchdog's own process
 discovery filtered `Get-CimInstance Win32_Process` to `Name = 'java.exe'`
 before walking parent links; a fourth run, watched directly in Task
@@ -1293,7 +1293,7 @@ fixes the actual root cause.
 every one of this repo's 716 test classes was a covering-test candidate**
 (2026-08-25)
 Investigated by cloning PIT's own source (`hcoles/pitest`, near 1.25.9 -
-coverdict pins 1.15.8, but the minion-spawn/coverage-gathering machinery in
+proof-java pins 1.15.8, but the minion-spawn/coverage-gathering machinery in
 `MutationTestUnit`/`WorkerFactory`/`Java9Process` is the relevant code path
 and matches across versions closely enough to read) and, after two failed
 standalone reproduction attempts (missing `pitest`/`pitest-entry` on a
@@ -1312,7 +1312,7 @@ respawn cascade D-57's terminology first suggested) and immediately logged
 same 19-test class's full coverage-gathering sequence **six times within
 one second**. `MutationDriver.main` had set `options.setTargetTests(Glob.
 toGlobPredicates(List.of("*")))` unconditionally since D-56/M5 shipped -
-every one of coverdict's own 716 test classes was declared a covering-test
+every one of proof-java's own 716 test classes was declared a covering-test
 candidate for every mutation run, regardless of how narrow
 `--target-classes` was. Under `setFullMutationMatrix(true)`, PIT gathers
 coverage once per target method/mutant group being probed rather than
@@ -1328,10 +1328,10 @@ faster and further than one with few.
 Fix: `MutationDriver.testGlobsFor` (new) derives one `<package>.*` test
 glob per unique package among the resolved target-class globs, replacing
 the unscoped `"*"`. Same "test lives beside the class it tests" Maven/
-Gradle convention `dev.coverdict.analysis.redundancy.TestLocator` (D-61)
+Gradle convention `dev.proofjava.analysis.redundancy.TestLocator` (D-61)
 already relies on for path resolution - not coverage-verified (that would
 need L2's own JaCoCo data, which this driver does not have), but a correct
-massive narrowing for every shape coverdict's own corpus work has
+massive narrowing for every shape proof-java's own corpus work has
 exercised (M1c's four real-repo phases all use the standard same-package
 test layout). `MutationRunnerIT` (regression check, tightened) went from
 reliably hitting its 90s budget and never once completing - across every
@@ -1391,7 +1391,7 @@ changed here - whether partial evidence should stop being `complete`/0 is a
 separate decision, and one that should be made once the logs from the next
 dogfood round say what is actually failing.
 
-**D-65 · `coverdict doctor` diagnoses a Maven repo, `--fix` may call Maven**
+**D-65 · `proof-java doctor` diagnoses a Maven repo, `--fix` may call Maven**
 (2026-08-27)
 Closes the "L2/L3 classpath UX gap" backlog item. Three of four WTA dogfood
 rounds lost time to a setup problem discovered only after `analyze` or a PIT
@@ -1423,9 +1423,9 @@ engines" (AGENTS.md): confined to this one opt-in command, which only ever
 asks Maven a question (never changes what it built), and `analyze` itself
 never shells to a build tool.
 
-**D-66 · `coverdict.config.json` can carry module/report/classpath
+**D-66 · `proof.config.json` can carry module/report/classpath
 bindings; `doctor --write-config` generates it** (2026-08-27)
-Closes the follow-up D-65 left open. `CoverdictConfig` gains a `modules`
+Closes the follow-up D-65 left open. `ProofConfig` gains a `modules`
 array (`id`, `root`, optional `sourceRoots`/`testRoots`, `report`,
 `perTestClasspath`, `mutationClasspath` - the same shape
 `--module`/`--report`/`--per-test-classpath`/`--mutation-classpath`
@@ -1447,11 +1447,11 @@ reasonable thing to want (`AnalyzeCommand.mergeConfigThenCli`).
 `doctor --write-config` (`ConfigWriter`, hand-written JSON writer - same
 D-40 reasoning) writes only modules with no BLOCKER, mirroring the filter
 `DoctorReportRenderer`'s suggested command already applies. Verified end
-to end against coverdict's own repo: `doctor --write-config` followed by
+to end against proof-java's own repo: `doctor --write-config` followed by
 `analyze --no-vcs --repo .` with zero `--module`/`--report` flags produced
 a real, correct coverage number from the generated config alone.
 
-**D-68 · L2's real root cause: `CoverdictLineExporter` read the wrong
+**D-68 · L2's real root cause: `ProofLineExporter` read the wrong
 classpath; `PerTestDriver`'s targetTests narrowed to match D-63**
 (2026-08-27)
 Closes the WTA dogfood's last open finding (`app`/`data` L2 returning
@@ -1459,15 +1459,15 @@ Closes the WTA dogfood's last open finding (`app`/`data` L2 returning
 minion genuinely gathered real coverage against WTA - "Found 143 tests",
 "All 143 tests were executed", real `ActionDAOImpl` log output from real
 test execution - so the bug was never in evidence collection, only in
-what coverdict did with it afterward.
+what proof-java did with it afterward.
 
 Root cause, confirmed by disassembling PIT 1.15.8's bytecode (`javap`):
-`CoverdictLineExporter.recordCoverage()` called `new
+`ProofLineExporter.recordCoverage()` called `new
 org.pitest.classpath.ClassPathByteArraySource()` (no-arg), which resolves
 class bytes through `ClassPath.getClassPathElementsAsFiles()` - the
 *running JVM's own* `java.class.path`, not `ReportOptions.classPathElements`.
 This code runs in the `PerTestDriver` subprocess, whose own `-cp` is only
-coverdict's shaded jar (`PerTestRunner`'s `classpathArgFile` never included
+proof-java's shaded jar (`PerTestRunner`'s `classpathArgFile` never included
 the target module's classes - those go to PIT separately, through
 `ReportOptions`). So every `BlockCoverage` PIT's minion sent back
 genuinely existed, but `LineMapper.mapLines()` could never find the
@@ -1478,7 +1478,7 @@ nothing was ever wrong with *that* check - the input handed to it already
 was. Fix: `PerTestDriver` now publishes the real classpath file path via
 a second system property (`CLASSPATH_FILE_PROPERTY`, same channel
 `MODULE_ID_PROPERTY` already used - the only way to reach an
-SPI-instantiated exporter); `CoverdictLineExporter` reads it and
+SPI-instantiated exporter); `ProofLineExporter` reads it and
 constructs `ClassPathByteArraySource(ClassPath)` explicitly, falling back
 to the no-arg default only when the property is absent (a bare unit test
 instantiating the SPI directly).
@@ -1490,14 +1490,14 @@ D-59/D-63's unscoped `targetTests=List.of("*")` - never narrowed like
 `MutationDriver`'s package-scoped globs. Under
 `SubprocessWorkspace.ownRuntimeClasspathEntries()` (this JVM's own
 dev/test classpath, appended to every driver's `-cp` unconditionally),
-that told PIT every test reachable there - including coverdict's own
+that told PIT every test reachable there - including proof-java's own
 `MainTest`/`PlaygroundFunctionalTest` - was a covering-test candidate,
 which blew well past the 120s per-test collection timeout running under
 `-Pmutation-it`. `MutationDriver`'s `testGlobsFor` (private, package-only
 narrowing) is now `TestGlobs.samePackageGlobsFor` in
-`dev.coverdict.analysis.subprocess` - shared by both drivers, no behavior
+`dev.proofjava.analysis.subprocess` - shared by both drivers, no behavior
 change for `MutationDriver` itself. Real WTA production runs (`java -jar
-coverdict.jar`, single shaded jar on `-cp`) were not exposed to the same
+proof-java.jar`, single shaded jar on `-cp`) were not exposed to the same
 failure mode as sharply, since there is no large dev/test suite riding
 along - but the narrowing is correct there too, for the same D-63
 reasoning.
@@ -1553,7 +1553,7 @@ manually `.toAbsoluteString()`'d module output dir). `doctor --fix`'s
 step) - exactly D-51's documented trap, just never exercised by a real
 run until this round.
 
-Fixed with a new shared helper, `dev.coverdict.analysis.subprocess.
+Fixed with a new shared helper, `dev.proofjava.analysis.subprocess.
 CanonicalPaths.canonicalize(List<String>)` (`File.getCanonicalPath()`
 per entry, falling back to the absolute form on a rare `IOException`
 rather than dropping the entry or throwing - hard rule 3a), applied at
@@ -1621,7 +1621,7 @@ further, to avoid a second, less precise warning for the same fact.
 (target-mode `classNameToPathByModuleId`/`targetGlobsById`) alongside their
 existing changed-files-based one, which callers (including existing unit
 tests) keep using unchanged. Verified end to end with a real PIT subprocess
-against coverdict-playground (`PlaygroundMutationIT`, `-Pmutation-it`): a
+against proof-java-playground (`PlaygroundMutationIT`, `-Pmutation-it`): a
 class named by `--mutation-target` under `--no-vcs`, with no git repository
 at all, produces a real, path-resolved `PSEUDO_TESTED_METHOD` finding -
 Plan.md Faz 2's own completion criterion. Checked, not assumed, per the
@@ -1634,13 +1634,13 @@ to fix there.
 finding** (2026-08-29)
 Hard rule 7 already names **skill** as a rendering surface of the same JSON, and
 ROADMAP's backlog carried the one-liner - this promotes that item, it is not new
-scope. The skill ships at `skills/coverdict/` (repo root), **not** under
+scope. The skill ships at `skills/proof-java/` (repo root), **not** under
 `.claude/`: hard rule 7 makes it a product surface that versions with the schema,
 the same reasoning that puts `schema/` and `docs/rules/` at the root, whereas
-`.claude/` holds config for agents working *on* coverdict - the `AGENTS.md`
+`.claude/` holds config for agents working *on* proof-java - the `AGENTS.md`
 audience. Conflating the two would auto-load a consumer skill into maintainer
 sessions. Installation is a copy into the host tool's own skills directory; a
-`coverdict skill install` subcommand is backlog, not this pass (hard rule 8).
+`proof-java skill install` subcommand is backlog, not this pass (hard rule 8).
 The skill is bound by the same hard rules as every other surface: it renders
 verdict JSON and **may never generate, infer, or store a finding of its own**
 (hard rule 1), never suggests deletion at any confidence (hard rule 3), and never
@@ -1650,8 +1650,8 @@ measurable on every future run rather than only when someone remembers to record
 one - six WTA dogfood rounds produced zero such evidence precisely because
 nothing required it.
 
-**D-73 · `coverdict-cli` bundles `junit-vintage-engine` (compile scope,
-shaded into `coverdict.jar`)** (2026-08-30)
+**D-73 · `proof-java-cli` bundles `junit-vintage-engine` (compile scope,
+shaded into `proof-java.jar`)** (2026-08-30)
 Real gson dogfooding: L2 (`--per-test-report`) always failed on gson - a
 plain JUnit4 module, no JUnit5/Platform dependency of its own - with PIT's
 minion crashing `UNKNOWN_ERROR`. Root-caused via `--diagnostics-dir`: PIT's
@@ -1660,7 +1660,7 @@ for a JUnit4 target, and `LauncherFactory` throws
 `PreconditionViolationException: Cannot create Launcher without at least
 one TestEngine` when nothing on the classpath supplies one -
 `junit-vintage-engine` is that bridge, and neither the target module (gson
-declares only `junit:junit`) nor `coverdict.jar` (only `junit-jupiter` at
+declares only `junit:junit`) nor `proof-java.jar` (only `junit-jupiter` at
 `test` scope, never shaded) had it. Adding it externally via
 `--per-test-classpath` isn't enough either: a version resolved outside
 `junit-bom` risks a `junit-platform-commons` release older/newer than the
@@ -1669,20 +1669,20 @@ pulls in - confirmed the hard way, a mismatched `junit-vintage-engine`
 5.11.3 against the bundled platform-commons 1.12.2 threw
 `ClassNotFoundException: org.junit.platform.commons.util.ClassFilter`, a
 real internal API moved between 1.11.x and 1.12.x. Declaring
-`junit-vintage-engine` as a normal dependency in `coverdict-cli/pom.xml`
+`junit-vintage-engine` as a normal dependency in `proof-java-cli/pom.xml`
 (no explicit version) lets the existing `junit-bom` import resolve it to
 the same Platform line as `junit-jupiter`, guaranteeing alignment, and
 bundles it into every target repo's classpath for free - no per-repo
 `doctor --fix` classpath guessing needed. Verified against real gson:
 single-target collection now returns real method entries (previously
 crashed in ~1.3s regardless of `--per-test-timeout`, proving the earlier
-120s-budget hypothesis wrong); `coverdict-cli`'s own suite stayed
+120s-budget hypothesis wrong); `proof-java-cli`'s own suite stayed
 370/370 (1 pre-existing skip). A full ~85-class "scan whole module" run
 gets past the minion entirely (`Coverage generator Minion exited ok`) but
 hits a separate, later failure reading the result file back
 (`PerTestRunner`'s "produced an unreadable per-test result file") - see D-74.
 
-**D-74 · `CoverdictLineExporter` writes its export to a `.tmp` name and
+**D-74 · `ProofLineExporter` writes its export to a `.tmp` name and
 atomically renames it into place** (2026-08-30)
 Follow-on from D-73's dogfooding: fixed there, L2 still failed at real
 scale (gson's full ~85-class "scan whole module" run) with `PerTestRunner`
@@ -1699,8 +1699,8 @@ finish first, but for ~85 classes' worth of entries it is not: the poll
 loop was observing the freshly-created-but-still-being-written file,
 killing the process mid-write, and `PerTestJsonReader` correctly rejected
 the truncated JSON as unreadable (hard rule 3a - it did not guess at the
-partial content). Fix, confirmed via a real gson run: `CoverdictLineExporter`
-now writes to `coverdict-line-tests.json.tmp` and, only after that writer
+partial content). Fix, confirmed via a real gson run: `ProofLineExporter`
+now writes to `proof-line-tests.json.tmp` and, only after that writer
 is fully closed, atomically `Files.move`s it onto the real name
 (`ATOMIC_MOVE` - the poll loop can now only ever observe the file absent
 or completely written, never partial). `PerTestDriver` passes its own
@@ -1708,12 +1708,12 @@ or completely written, never partial). `PerTestDriver` passes its own
 alongside the two D-68 already established) since that is still the only
 channel reaching an SPI-instantiated exporter. Verified against the exact
 repro: the same ~85-class gson run that previously failed now returns
-1879 real method entries in ~12s; `coverdict-cli`'s own suite stayed
+1879 real method entries in ~12s; `proof-java-cli`'s own suite stayed
 370/370.
 
 **D-75 · Standalone HTML report ships as a third renderer, closing D-15's
 deferral** (2026-08-30)
-D-15 shipped v0.1 with JSON and text only ("HTML is later"); `coverdict-vscode/docs/PLAN.md`'s
+D-15 shipped v0.1 with JSON and text only ("HTML is later"); `proof-vscode/docs/PLAN.md`'s
 2026-08-29 entry recorded the first concrete request - a Cucumber/SonarQube-style,
 exportable, human-readable report - as an idea deliberately left "not designed,
 not scoped." This closes it: `analyze --html-report <path>` (opt-in, off by
@@ -1725,12 +1725,12 @@ today. `HtmlRenderer` HTML-escapes (`&`/`<`/`>`/`"`/`'`) every input-derived
 string in addition to `TextRenderer`'s existing control-character escape
 (SECURITY-POLICY.md #4) - a path or message can originate from parsed repo
 content and must never be trusted to land in a browser raw. The emitted CSS
-declares the same IBM Plex font stacks `coverdict-playground/docs/report.html`
+declares the same IBM Plex font stacks `proof-java-playground/docs/report.html`
 uses for visual reference, but drops that file's `fonts.googleapis.com`
 `<link>`s: the CLI makes zero network calls (SECURITY-POLICY.md #5) and a
 report must render identically offline.
 
-`coverdict-vscode`'s `coverdict.exportReport` command always triggers one
+`proof-vscode`'s `proof-java.exportReport` command always triggers one
 fresh `analyze` run rather than compositing the extension's three
 independently-timestamped in-memory states (`CoverageState`/`PerTestState`/
 `MutationState` in `model/store.ts`) into a synthetic "current view" export.
@@ -1801,10 +1801,10 @@ best-effort persists the choice to `localStorage` inside a `try`/`catch` -
 verified live that a `file://`-restricted origin (storage disabled) throws
 there without breaking the toggle itself, it just doesn't survive a reopen.
 
-**D-78 · `coverdict render-html`: a fourth CLI command that renders an
+**D-78 · `proof-java render-html`: a fourth CLI command that renders an
 existing verdict JSON, no fresh analysis** (2026-08-30)
 Real user report against the D-75/D-76 "always fresh diff-derived rescan"
-design: `coverdict.exportReport`'s optional per-test/mutation re-run could
+design: `proof-java.exportReport`'s optional per-test/mutation re-run could
 come back with `PER_TEST_NO_CHANGED_TARGETS`/`MUTATION_NO_CHANGED_TARGETS`
 (no class currently in the diff) even though the extension's own sidebar
 had real, current-looking per-class evidence a moment earlier from an
@@ -1817,12 +1817,12 @@ mi" - the user's real expectation is that export reflects what the
 extension already knows, not a brand-new, possibly narrower-scoped
 analysis.
 
-Fix: `coverdict-vscode` no longer calls `analyze` to build the export's
+Fix: `proof-vscode` no longer calls `analyze` to build the export's
 document. It composes a verdict JSON directly from whatever it currently
 holds - `verdict-current.json` (coverage/findings/changedFiles, always
 present after any scan) with `perTest`/`mutation` spliced in from
 `pertest-current.json`/`mutation-current.json` when those exist - and hands
-the composed file to `coverdict render-html --in <path> --out <path>`
+the composed file to `proof-java render-html --in <path> --out <path>`
 (new `RenderHtmlCommand`), which only reads and renders, never
 re-collects evidence. Zero re-analysis cost, and the exported report is
 provably exactly what the sidebar already showed, not a fresh guess at it.
@@ -1852,7 +1852,7 @@ top-level section is now a `<details open class="report-section">`
 exactly like those two already could. (3) Only mutation/file-coverage were
 filterable - Değişen Dosyalar, Bulgular, Uyarılar/Eksik nedenler, and Test
 bazlı kanıt now carry a text filter too, via one new generic script
-function (`coverdictFilterRows`, `input.closest('.filterable')` +
+function (`proof-javaFilterRows`, `input.closest('.filterable')` +
 `[data-search]`) instead of a bespoke function per section. A related fix
 found while widening the findings table with real long content: `<code>`
 cells (paths, method signatures) now get `white-space: nowrap` and scroll
@@ -1875,16 +1875,16 @@ empty list so "no changed files" and "this was never computed" looked
 identical (contrary to hard rule 3a), and every table's horizontal scrollbar
 hid the column a reader actually needed. Fixing these one at a time inside
 the print-every-row-as-HTML architecture kept adding bespoke per-section
-JS (`coverdictFilterMutation`, `coverdictFilterFileTree`, ...) that didn't
+JS (`proof-javaFilterMutation`, `proof-javaFilterFileTree`, ...) that didn't
 compose.
 
-Architecture: [`ReportDataWriter`](../coverdict-cli/src/main/java/dev/coverdict/analysis/report/ReportDataWriter.java)
+Architecture: [`ReportDataWriter`](../proof-java-cli/src/main/java/dev/proofjava/analysis/report/ReportDataWriter.java)
 turns `VerdictDocument` into one presentation-shaped JSON object (Turkish
 number formatting, a path-compressed file tree, simplified mutation method
 signatures, a friendly-name/description lookup for only the codes this
 report actually uses) instead of `HtmlRenderer` printing markup row by row.
 `HtmlRenderer` now only builds a static shell (head/CSS/`<noscript>`) and
-embeds that JSON in `<script id="coverdict-data" type="application/json">`;
+embeds that JSON in `<script id="proof-data" type="application/json">`;
 one static, interpolation-free `<script>` (same file, unconditionally
 static source text - `HtmlRenderer.render` never touches it with a doc-derived
 value) parses it and builds the whole page with `createElement`/
@@ -1922,7 +1922,7 @@ never contains the breakout sequence.
 constructed in this codebase, `Severity`/`Confidence`/`Classification`
 value, PIT mutant status, and coverage metric mode gets one Turkish
 friendly name plus a one-sentence explanation, defined once in
-[`ReportLabels`](../coverdict-cli/src/main/java/dev/coverdict/analysis/report/ReportLabels.java)
+[`ReportLabels`](../proof-java-cli/src/main/java/dev/proofjava/analysis/report/ReportLabels.java)
 and mirrored in prose at [`docs/GLOSSARY.md`](GLOSSARY.md). The raw code is
 never replaced, only accompanied (hard rule 5: a metric's canonical id is
 never dropped in favor of its friendly name) - the report always shows
@@ -1986,7 +1986,7 @@ only the string representation changed, never the number.
 collapsible-sections page; flat risk-sorted file list replaces the folder
 tree; opens in light mode; every card built strictly from numbers, never a
 generated verdict sentence** (2026-09-01)
-A follow-up Claude Design mockup ("Coverdict Dashboard") proposed a
+A follow-up Claude Design mockup ("Proof-java Dashboard") proposed a
 different top-level structure than D-80's collapsible `<details>` sections:
 a fixed left sidebar with scroll-spy navigation, a 12-column card grid
 (Kapsama/Mutasyon/Bulgular/Dosyalar as always-visible dashboard cards
@@ -2002,7 +2002,7 @@ sağlam, mutasyon kanıtı yok." - a judgment sentence, the same shape D-80's
 predecessor mockup had and the user had already rejected once ("Hiç özet
 olmasın"). Asked whether this reversed that rejection, the user's answer
 sharpened the rule rather than reversing it: *"ai çıktı veremeyeceği için
-süslü cümlelerin olmadığı elimizdeki veriler ile özet olabilir"* - coverdict
+süslü cümlelerin olmadığı elimizdeki veriler ile özet olabilir"* - proof-java
 is a deterministic CLI, not an LLM, and cannot honestly assert an adjective
 like "sağlam" it has no basis for (hard rule 1: evidence over judgment). A
 summary is fine as a **fact strip only** - labeled numbers, no adjectives,
@@ -2015,7 +2015,7 @@ headline, no generated prose anywhere in the report.
 renk modda açılsın") overrides the mockup's own dark-first default: the
 CSS's bare `:root` now carries the light token values directly, and the
 `@media (prefers-color-scheme: dark)` auto-switch block D-77 introduced is
-gone entirely - a first-time reader (no `coverdict-report-theme` in
+gone entirely - a first-time reader (no `proof-java-report-theme` in
 `localStorage`) always opens light regardless of OS theme. The manual
 toggle (`:root[data-theme="dark"]`) still works exactly as before.
 
@@ -2066,7 +2066,7 @@ parent `.finding-group` opened first.
 **D-82 · HTML report: findings stop overflowing the page, sidebar navigation
 gets groups instead of checkbox-looking dots, and the report stays usable
 below 900px** (2026-09-01)
-Looking at a real generated report (`coverdict-playground`, 11 findings, 21
+Looking at a real generated report (`proof-java-playground`, 11 findings, 21
 mutants), the user rejected two things by name: the sidebar's section
 labels, and areas whose content spilled out of them. Both were real; the
 overflow was a layout bug, not a styling preference.
@@ -2167,5 +2167,5 @@ sites and break line attribution; Android adds its own report layout,
 flavor/variant matrix, and generated sources. Out of scope unless a dogfood
 repo (M0 item 1) forces it.
 
-Resolved: O-01 is **coverdict**; O-03 is D-13/D-18; O-04 is D-23; O-05 is
+Resolved: O-01 is **proof-java**; O-03 is D-13/D-18; O-04 is D-23; O-05 is
 D-60; O-06 is D-04.

@@ -14,7 +14,7 @@ This rule supersedes an earlier design, D-46's `COVERAGE_EQUIVALENT_CANDIDATE`
 assertion-structure match, and L3 kill-set match all at once). D-61 records
 why: that gate fired almost exclusively on near-literal copy-paste tests
 SonarQube CPD already finds for free, and its L0 requirement discarded the
-one finding shape coverdict's other evidence cannot get elsewhere - two
+one finding shape proof-java's other evidence cannot get elsewhere - two
 tests that look textually different but are behaviorally identical under
 mutation. `SUBSUMED_TEST` asks a directional question instead (does this
 test add anything a richer test does not), needs only `--mutation-report`,
@@ -85,7 +85,7 @@ the same finding). An unresolvable dominator location degrades
 `relatedPath` to `null` without dropping the finding - the subsumed test's
 own identity is already fully meaningful on its own.
 
-The fingerprint (`dev.coverdict.analysis.model.Fingerprint`, shared with
+The fingerprint (`dev.proofjava.analysis.model.Fingerprint`, shared with
 every other rule) anchors on the subsumed test's own raw kill-set test id as
 its signature - stable across unrelated line-number churn and across which
 specific dominator the suite happens to pick, since the underlying claim

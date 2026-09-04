@@ -1,6 +1,6 @@
 package dev.proofjava.analysis.model;
 
-/** The five-way classification every changed Java path ends in (docs/M0-CLI-INPUT.md, M1c criterion 3, D-27). */
+/** The five-way classification every changed Java path ends in (docs/INPUT-MODEL.md, M1c criterion 3, D-27). */
 public enum Classification {
     MAPPED("mapped"),
     EXCLUDED("excluded"),

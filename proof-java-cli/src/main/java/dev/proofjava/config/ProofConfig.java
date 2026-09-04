@@ -3,7 +3,7 @@ package dev.proofjava.config;
 import java.util.List;
 
 /**
- * The parsed {@code proof.config.json} (M0-CLI-INPUT.md). Every field is
+ * The parsed {@code proof.config.json} (INPUT-MODEL.md). Every field is
  * nullable/empty-by-default so {@link ConfigLoader#effective} can tell "the
  * config did not say" apart from "the config said this" - the whole point of
  * the precedence rule (command line &gt; config file &gt; documented defaults).

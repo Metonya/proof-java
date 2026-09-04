@@ -22,7 +22,7 @@ import dev.proofjava.analysis.model.RepoPaths;
  * since git itself needs {@code PATH}/{@code HOME} to run at all), a bounded
  * timeout, and UTF-8 decoding of every byte git writes - this machine's
  * platform default is Cp1254 (the same trap {@code --encoding UTF-8} exists
- * to dodge for JaCoCo XML, per docs/M0-CLI-INPUT.md).
+ * to dodge for JaCoCo XML, per docs/INPUT-MODEL.md).
  *
  * <p>Every diff command passes {@code --no-color}, explicit {@code
  * --src-prefix=a/ --dst-prefix=b/}, and {@code --find-renames} so output

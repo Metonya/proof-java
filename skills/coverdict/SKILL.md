@@ -1,17 +1,17 @@
 ---
-name: coverdict
+name: proof-java
 description: >-
-  Check whether Java tests actually verify anything, using the coverdict CLI.
+  Check whether Java tests actually verify anything, using the proof-java CLI.
   Use after writing or repairing JUnit tests in a Java repository; when asked
   if changed lines are covered, if a test asserts anything, if a test is
   redundant or pseudo-tested; or when coverage is high but trust in it is low.
-  Runs the build with JaCoCo, invokes coverdict, and acts on the verdict JSON
+  Runs the build with JaCoCo, invokes proof-java, and acts on the verdict JSON
   in a loop until clean or the human accepts the remainder.
 ---
 
-# coverdict — verify test quality before committing
+# proof-java — verify test quality before committing
 
-coverdict is a **verdict layer**, not an engine. It never measures coverage or
+proof-java is a **verdict layer**, not an engine. It never measures coverage or
 runs mutation testing itself: it reads JaCoCo XML, git diffs and PIT output and
 turns them into findings. Every finding traces to parsed source, executed code
 or a diff — **findings are evidence, never opinion**.
@@ -20,7 +20,7 @@ or a diff — **findings are evidence, never opinion**.
 
 1. Write or repair tests.
 2. Build with JaCoCo XML output (`mvn verify` with the JaCoCo plugin bound).
-3. Run `coverdict analyze`.
+3. Run `proof-java analyze`.
 4. Read the verdict JSON.
 5. Act on each finding, then go back to step 2.
 
@@ -30,8 +30,8 @@ instead of grinding.
 
 ## Preflight — before the first analyze
 
-1. **Jar present?** `ls coverdict-cli/target/coverdict.jar`, else `mvn -q verify`
-   in the coverdict repo. Below, `CJ` means `java -jar <path-to>/coverdict.jar`.
+1. **Jar present?** `ls proof-java-cli/target/proof-java.jar`, else `mvn -q verify`
+   in the proof-java repo. Below, `CJ` means `java -jar <path-to>/proof-java.jar`.
 2. **Maven repo? Run `doctor` first and use what it prints:**
    ```
    CJ doctor --repo .
@@ -43,7 +43,7 @@ instead of grinding.
    assembling flags by hand. `doctor` exits `3` when any module has a BLOCKER:
    that is stop-and-fix, not a warning.
 3. **Once per repo:** `CJ doctor --repo . --write-config` writes
-   `coverdict.config.json`, after which `analyze` needs no `--module`/`--report`
+   `proof.config.json`, after which `analyze` needs no `--module`/`--report`
    flags at all. Add `--fix` to regenerate a broken L2/L3 classpath list.
 4. **Not a Maven repo?** `doctor` is Maven-only. Build the binding by hand — see
    `reference/invocations.md`.
@@ -62,10 +62,10 @@ Zero or two of these is rejected before any JSON is written.
 
 ```
 CJ analyze --repo . --uncommitted --findings-scope changed \
-  --out coverdict-verdict.json
+  --out proof-verdict.json
 ```
 
-Progress goes to **stderr**, prefixed `coverdict: `, with a 30s heartbeat. The
+Progress goes to **stderr**, prefixed `proof-java: `, with a 30s heartbeat. The
 human-readable report goes to stdout. **Parse the JSON file — never the text.**
 
 ## Exit codes — read this before anything else
@@ -136,7 +136,7 @@ default budget of 300s **per module**.
 
 - **Never fabricate** a coverage number, a finding, or a fingerprint. Every claim
   quotes the JSON.
-- **Never delete or disable a test** because coverdict flagged it. No rule at any
+- **Never delete or disable a test** because proof-java flagged it. No rule at any
   confidence suggests deletion — `SUBSUMED_TEST` least of all.
 - **Never treat exit 3 as success**, and never treat "no findings" from an
   incomplete run as clean. **Unknown is never green.**
@@ -145,7 +145,7 @@ default budget of 300s **per module**.
 - **Never add a suppression without a written `reason` and human sign-off.**
 - **Never run `mvn clean` mid-loop** — it deletes the L2/L3 classpath list.
 - **Never judge a test by reading it and record that as a finding.** Findings come
-  from coverdict only (hard rule 1: evidence over judgment).
+  from proof-java only (hard rule 1: evidence over judgment).
 
 ## Record the run
 

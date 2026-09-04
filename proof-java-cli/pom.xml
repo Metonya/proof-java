@@ -63,7 +63,7 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <!-- Test-only: asserts real analyzer output against schema/coverdict-verdict.schema.json -->
+      <!-- Test-only: asserts real analyzer output against schema/proof-verdict.schema.json -->
       <groupId>com.networknt</groupId>
       <artifactId>json-schema-validator</artifactId>
       <scope>test</scope>
@@ -89,7 +89,7 @@
       <plugin>
         <!-- K4: downloads the fixture-harness API jars (JUnit 4/5, AssertJ, Mockito,
              Hamcrest, Truth) fixtures/rules/** compiles against, without declaring any of
-             them as a project dependency - so coverdict's own oracle engine tests
+             them as a project dependency - so proof-java's own oracle engine tests
              exercise the same classpath-less resolution path a real user run does,
              plus a proof of the JarTypeSolver mechanism a future classpath option will reuse. -->
         <groupId>org.apache.maven.plugins</groupId>
@@ -237,7 +237,7 @@
     </profile>
     <profile>
       <!--
-        Runs MutationRunnerIT: a real PIT mutation run against coverdict's
+        Runs MutationRunnerIT: a real PIT mutation run against proof-java's
         own repo (minutes, not milliseconds - the default mvn verify must
         stay fast). *IT.java doesn't match Surefire's default include
         patterns, so this profile's own execution is the only way it runs.

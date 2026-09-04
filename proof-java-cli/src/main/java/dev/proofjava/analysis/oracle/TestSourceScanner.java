@@ -16,7 +16,7 @@ import dev.proofjava.analysis.model.ModuleDefinition;
 import dev.proofjava.analysis.model.RepoPaths;
 
 /**
- * Walks every declared module's testRoots for .java files (docs/M0-CLI-INPUT.md).
+ * Walks every declared module's testRoots for .java files (docs/INPUT-MODEL.md).
  * A module whose test root does not exist on disk is not an error - plenty of
  * modules have no tests yet - it simply contributes no files.
  */

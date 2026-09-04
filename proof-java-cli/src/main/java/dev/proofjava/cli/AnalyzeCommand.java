@@ -64,7 +64,7 @@ import dev.proofjava.analysis.vcs.DiffResult;
 import dev.proofjava.analysis.vcs.GitClient;
 
 /**
- * Three diff modes, exactly one required per invocation (docs/M0-CLI-INPUT.md):
+ * Three diff modes, exactly one required per invocation (docs/INPUT-MODEL.md):
  * {@code --no-vcs} (overall coverage only), {@code --uncommitted} (working-tree
  * mode: {@code HEAD} to the working tree), and {@code --base <ref>} (base-ref
  * mode: {@code merge-base(ref, HEAD)} to the working tree, D-16).
@@ -225,7 +225,7 @@ class AnalyzeCommand implements Callable<Integer> {
         int modesSelected = (noVcs ? 1 : 0) + (uncommitted ? 1 : 0) + (baseRefOption != null ? 1 : 0);
         if (modesSelected != 1) {
             throw new CliUsageException("exactly one diff mode is required: --no-vcs, --uncommitted, or --base <ref> "
-                + "(docs/M0-CLI-INPUT.md).");
+                + "(docs/INPUT-MODEL.md).");
         }
         return selectedDiffMode();
     }
@@ -350,7 +350,7 @@ class AnalyzeCommand implements Callable<Integer> {
     }
 
     /**
-     * M0-CLI-INPUT.md's precedence rule: command line &gt; config file &gt;
+     * INPUT-MODEL.md's precedence rule: command line &gt; config file &gt;
      * documented defaults. picocli has already applied the CLI value or the
      * default, and cannot tell those two apart on its own - so the config
      * value is applied only when the parse result shows the user did not
@@ -616,7 +616,7 @@ class AnalyzeCommand implements Callable<Integer> {
         String diffMode = inv.diffMode();
 
         // A declared module with no bound report has no coverage evidence in
-        // --no-vcs mode (M0-CLI-INPUT.md: this is only a hard error when the
+        // --no-vcs mode (INPUT-MODEL.md: this is only a hard error when the
         // module has changed Java files, a diff-mode concept this build
         // doesn't have yet) - warn and leave it out of the analyzed set,
         // rather than passing an empty-evidence module through.

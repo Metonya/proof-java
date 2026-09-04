@@ -1,6 +1,6 @@
 # The six rules — what fires, what to do, where it misfires
 
-Authoritative spec: `docs/rules/<RULE>.md` in the coverdict repo. This file is
+Authoritative spec: `docs/rules/<RULE>.md` in the proof-java repo. This file is
 the acting guide; the spec wins on any disagreement.
 
 Confidence is `HIGH` / `MEDIUM` / `INCONCLUSIVE`. `LOW` exists in the schema but
@@ -20,9 +20,9 @@ in the test method body or its same-compilation-unit helpers.
 **Fix by:** adding an assertion on the observed behavior.
 
 **Known false-positive shapes — waive, do not weaken the test:**
-- The real assertion lives in a helper in **another file**. coverdict only
+- The real assertion lives in a helper in **another file**. proof-java only
   traverses same-compilation-unit helpers by design (D-17). Register the helper
-  via `customOracles` in `coverdict.config.json`
+  via `customOracles` in `proof.config.json`
   (`fully.qualified.Type#methodPattern`, glob `*` allowed).
 - The assertion library is not on the allowlist. Recognized: JUnit 4 & 5,
   AssertJ, Mockito verification, Hamcrest, Google Truth, JUnit 4
@@ -34,7 +34,7 @@ in the test method body or its same-compilation-unit helpers.
   helper (e.g. JUnit Platform Testkit's `Events.assertEventsMatchExactly`).
 
 **Never fires on** `@TestFactory` methods — dynamic-test oracles live in lambdas
-coverdict does not traverse in v0.1. This is a documented blind spot, not a pass.
+proof-java does not traverse in v0.1. This is a documented blind spot, not a pass.
 
 ---
 

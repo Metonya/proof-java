@@ -2,7 +2,7 @@
 
 Two things live here: the words this tool uses for its own concepts, and the
 friendly name attached to every machine code that can appear in the HTML report
-(`coverdict analyze --html-report`, `coverdict render-html`).
+(`proof-java analyze --html-report`, `proof-java render-html`).
 
 ## Terminology
 
@@ -21,7 +21,7 @@ friendly name attached to every machine code that can appear in the HTML report
 
 Every code that can surface in the report gets one friendly name and one
 sentence, defined once in
-[`ReportLabels.java`](../coverdict-cli/src/main/java/dev/coverdict/analysis/report/ReportLabels.java).
+[`ReportLabels.java`](../proof-java-cli/src/main/java/dev/proofjava/analysis/report/ReportLabels.java).
 This page is the prose mirror of that map; read `ReportLabels.java` for the exact
 current text, since this page is not generated and can lag by one edit.
 
@@ -53,7 +53,7 @@ back to the raw code — but it is the regression that test exists to catch.
 These are the tool's "why is this number not the whole story" messages. Only the
 codes this codebase actually constructs via `new AnalysisReason(...)` are labeled
 — not the larger set of string constants that appear only inside exception
-messages or `coverdict doctor` output, which never reach the HTML report. See
+messages or `proof-java doctor` output, which never reach the HTML report. See
 `ANALYSIS_REASON_CODES` in `ReportLabelsTest.java` for the authoritative list; a
 new code needs both a `ReportLabels` entry and a row there.
 

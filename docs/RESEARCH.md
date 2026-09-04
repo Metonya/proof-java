@@ -38,7 +38,7 @@ records why exact attribution remains unproven.
 JUnit listener + JaCoCo `reset()`/`getExecutionData()` - is not the L2
 engine. PIT's own coverage-collection phase (`CoverageExporterFactory` +
 `LineMapper` SPI) already produces a per-test line map without any reset
-choreography of coverdict's own. See `validation/runs/pit-spike/FINDINGS.md`
+choreography of proof-java's own. See `validation/runs/pit-spike/FINDINGS.md`
 and §13 below. D-13's sequential-reset design survives only as M2's
 documented fallback if a corpus repo cannot get PIT's coverage phase green.
 
@@ -52,7 +52,7 @@ not a benchmark; D-18 requires measurement before architecture.
 **Correction (M2 Faz 0, 2026-08-25):** the 309 ms/test figure is an artifact
 of this specific prototype's process-per-test design (`jacococli` shelled
 out once per `.exec` file), not a property of per-test coverage generally.
-PIT's coverage-collection phase, measured against coverdict's own
+PIT's coverage-collection phase, measured against proof-java's own
 `analysis.oracle.*` scope (41 test classes), completed in ~1 second total -
 no per-test process spawn, no per-test disk write. The 25-minute,
 whole-suite model is also the wrong scope for L2 as redefined by D-47/D-49:
@@ -85,9 +85,9 @@ from one filtered dataset.
 | pitest | Apache-2.0 | no constraints |
 | Descartes | LGPL-3.0 | separate process, never linked (D-09) |
 | JavaParser | Apache-2.0 / LGPL dual | use under Apache-2.0 |
-| diff-cover | Apache-2.0 | concept reference only; coverdict implements diff-intersection natively |
+| diff-cover | Apache-2.0 | concept reference only; proof-java implements diff-intersection natively |
 
-Target license for coverdict: Apache-2.0. The conservative distribution and
+Target license for proof-java: Apache-2.0. The conservative distribution and
 trademark posture is summarized in §8 and D-20; release artifacts still require
 an actual dependency/license inventory.
 
@@ -118,7 +118,7 @@ new-code metric is method-level: `(untested new+changed methods) /
 (total new+changed methods) × 100%`, computed server-side only. Pareto test
 ranking combines coverage-efficiency, term-similarity, **and LLM-embedding
 clustering** — the third heuristic is exactly what AGENTS.md hard rule 1
-rules out for coverdict; never an auto-delete suggestion either way. No
+rules out for proof-java; never an auto-delete suggestion either way. No
 mutation engine. Weak-oracle/tautology detection is undocumented (treat as
 absent, not confirmed absent). Full evidence:
 `docs/research-raw/05-teamscale-deep-dive.md`.
@@ -129,7 +129,7 @@ JaCoCo linking/redistribution is compatible with the chosen Apache-2.0 project
 license if EPL notices, source availability, and the actual transitive license
 inventory are shipped. JavaParser is used under its Apache-2.0 option. Descartes
 stays external under the voluntary policy in D-09/D-20. ASF policy is guidance,
-not jurisdiction over coverdict. Trademark conclusions remain project policy,
+not jurisdiction over proof-java. Trademark conclusions remain project policy,
 not legal advice: third-party marks stay adjectival next to a descriptive noun
 and never become a CLI value, subcommand, package or repo name — which is why
 the metric mode is `sonar-compatible`. Full evidence:
@@ -145,13 +145,13 @@ async work remain. Earlier 18–22/18–25 minute figures are models. Full evide
 `docs/research-raw/03-parallel-coverage.md`; decision boundary: D-13/D-18.
 
 **Superseded by D-47 (M2 Faz 0, 2026-08-25):** this entire problem statement
-assumed coverdict has to solve JaCoCo probe isolation itself. It does not -
+assumed proof-java has to solve JaCoCo probe isolation itself. It does not -
 PIT already isolates coverage collection per test inside its own minion
 process and exposes a per-test line map through a public SPI. Lifecycle,
 static state, and child-JVM risks are still real questions, but they are now
 M2 Faz 2's *validation* questions (do PIT's own isolation guarantees hold on
 real repos - measured via Jaccard stability, not assumed), not open design
-questions coverdict has to solve by writing its own reset choreography. See
+questions proof-java has to solve by writing its own reset choreography. See
 §13.
 
 ## 10. Known detection limits
@@ -208,8 +208,8 @@ than trusting its description of it: PIT 1.15.8's `exportLineCoverage` output
 block-to-source-line resolution path is PIT's own `LineMapper` +
 `CoverageExporterFactory` SPI, which is undocumented in the report but
 verified working: a ~150-line proof-of-concept
-(`validation/runs/pit-spike/exporter-poc/CoverdictLineExporter.java`)
-resolved 1996/1996 coverage blocks to correct source lines on coverdict's own
+(`validation/runs/pit-spike/exporter-poc/ProofLineExporter.java`)
+resolved 1996/1996 coverage blocks to correct source lines on proof-java's own
 `analysis.oracle.*` package, cross-validated on gson's
 `internal.LazilyParsedNumber` (JUnit4 test-name format, same correctness).
 Full run logs and the block/line spot-check against real source:
@@ -246,7 +246,7 @@ condition, change one arithmetic operator, alter one return value). This
 makes Descartes' mutants a much closer proxy for "does any test verify
 this method does anything at all" - which is exactly the pseudo-tested
 question - but Descartes is LGPL-3.0 and D-09/D-20 bar it from ever being
-a coverdict dependency at any scope, so it was never a candidate to run
+a proof-java dependency at any scope, so it was never a candidate to run
 even as a user-installed external process for this particular rule (unlike
 D-09's original framing, which anticipated Descartes running standalone
 for other purposes).
@@ -262,7 +262,7 @@ calls made *from within* the mutated method itself, which is not body
 replacement either, and provides no meaningful approximation of extreme
 mutation for a method whose own return type is `void`.
 
-**Not done**: no side-by-side run of Descartes and coverdict's gregor
+**Not done**: no side-by-side run of Descartes and proof-java's gregor
 substitute against the same corpus method exists yet, so the practical
 precision gap between "extreme mutation" and "RETURNS+VOID_METHOD_CALLS
 mutation" is unmeasured, not merely undocumented. `PSEUDO_TESTED_METHOD`'s

@@ -33,7 +33,7 @@ import dev.proofjava.analysis.AnalysisException;
  * rejected before the file is opened for streaming - {@code Files.size} costs
  * one stat call, far cheaper than starting a StAX parse only to fail deep
  * inside an attacker-sized document. Configurable only via the constructor
- * (no {@code --config} surface yet - see M0-CLI-INPUT.md).
+ * (no {@code --config} surface yet - see INPUT-MODEL.md).
  */
 public final class JacocoXmlParser {
 

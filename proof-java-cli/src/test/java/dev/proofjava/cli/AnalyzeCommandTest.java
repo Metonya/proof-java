@@ -23,14 +23,14 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import dev.proofjava.analysis.oracle.OracleRuleEngine;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion.VersionFlag;
 import com.networknt.schema.ValidationMessage;
 
 import picocli.CommandLine;
+
+import dev.proofjava.analysis.oracle.OracleRuleEngine;
 
 /** Runs the real fixtures end to end through the picocli-wired command, the way a user actually invokes it. */
 class AnalyzeCommandTest {
@@ -574,7 +574,7 @@ class AnalyzeCommandTest {
         assertTrue(warned, doc.toString());
     }
 
-    // --- --classpath (M0-CLI-INPUT.md's classpath input, wired for real) ---
+    // --- --classpath (INPUT-MODEL.md's classpath input, wired for real) ---
 
     /** Same validation shape for all five id-keyed list/target flags (SonarQube java:S5976). */
     @ParameterizedTest

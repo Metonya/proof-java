@@ -1,6 +1,4 @@
-# M0 deliverable 1 — Primary persona, canonical workflow, dogfood repositories
-
-Decisions taken with the maintainer on 2026-08-23.
+# Primary persona, canonical workflow, dogfood repositories
 
 ## Primary persona
 
@@ -16,9 +14,9 @@ The other two remain secondary audiences — deprioritized, not removed.
 1. Agent changes production code and/or writes tests.
 2. Agent runs the repo's build with tests and JaCoCo XML output
    (e.g. `mvn verify` with the JaCoCo plugin bound).
-3. Agent invokes the coverdict CLI: repository, JaCoCo XML report(s), and
+3. Agent invokes the proof-java CLI: repository, JaCoCo XML report(s), and
    either a base-ref diff or working-tree mode.
-4. coverdict emits verdict JSON — changed-code coverage in the three metric
+4. proof-java emits verdict JSON — changed-code coverage in the three metric
    modes plus L0 oracle findings — or a structured incomplete result.
 5. Agent acts on findings (adds missing coverage, strengthens weak oracles,
    or surfaces them to the human), repeating 2–4 until the verdict is clean
@@ -27,7 +25,7 @@ The other two remain secondary audiences — deprioritized, not removed.
 The defining property: the loop completes before commit/push. No server-side
 tool is in the loop.
 
-**Current workaround** (what the persona does today without coverdict): the
+**Current workaround** (what the persona does today without proof-java): the
 agent reads raw JaCoCo HTML/XML itself — token-expensive, format-fragile, and
 with no oracle-quality signal — or skips verification entirely. That skip is
 exactly the failure mode VISION describes.
@@ -40,7 +38,7 @@ patience budget is minutes, not hours, and no server component is tolerated.
 
 The maintainer has no in-house Java codebase suitable for daily dogfooding, so
 three public repositories act as proxies: on each, an AI agent is asked to add
-or repair tests for selected classes and coverdict critiques the result.
+or repair tests for selected classes and proof-java critiques the result.
 Limit acknowledged: proxies exercise the workflow's mechanics; they do not
 measure organic demand. That remains a hypothesis per VISION.
 

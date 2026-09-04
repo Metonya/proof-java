@@ -63,7 +63,7 @@ carries `<FQCN>#<methodName><methodDescriptor>` - the JVM method
 descriptor disambiguates overloads, unlike the four L0 rules' human-
 readable parameter-type signature. `startLine`/`endLine` span the
 method's surviving mutants' line numbers. The fingerprint
-(`dev.coverdict.analysis.model.Fingerprint`, shared with the L0 rules)
+(`dev.proofjava.analysis.model.Fingerprint`, shared with the L0 rules)
 anchors on this same production-method signature instead of a test
 method's.
 

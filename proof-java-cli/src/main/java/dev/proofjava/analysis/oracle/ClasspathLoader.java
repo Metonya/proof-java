@@ -17,7 +17,7 @@ import dev.proofjava.analysis.model.AnalysisReason;
 
 /**
  * Builds JavaParser {@link TypeSolver}s from {@code --classpath <id>=<file>}
- * (M0-CLI-INPUT.md): each file lists one jar path per line. This is the
+ * (INPUT-MODEL.md): each file lists one jar path per line. This is the
  * production counterpart of the fixture harness's jar solvers - until now the
  * only {@link JarTypeSolver} usage lived in a test (D-28 shipped
  * import-anchoring precisely because a real run had no classpath at all).

@@ -17,7 +17,7 @@ import com.fasterxml.jackson.core.StreamReadConstraints;
 import dev.proofjava.analysis.model.RuleIds;
 
 /**
- * Reads {@code proof.config.json} (M0-CLI-INPUT.md's config surface).
+ * Reads {@code proof.config.json} (INPUT-MODEL.md's config surface).
  *
  * <p><strong>Why a hand-written strict reader rather than the JSON Schema
  * validator (D-40):</strong> the schema
@@ -38,7 +38,7 @@ import dev.proofjava.analysis.model.RuleIds;
  */
 public final class ConfigLoader {
 
-    /** M0-CLI-INPUT.md: used when {@code --config} is absent and this file exists at the repo root. */
+    /** INPUT-MODEL.md: used when {@code --config} is absent and this file exists at the repo root. */
     public static final String DEFAULT_FILE_NAME = "proof.config.json";
 
     /** SECURITY-POLICY.md #2: a config file is untrusted input; a real one is well under a kilobyte. */

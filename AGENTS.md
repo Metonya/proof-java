@@ -4,17 +4,17 @@ Guidance for AI agents working on this repository.
 
 ## What this is
 
-**coverdict** is a test-verdict tool for Java. It consumes evidence
+**proof-java** is a test-verdict tool for Java. It consumes evidence
 produced by existing engines — JaCoCo coverage data, git diffs, PIT/Descartes
 reports — and turns it into verdicts a developer or an AI agent can act on:
 which changed lines are untested, which tests lack a recognized oracle, and
 which tests are suspiciously coverage-equivalent.
 
-Long-term mission: **coverage says 80%; coverdict says how much of that is
+Long-term mission: **coverage says 80%; proof-java says how much of that is
 real.** This is the destination, not a v0.1 claim — see D-15 and the
 capability boundary in README.md.
 
-coverdict is a verdict layer, not an engine. It never re-implements coverage
+proof-java is a verdict layer, not an engine. It never re-implements coverage
 measurement or mutation testing.
 
 ## Read before working
@@ -25,20 +25,10 @@ measurement or mutation testing.
 3. `docs/ROADMAP.md` — the current milestone. Work only inside it.
 4. `docs/RESEARCH.md` — measured facts and verified formulas. Cite these
    instead of re-deriving from memory.
-5. `docs/GLOSSARY.md` — the Turkish friendly-name mapping for every code
-   the HTML report shows (rule ids, `AnalysisReason` codes, enums, mutant
-   statuses, metric modes). Add a code here before it can appear unlabeled
-   in a report; `ReportLabelsTest` enforces this.
-
-`prototype/` is a validated proof of concept, kept as reference. Production
-code is written fresh (see D-03 and D-11 in DECISIONS); do not extend the
-prototype's Python analyzer or its mini test harness.
-
-`docs/research-raw/` holds the full deep-research reports RESEARCH.md was
-distilled from (~120 KB total). Do not read them by default — RESEARCH.md
-carries everything a decision needs. Open one when you need a citation, a
-source URL, or the full evidence behind a licensing, competitive or
-parallel-coverage position, which now lives only in the raw reports.
+5. `docs/GLOSSARY.md` — the project's terminology, plus the friendly-name
+   mapping for every code the HTML report shows (rule ids, `AnalysisReason`
+   codes, enums, mutant statuses, metric modes). Add a code here before it can
+   appear unlabeled in a report; `ReportLabelsTest` enforces this.
 
 ## Hard rules
 
@@ -84,7 +74,7 @@ parallel-coverage position, which now lives only in the raw reports.
 8. **Stay inside the milestone.** Ideas beyond it go into ROADMAP.md's backlog
    as one line, not into code.
 9. **LGPL never enters a pom.xml, at any scope.** As a conservative project
-   distribution policy, coverdict adopts the ASF Category X boundary even
+   distribution policy, proof-java adopts the ASF Category X boundary even
    though it is not an ASF project. Descartes and other LGPL components are
    user-installed external processes, never declared dependencies. Third-party
    trademarks
@@ -120,7 +110,12 @@ parallel-coverage position, which now lives only in the raw reports.
 
 ```
 AGENTS.md            this file
-README.md            what/why in one screen
-docs/                VISION, DECISIONS, ROADMAP, RESEARCH
-prototype/           validated PoC: demo repo + Python analyzer (reference only)
+README.md            what/why, install, usage
+docs/                VISION, DECISIONS, ROADMAP, RESEARCH, CLI-REFERENCE,
+                     GLOSSARY, PERSONA, VALIDATION, rules/
+proof-java-cli/      the CLI: sources, tests, and the playground fixture
+schema/              verdict + config JSON Schema, golden examples
+fixtures/            per-rule and per-parser input fixtures
+validation/          corpus run records: labels, precision, benchmarks
+skills/proof-java/   the agent skill that drives analyze in a loop
 ```

@@ -1,4 +1,4 @@
-# CLI input model (M0 deliverable 2)
+# CLI input model
 
 Every input the v0.1 CLI accepts, with its default and failure behavior.
 Fail-closed principle throughout (hard rule 3a): an ambiguous or missing input
@@ -7,21 +7,21 @@ is a structured error, never a guessed default that could produce false green.
 ## Invocation
 
 ```
-java -jar coverdict.jar analyze [options]
+java -jar proof-java.jar analyze [options]
 ```
 
 `analyze` is the only v0.1 subcommand (`--version`/`--help` aside); the
 subcommand form leaves room for later additions without breaking flags.
 Option precedence: command line > config file > documented defaults.
 
-Config file: `--config <path>`; if omitted, `coverdict.config.json` at the
+Config file: `--config <path>`; if omitted, `proof.config.json` at the
 repo root is used when present. Strict JSON, schema-validated (same schema
 discipline as the output, hard rule 7). No comments; entries that need
 rationale (suppressions) carry an explicit `reason` field instead.
 
 `modules` (D-66) carries the same binding `--module`/`--report`/
 `--per-test-classpath`/`--mutation-classpath` express on the command line -
-`coverdict doctor --write-config` generates it. All-or-nothing: a single
+`proof-java doctor --write-config` generates it. All-or-nothing: a single
 `--module` on the command line makes this array invisible entirely, never
 partially merged with it.
 
@@ -91,7 +91,7 @@ partially merged with it.
 
 - `--per-test-report` — collects per-test line coverage for changed
   production classes via an embedded PIT (`org.pitest:pitest*:1.15.8`,
-  shaded into `coverdict.jar` itself - never a separate install, D-51).
+  shaded into `proof-java.jar` itself - never a separate install, D-51).
   Diff-scoped automatically: only classes with changed, mapped source lines
   are targeted. Requires a diff mode; rejected under `--no-vcs`, exit 2
   (same pattern as `--findings-scope changed`). **Runs the module's entire
@@ -165,7 +165,7 @@ partially merged with it.
   are always computed for overall and new-code scopes; there is no mode
   selection flag. Every percentage in every surface carries its mode id and
   raw numerator/denominator.
-- `--out <path>` — verdict JSON, default `coverdict-verdict.json` in the
+- `--out <path>` — verdict JSON, default `proof-verdict.json` in the
   working directory, byte-deterministic. Human-readable text goes to stdout.
 - Exit codes: `0` complete analysis (findings or not) · `2` invalid
   invocation/input · `3` incomplete or unverified-required evidence ·
