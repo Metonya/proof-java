@@ -40,6 +40,16 @@ public record EvidenceDiagnostics(Path logDir, Consumer<String> progressSink) {
 
     private static final EvidenceDiagnostics NONE = new EvidenceDiagnostics(null, message -> { });
 
+    /**
+     * D-89: a single module's verbose PIT log reached 184 MB on google/gson,
+     * because verbose means one line per mutant per test. The log exists to
+     * explain why a subprocess died, and that explanation is at the end, so the
+     * cap keeps the run's shape - the head, where the invocation and classpath
+     * are - and stops rather than filling a disk. A truncated log says so in its
+     * last line, so nobody reads a cut-off file as a complete one.
+     */
+    private static final long MAX_LOG_BYTES = 25L * 1024 * 1024;
+
     /** Neither channel - the shape used by tests and by any caller with nowhere to report. */
     public static EvidenceDiagnostics none() {
         return NONE;
@@ -83,7 +93,7 @@ public record EvidenceDiagnostics(Path logDir, Consumer<String> progressSink) {
         Path file = logDir.resolve(sanitize(moduleId) + "-" + layer + ".log");
         try {
             Files.createDirectories(logDir);
-            return Files.newBufferedWriter(file, StandardCharsets.UTF_8);
+            return new CappedWriter(Files.newBufferedWriter(file, StandardCharsets.UTF_8), MAX_LOG_BYTES);
         } catch (IOException | UncheckedIOException e) {
             progress("could not open diagnostics log " + file + " (" + e.getClass().getSimpleName()
                 + "); continuing without it");

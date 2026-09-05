@@ -2071,6 +2071,48 @@ problem, and gson has one (`JsonPrimitive#hashOfDoubleValue`). Detecting it need
 call-graph analysis this rule does not do, so the limit is documented rather than
 papered over.
 
+**D-88 · A missing L2/L3 classpath makes the run incomplete, like any other
+missing evidence** (2026-09-05)
+D-85 moved *collection failures* out of warnings and into incomplete reasons: ask
+for mutation evidence, get none, and the run must not report success. It left one
+case behind - `--mutation-report` or `--per-test-report` given without the
+matching `--classpath`, where collection never starts at all.
+
+That was inconsistent. The result is identical either way: evidence was requested
+and does not exist. The argument for keeping it a warning was that a forgotten
+flag is a configuration mistake you can see immediately, unlike a silent runtime
+timeout - but "you can see it in the output" was also true of the timeout
+warning, and it was not enough there either. Someone reading an exit code, which
+is what a CI gate reads, sees the same green in both cases.
+
+`MUTATION_CLASSPATH_MISSING`, `PER_TEST_CLASSPATH_MISSING`, and an unreadable
+classpath file now make the run incomplete (exit 3).
+
+Unchanged: `MUTATION_NO_CHANGED_TARGETS` and its per-test twin stay warnings.
+Those say the diff contained no production class to analyse - the evidence is
+absent because there was nothing to collect, not because something prevented
+collecting it. Reporting a run incomplete for having nothing to do would make
+exit 3 meaningless.
+
+**D-89 · The verbose diagnostics log is capped at 25 MB per module**
+(2026-09-05)
+`--diagnostics-dir` is opt-in and writes nothing unless asked, so it has never
+been a background cost. But when it is asked for - which is exactly when
+something is already broken - a single module's log reached **184 MB** on
+google/gson, because the flag also turns PIT verbose and verbose means a line
+per mutant per test.
+
+Capped at 25 MB per module/layer file. The head is kept rather than the tail: the
+invocation, the classpath and the first failure are what explain a run, and those
+come first. A truncated log ends with a line saying it was truncated and roughly
+how much was dropped, because a silently cut-off file reads exactly like a
+complete one.
+
+Not done: compressing the log, or making the verbosity separately switchable.
+Verbosity is deliberately tied to the log directory (D-64) - verbose output with
+nowhere to land is just a slower run - and a compressed log cannot be tailed
+while a run is stuck, which is the situation it exists for.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

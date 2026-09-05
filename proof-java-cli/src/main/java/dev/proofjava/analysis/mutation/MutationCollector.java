@@ -99,7 +99,13 @@ public final class MutationCollector {
             + " target class(es), budget " + budget.toSeconds() + "s");
         String classpathFile = mutationClasspathFilesById.get(module.id());
         if (classpathFile == null) {
-            warnings.add(new AnalysisReason("MUTATION_CLASSPATH_MISSING",
+            // D-88: the same reasoning as D-85's collection failure. The user
+            // asked for mutation evidence and none exists for this module, and
+            // whether that is a timeout or a forgotten flag does not change what
+            // the result is missing. A configuration mistake is easier to see
+            // than a runtime one, but "easy to see" was the argument for leaving
+            // the timeout a warning too, and it was not enough.
+            incompleteReasons.add(new AnalysisReason("MUTATION_CLASSPATH_MISSING",
                 MODULE_PREFIX + module.id() + "' has target classes to mutate but no --mutation-classpath "
                     + "bound to it; mutation evidence skipped for this module.", null, module.id()));
             return;
@@ -107,7 +113,7 @@ public final class MutationCollector {
 
         MutationClasspathLoader.Result classpath = MutationClasspathLoader.load(repoRoot, module.id(), classpathFile);
         if (!classpath.warnings().isEmpty()) {
-            warnings.addAll(classpath.warnings());
+            incompleteReasons.addAll(classpath.warnings());
             return;
         }
 

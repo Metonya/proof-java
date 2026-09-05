@@ -52,7 +52,7 @@ class PerTestCollectorTest {
     }
 
     @Test
-    void aChangedModuleWithNoBoundClasspathWarns() {
+    void aChangedModuleWithNoBoundClasspathMakesTheRunIncomplete() {
         ChangedFile changed = new ChangedFile("app/src/main/java/com/example/Calc.java", "app",
             Classification.MAPPED, 5, 3, List.of());
 
@@ -60,12 +60,12 @@ class PerTestCollectorTest {
             Duration.ofMinutes(1));
 
         assertTrue(result.modules().isEmpty());
-        assertEquals(1, result.warnings().size());
-        assertEquals("PER_TEST_CLASSPATH_MISSING", result.warnings().get(0).code());
+        assertEquals(1, result.incompleteReasons().size());
+        assertEquals("PER_TEST_CLASSPATH_MISSING", result.incompleteReasons().get(0).code());
     }
 
     @Test
-    void aChangedModuleWithAnUnreadableClasspathFilePropagatesTheLoaderWarning() {
+    void aChangedModuleWithAnUnreadableClasspathFileMakesTheRunIncomplete() {
         ChangedFile changed = new ChangedFile("app/src/main/java/com/example/Calc.java", "app",
             Classification.MAPPED, 5, 3, List.of());
 
@@ -73,8 +73,8 @@ class PerTestCollectorTest {
             Map.of("app", "missing-classpath.txt"), Duration.ofMinutes(1));
 
         assertTrue(result.modules().isEmpty());
-        assertEquals(1, result.warnings().size());
-        assertEquals("PER_TEST_CLASSPATH_MISSING", result.warnings().get(0).code());
+        assertEquals(1, result.incompleteReasons().size());
+        assertEquals("PER_TEST_CLASSPATH_MISSING", result.incompleteReasons().get(0).code());
     }
 
     // --- collectForTargets (Faz 14a, --per-test-target) ---
@@ -91,13 +91,13 @@ class PerTestCollectorTest {
     }
 
     @Test
-    void aTargetedModuleWithNoBoundClasspathWarnsTheSameWayAChangedModuleWould() {
+    void aTargetedModuleWithNoBoundClasspathIsIncompleteTheSameWayAChangedModuleIs() {
         PerTestCollector.Result result = PerTestCollector.collectForTargets(repoRoot, List.of(MODULE),
             Map.of("app", List.of("com.example.Calc*")), Map.of(), Duration.ofMinutes(1),
             dev.proofjava.analysis.subprocess.EvidenceDiagnostics.none());
 
         assertTrue(result.modules().isEmpty());
-        assertEquals(1, result.warnings().size());
-        assertEquals("PER_TEST_CLASSPATH_MISSING", result.warnings().get(0).code());
+        assertEquals(1, result.incompleteReasons().size());
+        assertEquals("PER_TEST_CLASSPATH_MISSING", result.incompleteReasons().get(0).code());
     }
 }

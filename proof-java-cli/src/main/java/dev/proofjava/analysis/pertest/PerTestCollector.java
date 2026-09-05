@@ -102,7 +102,9 @@ public final class PerTestCollector {
             + " target class(es), budget " + timeout.toSeconds() + "s");
         String classpathFile = perTestClasspathFilesById.get(module.id());
         if (classpathFile == null) {
-            acc.warnings.add(new AnalysisReason("PER_TEST_CLASSPATH_MISSING",
+            // D-88: see MutationCollector - requested evidence that never
+            // arrives makes the run incomplete, whatever prevented it.
+            acc.incompleteReasons.add(new AnalysisReason("PER_TEST_CLASSPATH_MISSING",
                 MODULE_PREFIX + module.id() + "' has changed production classes but no --per-test-classpath "
                     + "bound to it; per-test evidence skipped for this module.", null, module.id()));
             return;
@@ -110,7 +112,7 @@ public final class PerTestCollector {
 
         PerTestClasspathLoader.Result classpath = PerTestClasspathLoader.load(repoRoot, module.id(), classpathFile);
         if (!classpath.warnings().isEmpty()) {
-            acc.warnings.addAll(classpath.warnings());
+            acc.incompleteReasons.addAll(classpath.warnings());
             return;
         }
 
