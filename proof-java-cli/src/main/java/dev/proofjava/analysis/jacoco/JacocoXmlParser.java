@@ -241,19 +241,19 @@ public final class JacocoXmlParser {
             }
             return new SourceFileReport(packageName, fileName, lines, reportedMissed, reportedCovered);
         }
-    }
 
-    /** Called right after the START_ELEMENT of the element to discard. */
-    private void skipSubtree(XMLStreamReader r, String sourceLabel) throws XMLStreamException {
-        int depth = 1;
-        while (depth > 0) {
-            int event = r.next();
-            if (event == XMLStreamConstants.START_ELEMENT) {
-                depth++;
-            } else if (event == XMLStreamConstants.END_ELEMENT) {
-                depth--;
-            } else if (event == XMLStreamConstants.ENTITY_REFERENCE) {
-                throw entityReferenceRejected(r, sourceLabel);
+        /** Called right after the START_ELEMENT of the element to discard. Moved here (S3398) - every caller is now inside this class. */
+        private void skipSubtree(XMLStreamReader r, String sourceLabel) throws XMLStreamException {
+            int depth = 1;
+            while (depth > 0) {
+                int event = r.next();
+                if (event == XMLStreamConstants.START_ELEMENT) {
+                    depth++;
+                } else if (event == XMLStreamConstants.END_ELEMENT) {
+                    depth--;
+                } else if (event == XMLStreamConstants.ENTITY_REFERENCE) {
+                    throw entityReferenceRejected(r, sourceLabel);
+                }
             }
         }
     }

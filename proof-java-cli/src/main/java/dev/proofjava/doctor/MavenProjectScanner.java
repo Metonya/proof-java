@@ -148,33 +148,41 @@ public final class MavenProjectScanner {
             return "parent".equals(name) || "dependencies".equals(name) || "build".equals(name)
                 || "properties".equals(name) || "profiles".equals(name);
         }
-    }
 
-    /** Consumes {@code r}'s current start element and every descendant, leaving the reader positioned on the matching end element - same shape as {@code JacocoXmlParser}'s subtree skip. */
-    private static void skipSubtree(XMLStreamReader r) throws XMLStreamException {
-        int depth = 1;
-        while (depth > 0 && r.hasNext()) {
-            int event = r.next();
-            if (event == XMLStreamConstants.START_ELEMENT) {
-                depth++;
-            } else if (event == XMLStreamConstants.END_ELEMENT) {
-                depth--;
+        /**
+         * Consumes {@code r}'s current start element and every descendant,
+         * leaving the reader positioned on the matching end element - same
+         * shape as {@code JacocoXmlParser}'s subtree skip. Moved here
+         * (SonarQube java:S3398) - {@link #handleStartElement} is its only
+         * caller. Its own {@code subtreeDepth} is unrelated to this class's
+         * {@code depth} field (named apart to avoid any shadowing confusion).
+         */
+        private static void skipSubtree(XMLStreamReader r) throws XMLStreamException {
+            int subtreeDepth = 1;
+            while (subtreeDepth > 0 && r.hasNext()) {
+                int event = r.next();
+                if (event == XMLStreamConstants.START_ELEMENT) {
+                    subtreeDepth++;
+                } else if (event == XMLStreamConstants.END_ELEMENT) {
+                    subtreeDepth--;
+                }
             }
         }
-    }
 
-    private static String readCharacters(XMLStreamReader r) throws XMLStreamException {
-        StringBuilder sb = new StringBuilder();
-        while (r.hasNext()) {
-            int event = r.next();
-            if (event == XMLStreamConstants.CHARACTERS || event == XMLStreamConstants.CDATA) {
-                sb.append(r.getText());
-            } else if (event == XMLStreamConstants.END_ELEMENT) {
-                break;
+        /** Moved here (SonarQube java:S3398) - {@link #handleStartElement} is its only caller. */
+        private static String readCharacters(XMLStreamReader r) throws XMLStreamException {
+            StringBuilder sb = new StringBuilder();
+            while (r.hasNext()) {
+                int event = r.next();
+                if (event == XMLStreamConstants.CHARACTERS || event == XMLStreamConstants.CDATA) {
+                    sb.append(r.getText());
+                } else if (event == XMLStreamConstants.END_ELEMENT) {
+                    break;
+                }
             }
+            String text = sb.toString().trim();
+            return text.isEmpty() ? null : text;
         }
-        String text = sb.toString().trim();
-        return text.isEmpty() ? null : text;
     }
 
     /** Same OWASP StAX XXE posture as {@code JacocoXmlParser}'s {@code secureFactory()} - a pom.xml is local, but there is no reason to parse it any less defensively. */
