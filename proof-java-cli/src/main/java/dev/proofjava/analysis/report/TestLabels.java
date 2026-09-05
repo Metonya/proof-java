@@ -36,15 +36,15 @@ final class TestLabels {
 
         Matcher junit5 = JUNIT5.matcher(decoded);
         if (junit5.find()) {
-            return simpleName(junit5.group(1)) + "#" + junit5.group(2).trim();
+            return shorten(simpleName(junit5.group(1)) + "#" + junit5.group(2).trim());
         }
         Matcher vintage = VINTAGE.matcher(decoded);
         if (vintage.find()) {
-            return simpleName(vintage.group(1)) + "#" + vintage.group(2).trim();
+            return shorten(simpleName(vintage.group(1)) + "#" + vintage.group(2).trim());
         }
         Matcher plain = PLAIN.matcher(decoded);
         if (plain.find()) {
-            return simpleName(plain.group(1)) + "#" + plain.group(2);
+            return shorten(simpleName(plain.group(1)) + "#" + plain.group(2));
         }
         return shorten(decoded);
     }
@@ -82,8 +82,9 @@ final class TestLabels {
         return lastDot < 0 ? trimmed : trimmed.substring(lastDot + 1);
     }
 
+    /** A table cell, not a document: a generated suite descriptor stays long even after the scaffolding is stripped. */
     private static String shorten(String value) {
-        return value.length() <= 80 ? value : value.substring(0, 77) + "...";
+        return value.length() <= 60 ? value : value.substring(0, 57) + "...";
     }
 
     /**

@@ -39,7 +39,7 @@ class TestLabelsTest {
         String label = TestLabels.readable(raw);
 
         assertTrue(label.startsWith("JsonArrayAsListSuiteTest#"), label);
-        assertTrue(label.length() < 60, "a table cell has to fit: " + label);
+        assertTrue(label.length() <= 60, "a table cell has to fit: " + label);
         assertTrue(!label.contains("%5B"), "percent escapes are decoded, not shown: " + label);
     }
 
