@@ -78,51 +78,75 @@ public final class MavenProjectScanner {
     private static ParsedPom readPom(InputStream in) throws XMLStreamException {
         XMLStreamReader r = secureFactory().createXMLStreamReader(in);
         try {
-            String artifactId = null;
-            String packaging = null;
-            List<String> childModules = new ArrayList<>();
-            int depth = 0;
-            // depth 1 is <project> itself (the first START_ELEMENT this reader
-            // ever sees) - its direct children (artifactId, packaging,
-            // modules) are depth 2, and <module> entries inside <modules>
-            // are depth 3.
-            String currentPath = null; // "modules" while inside that element
+            PomState state = new PomState();
             while (r.hasNext()) {
                 int event = r.next();
                 if (event == XMLStreamConstants.START_ELEMENT) {
-                    depth++;
-                    String name = r.getLocalName();
-                    if (depth == 2 && "artifactId".equals(name) && artifactId == null) {
-                        artifactId = readCharacters(r);
-                        depth--; // readCharacters(r) already consumed this element's own END_ELEMENT
-                    } else if (depth == 2 && "packaging".equals(name)) {
-                        packaging = readCharacters(r);
-                        depth--;
-                    } else if (depth == 3 && "module".equals(name) && MODULES_ELEMENT.equals(currentPath)) {
-                        childModules.add(readCharacters(r));
-                        depth--;
-                    } else if (depth == 2 && MODULES_ELEMENT.equals(name)) {
-                        currentPath = MODULES_ELEMENT;
-                    }
-                    if (depth == 2 && ("parent".equals(name) || "dependencies".equals(name) || "build".equals(name)
-                            || "properties".equals(name) || "profiles".equals(name))) {
-                        skipSubtree(r); // never let a nested artifactId/packaging/module inside these count
-                        depth--;
-                    }
+                    state.handleStartElement(r);
                 } else if (event == XMLStreamConstants.END_ELEMENT) {
-                    depth--;
-                    if (depth == 2) {
-                        currentPath = null;
-                    }
+                    state.handleEndElement();
                 }
             }
-            return new ParsedPom(artifactId, packaging, childModules);
+            return new ParsedPom(state.artifactId, state.packaging, state.childModules);
         } finally {
             try {
                 r.close();
             } catch (XMLStreamException ignored) {
                 // best-effort close
             }
+        }
+    }
+
+    /**
+     * Mutable read-loop state for {@link #readPom} (SonarQube java:S3776 -
+     * the flat {@code if}/{@code else if} chain over {@code depth}+name
+     * combinations was what drove that method's own complexity over budget;
+     * moving it here doesn't remove a single branch, it just gives the loop
+     * a name instead of five bare local variables threaded through one method).
+     *
+     * <p>depth 1 is {@code <project>} itself (the first {@code START_ELEMENT}
+     * the reader ever sees) - its direct children ({@code artifactId},
+     * {@code packaging}, {@code modules}) are depth 2, and {@code <module>}
+     * entries inside {@code <modules>} are depth 3.
+     */
+    private static final class PomState {
+        private String artifactId;
+        private String packaging;
+        private final List<String> childModules = new ArrayList<>();
+        private int depth;
+        private String currentPath; // "modules" while inside that element
+
+        void handleStartElement(XMLStreamReader r) throws XMLStreamException {
+            depth++;
+            String name = r.getLocalName();
+            if (depth == 2 && "artifactId".equals(name) && artifactId == null) {
+                artifactId = readCharacters(r);
+                depth--; // readCharacters(r) already consumed this element's own END_ELEMENT
+            } else if (depth == 2 && "packaging".equals(name)) {
+                packaging = readCharacters(r);
+                depth--;
+            } else if (depth == 3 && "module".equals(name) && MODULES_ELEMENT.equals(currentPath)) {
+                childModules.add(readCharacters(r));
+                depth--;
+            } else if (depth == 2 && MODULES_ELEMENT.equals(name)) {
+                currentPath = MODULES_ELEMENT;
+            }
+            if (depth == 2 && isSkippedElement(name)) {
+                skipSubtree(r); // never let a nested artifactId/packaging/module inside these count
+                depth--;
+            }
+        }
+
+        void handleEndElement() {
+            depth--;
+            if (depth == 2) {
+                currentPath = null;
+            }
+        }
+
+        private static boolean isSkippedElement(String name) {
+            return "parent".equals(name) || "dependencies".equals(name) || "build".equals(name)
+                || "properties".equals(name) || "profiles".equals(name);
         }
     }
 

@@ -22,7 +22,17 @@ final class TestLabels {
 
     private static final Pattern JUNIT5 = Pattern.compile("\\[class:([^]]+)].*?\\[method:([^](]+)");
     private static final Pattern VINTAGE = Pattern.compile("\\[runner:([^]]+)].*?\\[test:([^](\\[]+)");
-    private static final Pattern PLAIN = Pattern.compile("([\\w.$]+)#([\\w$]+)");
+    /**
+     * SonarQube java:S5852 flagged this as a possible DoS-by-backtracking
+     * hotspot; reviewed and hardened rather than left as-is. No nested
+     * quantifier ambiguity exists here - {@code #} is outside {@code [\w.$]},
+     * so the first group's greedy match can never cross into the second
+     * group's territory and never needs to backtrack past a real {@code #}.
+     * Possessive quantifiers make that explicit and remove even the linear
+     * backtracking the plain {@code +} would otherwise attempt on a
+     * non-matching tail.
+     */
+    private static final Pattern PLAIN = Pattern.compile("([\\w.$]++)#([\\w$]++)");
 
     private TestLabels() {
     }

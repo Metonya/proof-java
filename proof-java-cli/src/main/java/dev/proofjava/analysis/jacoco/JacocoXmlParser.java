@@ -202,44 +202,45 @@ public final class JacocoXmlParser {
             }
             return result;
         }
-    }
 
-    private SourceFileReport readSourceFile(XMLStreamReader r, String packageName, String fileName, String sourceLabel) throws XMLStreamException {
-        List<LineCoverage> lines = new ArrayList<>();
-        int reportedMissed = 0;
-        int reportedCovered = 0;
-        int depth = 1;
-        while (depth > 0) {
-            int event = r.next();
-            switch (event) {
-                case XMLStreamConstants.ENTITY_REFERENCE -> throw entityReferenceRejected(r, sourceLabel);
-                case XMLStreamConstants.START_ELEMENT -> {
-                    depth++;
-                    String local = r.getLocalName();
-                    if ("line".equals(local)) {
-                        lines.add(new LineCoverage(
-                            intAttr(r, "nr"),
-                            intAttr(r, "mi"),
-                            intAttr(r, "ci"),
-                            intAttrOrZero(r, "mb"),
-                            intAttrOrZero(r, "cb")
-                        ));
-                        // <line> has no children; its own END_ELEMENT arrives
-                        // on the next iteration and decrements depth, same
-                        // as any other element - no special-casing needed.
-                    } else if ("counter".equals(local) && "LINE".equals(attr(r, "type"))) {
-                        reportedMissed = intAttr(r, "missed");
-                        reportedCovered = intAttr(r, "covered");
-                    } else {
-                        skipSubtree(r, sourceLabel);
-                        depth--; // skipSubtree already consumed through its own end tag
+        /** Moved here from the outer class (SonarQube java:S3398) - readPackage above is its only caller. */
+        private SourceFileReport readSourceFile(XMLStreamReader r, String packageName, String fileName, String sourceLabel) throws XMLStreamException {
+            List<LineCoverage> lines = new ArrayList<>();
+            int reportedMissed = 0;
+            int reportedCovered = 0;
+            int depth = 1;
+            while (depth > 0) {
+                int event = r.next();
+                switch (event) {
+                    case XMLStreamConstants.ENTITY_REFERENCE -> throw entityReferenceRejected(r, sourceLabel);
+                    case XMLStreamConstants.START_ELEMENT -> {
+                        depth++;
+                        String local = r.getLocalName();
+                        if ("line".equals(local)) {
+                            lines.add(new LineCoverage(
+                                intAttr(r, "nr"),
+                                intAttr(r, "mi"),
+                                intAttr(r, "ci"),
+                                intAttrOrZero(r, "mb"),
+                                intAttrOrZero(r, "cb")
+                            ));
+                            // <line> has no children; its own END_ELEMENT arrives
+                            // on the next iteration and decrements depth, same
+                            // as any other element - no special-casing needed.
+                        } else if ("counter".equals(local) && "LINE".equals(attr(r, "type"))) {
+                            reportedMissed = intAttr(r, "missed");
+                            reportedCovered = intAttr(r, "covered");
+                        } else {
+                            skipSubtree(r, sourceLabel);
+                            depth--; // skipSubtree already consumed through its own end tag
+                        }
                     }
+                    case XMLStreamConstants.END_ELEMENT -> depth--;
+                    default -> { /* ignore */ }
                 }
-                case XMLStreamConstants.END_ELEMENT -> depth--;
-                default -> { /* ignore */ }
             }
+            return new SourceFileReport(packageName, fileName, lines, reportedMissed, reportedCovered);
         }
-        return new SourceFileReport(packageName, fileName, lines, reportedMissed, reportedCovered);
     }
 
     /** Called right after the START_ELEMENT of the element to discard. */
