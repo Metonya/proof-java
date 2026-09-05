@@ -2359,6 +2359,19 @@ underlying pattern the expression would otherwise satisfy. Confirmed on the
 real repo: the finding count dropped from 255 to 254 and the specific line
 no longer appears.
 
+A second, unannotated legitimate shape turned up in the same scan: commons-io's
+`AccumulatorPathVisitorTest` pairs `assertEquals(x, x)` with
+`assertEquals(x.hashCode(), x.hashCode())` in eight separate test methods -
+the same equals/hashCode-contract idiom, just never marked with
+`@SuppressWarnings` at all (no IDE inspection happens to flag the non-hashCode
+half on its own). Added `isPairedWithHashCodeReflexivityCheck`: scans the
+whole test method for a sibling `assertEquals` whose two arguments are both
+`.hashCode()` calls on the same base expression as the self-comparison: if
+found, the self-comparison is legitimate regardless of annotation. An
+isolated self-comparison with no accompanying pair, or a pair on a *different*
+base expression, still fires - three new test cases cover both negative
+controls.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

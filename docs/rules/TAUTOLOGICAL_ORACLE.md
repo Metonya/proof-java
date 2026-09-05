@@ -44,6 +44,12 @@ list requires updating this spec and its fixtures first.
   (`x.equals(x)` must hold per the `Object.equals` contract), found as a real
   false positive on apache/commons-io's `ByteOrderMarkTest`. Scoped to
   pattern 3 only: the same suppression does not silence patterns 1, 2, or 4.
+- Pattern 3 when `assertEquals(x, x)` is paired, anywhere else in the same
+  test method, with `assertEquals(x.hashCode(), x.hashCode())` on the same
+  base expression (D-98) — the unannotated, equally common half of the same
+  equals/hashCode-contract idiom, found eight times on commons-io's
+  `AccumulatorPathVisitorTest` with no suppression at all. An isolated
+  self-comparison with no accompanying hashCode pair still fires.
 
 ## Suggested action text
 

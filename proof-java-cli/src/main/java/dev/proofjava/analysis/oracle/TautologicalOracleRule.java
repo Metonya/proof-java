@@ -60,7 +60,7 @@ final class TautologicalOracleRule {
                     || OracleAllowlist.JUNIT4_ASSERT.equals(occ.declaringTypeFqn()));
             if (isDirectJunitCall) {
                 Optional<RuleFinding> finding = matchPattern(occ.methodName(), occ.anchorCall(), testClassFqn,
-                    selfComparisonSuppressed);
+                    selfComparisonSuppressed, testMethod);
                 if (finding.isPresent()) {
                     return finding;
                 }
@@ -101,10 +101,11 @@ final class TautologicalOracleRule {
     }
 
     private static Optional<RuleFinding> matchPattern(String methodName, MethodCallExpr call, String testClassFqn,
-                                                        boolean selfComparisonSuppressed) {
+                                                        boolean selfComparisonSuppressed, MethodDeclaration testMethod) {
         List<Expression> args = call.getArguments();
         if ("assertEquals".equals(methodName) && args.size() >= 2) {
-            Optional<RuleFinding> f = matchAssertEquals(args.get(0), args.get(1), testClassFqn, selfComparisonSuppressed);
+            Optional<RuleFinding> f = matchAssertEquals(args.get(0), args.get(1), testClassFqn,
+                selfComparisonSuppressed, testMethod);
             if (f.isPresent()) {
                 return f;
             }
@@ -120,7 +121,7 @@ final class TautologicalOracleRule {
     }
 
     private static Optional<RuleFinding> matchAssertEquals(Expression a, Expression b, String testClassFqn,
-                                                             boolean selfComparisonSuppressed) {
+                                                             boolean selfComparisonSuppressed, MethodDeclaration testMethod) {
         // Checked before pattern 1: a syntactic self-comparison (D-98's real
         // shape, ByteOrderMark.UTF_16BE compared to itself) can *also* satisfy
         // isPlainConstant's own "resolves to a field" branch depending on how
@@ -132,7 +133,7 @@ final class TautologicalOracleRule {
             && a.findAll(MethodCallExpr.class).isEmpty() && b.findAll(MethodCallExpr.class).isEmpty()
             && (a instanceof NameExpr || a instanceof FieldAccessExpr || a instanceof ArrayAccessExpr || a instanceof CastExpr);
         if (isSelfComparison) {
-            if (selfComparisonSuppressed) {
+            if (selfComparisonSuppressed || isPairedWithHashCodeReflexivityCheck(a, testMethod)) {
                 return Optional.empty();
             }
             Confidence confidence = (a instanceof NameExpr || a instanceof FieldAccessExpr) ? Confidence.HIGH : Confidence.MEDIUM;
@@ -142,6 +143,34 @@ final class TautologicalOracleRule {
             return Optional.of(new RuleFinding(Confidence.HIGH, "Both operands are compile-time constants; this assertion holds for any implementation."));
         }
         return Optional.empty();
+    }
+
+    /**
+     * The second, unannotated legitimate shape found on the same repo
+     * (apache/commons-io's {@code AccumulatorPathVisitorTest}, eight
+     * occurrences, always in this exact pairing, never
+     * {@code @SuppressWarnings}-marked): {@code assertEquals(x, x)}
+     * immediately alongside {@code assertEquals(x.hashCode(), x.hashCode())}
+     * is a routine equals/hashCode-contract sanity check appended to an
+     * otherwise-unrelated test, not a copy-paste mistake - the two
+     * assertions are clearly written as a pair, and no IDE inspection
+     * happens to flag the non-hashCode half the way it flags the reflexive
+     * {@code equals()} call on its own. Scanning the whole method (not just
+     * the current occurrence) for a sibling {@code assertEquals} whose two
+     * arguments are both {@code .hashCode()} calls on the same base
+     * expression is what distinguishes this from an isolated,
+     * unaccompanied self-comparison, which still fires.
+     */
+    private static boolean isPairedWithHashCodeReflexivityCheck(Expression selfComparedExpr, MethodDeclaration testMethod) {
+        String scope = selfComparedExpr.toString();
+        return testMethod.findAll(MethodCallExpr.class).stream()
+            .filter(call -> "assertEquals".equals(call.getNameAsString()) && call.getArguments().size() >= 2)
+            .anyMatch(call -> isHashCodeOnScope(call.getArgument(0), scope) && isHashCodeOnScope(call.getArgument(1), scope));
+    }
+
+    private static boolean isHashCodeOnScope(Expression e, String scope) {
+        return e instanceof MethodCallExpr mce && "hashCode".equals(mce.getNameAsString())
+            && mce.getScope().map(Expression::toString).map(scope::equals).orElse(false);
     }
 
     private static boolean isBooleanLiteral(Expression e, boolean value) {
