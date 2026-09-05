@@ -107,13 +107,7 @@ public final class PerTestRunner {
             pb.directory(repoRoot.toFile());
             pb.redirectErrorStream(true); // one chronological stream, one drain thread (D-64)
 
-            Process process;
-            try {
-                process = pb.start();
-            } catch (IOException e) {
-                throw new PerTestCollectionException("Could not start the per-test coverage subprocess for module '"
-                    + moduleId + "'", e);
-            }
+            Process process = startProcess(pb, moduleId);
 
             ProcessOutputTail output = ProcessOutputTail.of(process.getInputStream(), log, null);
             Thread outputThread = output.start("proof-pertest-output");
@@ -197,6 +191,15 @@ public final class PerTestRunner {
                     + ProgressMarker.formatElapsed(Duration.ofNanos(System.nanoTime() - start)) + " elapsed");
                 nextHeartbeat = System.nanoTime() + HEARTBEAT.toNanos();
             }
+        }
+    }
+
+    private static Process startProcess(ProcessBuilder pb, String moduleId) {
+        try {
+            return pb.start();
+        } catch (IOException e) {
+            throw new PerTestCollectionException("Could not start the per-test coverage subprocess for module '"
+                + moduleId + "'", e);
         }
     }
 

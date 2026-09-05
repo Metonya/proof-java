@@ -313,7 +313,7 @@ class HtmlRendererTest {
 
         long openScript = countOccurrences(rendered, "<script>");
         long closeScriptTotal = countOccurrences(rendered, "</script>");
-        assertTrue(openScript == 1, rendered);
+        assertEquals(1, openScript, rendered);
         // one closing tag for the data script, one for the code script.
         assertEquals(2, closeScriptTotal, rendered);
         assertFalse(rendered.contains("innerHTML"), rendered);

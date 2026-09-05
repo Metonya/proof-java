@@ -38,17 +38,17 @@ public final class PerTestCollector {
     public static Result collect(Path repoRoot, List<ModuleDefinition> modules, List<ChangedFile> changedFiles,
                                   Map<String, String> perTestClasspathFilesById, Duration timeout,
                                   EvidenceDiagnostics diagnostics) {
-        Accumulator acc = new Accumulator();
+        Context context = new Context(repoRoot, perTestClasspathFilesById, timeout, diagnostics, new Accumulator());
 
         for (ModuleDefinition module : modules) {
             List<String> targetClasses = ChangedClassTargets.globsFor(module, changedFiles);
             AnalysisReason noTargetsReason = new AnalysisReason("PER_TEST_NO_CHANGED_TARGETS",
                 MODULE_PREFIX + module.id() + "' has no mapped changed production class, so no per-test evidence "
                     + "was requested from the engine.", null, module.id(), 0);
-            collectOneModule(repoRoot, module, targetClasses, noTargetsReason, perTestClasspathFilesById, timeout, acc, diagnostics);
+            collectOneModule(module, targetClasses, noTargetsReason, context);
         }
 
-        return acc.toResult();
+        return context.acc().toResult();
     }
 
     /**
@@ -65,28 +65,37 @@ public final class PerTestCollector {
                                             Map<String, String> perTestClasspathFilesById,
                                             Duration timeout,
                                             EvidenceDiagnostics diagnostics) {
-        Accumulator acc = new Accumulator();
+        Context context = new Context(repoRoot, perTestClasspathFilesById, timeout, diagnostics, new Accumulator());
 
         for (ModuleDefinition module : modules) {
             List<String> targetClasses = targetGlobsById.getOrDefault(module.id(), List.of());
-            collectOneModule(repoRoot, module, targetClasses, null, perTestClasspathFilesById, timeout, acc, diagnostics);
+            collectOneModule(module, targetClasses, null, context);
         }
 
-        return acc.toResult();
+        return context.acc().toResult();
+    }
+
+    /**
+     * Everything one {@link #collect}/{@link #collectForTargets} call shares
+     * across every module it iterates (SonarQube java:S107 -
+     * {@code collectOneModule} conflated this loop-invariant context with
+     * its actual per-module arguments; every field here is the same object
+     * for every module in one run, unlike {@code module}/{@code
+     * targetClasses}/{@code noTargetsReason}, which is what stayed out of
+     * this record).
+     */
+    private record Context(Path repoRoot, Map<String, String> perTestClasspathFilesById, Duration timeout,
+                            EvidenceDiagnostics diagnostics, Accumulator acc) {
     }
 
     /**
      * One module's collection attempt (SonarQube java:S135 - {@link
      * #collect} stays continue-free). {@code noTargetsReason} may be
      * {@code null} when the caller (target mode) already explained an empty
-     * target list itself. {@code acc} bundles the two accumulator lists
-     * (SonarQube java:S107 - collect/collectForTargets/collectOneModule
-     * always mutate evidence and warnings together, so one parameter object
-     * is both the fix and the more accurate shape).
+     * target list itself.
      */
-    private static void collectOneModule(Path repoRoot, ModuleDefinition module, List<String> targetClasses,
-                                          AnalysisReason noTargetsReason, Map<String, String> perTestClasspathFilesById,
-                                          Duration timeout, Accumulator acc, EvidenceDiagnostics diagnostics) {
+    private static void collectOneModule(ModuleDefinition module, List<String> targetClasses,
+                                          AnalysisReason noTargetsReason, Context context) {
         if (targetClasses.isEmpty()) {
             // D-64: this used to be a silent return. --per-test-report was
             // explicitly asked for, so "this module contributed nothing"
@@ -95,39 +104,39 @@ public final class PerTestCollector {
             // ref, so nothing had changed) and the verdict explained none
             // of it.
             if (noTargetsReason != null) {
-                acc.warnings.add(noTargetsReason);
+                context.acc().warnings.add(noTargetsReason);
             }
             return;
         }
-        diagnostics.progress("per-test: module '" + module.id() + "' - " + targetClasses.size()
-            + " target class(es), budget " + timeout.toSeconds() + "s");
-        String classpathFile = perTestClasspathFilesById.get(module.id());
+        context.diagnostics().progress("per-test: module '" + module.id() + "' - " + targetClasses.size()
+            + " target class(es), budget " + context.timeout().toSeconds() + "s");
+        String classpathFile = context.perTestClasspathFilesById().get(module.id());
         if (classpathFile == null) {
             // D-88: see MutationCollector - requested evidence that never
             // arrives makes the run incomplete, whatever prevented it.
-            acc.incompleteReasons.add(new AnalysisReason("PER_TEST_CLASSPATH_MISSING",
+            context.acc().incompleteReasons.add(new AnalysisReason("PER_TEST_CLASSPATH_MISSING",
                 MODULE_PREFIX + module.id() + "' has changed production classes but no --per-test-classpath "
                     + "bound to it; per-test evidence skipped for this module.", null, module.id()));
             return;
         }
 
-        PerTestClasspathLoader.Result classpath = PerTestClasspathLoader.load(repoRoot, module.id(), classpathFile);
+        PerTestClasspathLoader.Result classpath = PerTestClasspathLoader.load(context.repoRoot(), module.id(), classpathFile);
         if (!classpath.warnings().isEmpty()) {
-            acc.incompleteReasons.addAll(classpath.warnings());
+            context.acc().incompleteReasons.addAll(classpath.warnings());
             return;
         }
 
         try {
-            Optional<PerTestModuleEvidence> result = PerTestRunner.run(module.id(), repoRoot,
-                classpath.classPathElements(), classpath.codePaths(), targetClasses, timeout, diagnostics);
-            result.ifPresent(one -> recordEvidence(module, one, acc));
+            Optional<PerTestModuleEvidence> result = PerTestRunner.run(module.id(), context.repoRoot(),
+                classpath.classPathElements(), classpath.codePaths(), targetClasses, context.timeout(), context.diagnostics());
+            result.ifPresent(one -> recordEvidence(module, one, context.acc()));
         } catch (PerTestCollectionException e) {
             // D-85: same reasoning as MutationCollector - --per-test-report was
             // requested and produced nothing, so the run is incomplete, not
             // complete-with-a-note.
             String hint = PitJdkSupport.isClasspathBytecodeCrash(e.getMessage())
                 ? PitJdkSupport.classpathBytecodeHint() : "";
-            acc.incompleteReasons.add(new AnalysisReason("PER_TEST_COLLECTION_FAILED",
+            context.acc().incompleteReasons.add(new AnalysisReason("PER_TEST_COLLECTION_FAILED",
                 MODULE_PREFIX + module.id() + "' per-test coverage collection failed (" + e.getMessage()
                     + "); per-test evidence skipped for this module." + hint, null, module.id()));
         }

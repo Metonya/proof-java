@@ -49,9 +49,10 @@ class PitJdkSupportTest {
      */
     @Test
     void aClasspathBytecodeCrashIsRecognizedByItsSignature() {
-        String realFailure = "Module 'demo' mutation subprocess exited 1 (0/1 class(es) completed) (output tail:\n"
-            + "Exception in thread \"main\" java.lang.IllegalArgumentException: Unsupported class file major version 69\n"
-            + "\tat org.pitest.mutationtest.verify.KotlinVerifier.kotlinClassesToBeMutated(KotlinVerifierFactory.java:42))";
+        String realFailure = """
+            Module 'demo' mutation subprocess exited 1 (0/1 class(es) completed) (output tail:
+            Exception in thread "main" java.lang.IllegalArgumentException: Unsupported class file major version 69
+            \tat org.pitest.mutationtest.verify.KotlinVerifier.kotlinClassesToBeMutated(KotlinVerifierFactory.java:42))""";
 
         assertTrue(PitJdkSupport.isClasspathBytecodeCrash(realFailure), realFailure);
     }

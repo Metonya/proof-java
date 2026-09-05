@@ -1,6 +1,7 @@
 package dev.proofjava.analysis.report;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -53,6 +54,6 @@ class TestLabelsTest {
     void leavesSomethingItCannotParseUsableRatherThanEmpty() {
         assertEquals("", TestLabels.readable(null));
         assertEquals("", TestLabels.readable("  "));
-        assertTrue(TestLabels.readable("something unstructured").length() > 0);
+        assertFalse(TestLabels.readable("something unstructured").isEmpty());
     }
 }

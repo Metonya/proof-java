@@ -45,6 +45,13 @@ import dev.proofjava.analysis.vcs.VcsIdentity;
  */
 public final class VerdictJsonReader {
 
+    /** JSON field names repeated across several of this reader's block parsers (SonarQube java:S1192). */
+    private static final String FIELD_STATUS = "status";
+    private static final String FIELD_MODULE = "module";
+    private static final String FIELD_MODULES = "modules";
+    private static final String FIELD_CLASS_NAME = "className";
+    private static final String FIELD_METHOD_NAME = "methodName";
+
     private VerdictJsonReader() {
     }
 
@@ -71,7 +78,6 @@ public final class VerdictJsonReader {
             List<AnalysisReason> incompleteReasons = List.of();
             String diffMode = null;
             String findingsScope = null;
-            String baseRef = null;
             VcsIdentity identity = null;
             int languageLevel = 0;
             String encoding = null;
@@ -101,7 +107,6 @@ public final class VerdictJsonReader {
                         InputsBlock block = readInputsBlock(p);
                         diffMode = block.diffMode;
                         findingsScope = block.findingsScope;
-                        baseRef = block.baseRef;
                         identity = block.identity;
                         languageLevel = block.languageLevel;
                         encoding = block.encoding;
@@ -148,7 +153,7 @@ public final class VerdictJsonReader {
             String field = requireFieldName(p);
             p.nextToken();
             switch (field) {
-                case "status" -> complete = "complete".equals(p.getText());
+                case FIELD_STATUS -> complete = "complete".equals(p.getText());
                 case "incompleteReasons" -> reasons = readArray(p, VerdictJsonReader::readReason);
                 default -> p.skipChildren();
             }
@@ -181,7 +186,7 @@ public final class VerdictJsonReader {
                 case "languageLevel" -> languageLevel = p.getIntValue();
                 case "encoding" -> encoding = p.getText();
                 case "exclusions" -> exclusions = readArray(p, JsonParser::getText);
-                case "modules" -> modules = readArray(p, VerdictJsonReader::readModule);
+                case FIELD_MODULES -> modules = readArray(p, VerdictJsonReader::readModule);
                 default -> p.skipChildren();
             }
         }
@@ -281,7 +286,7 @@ public final class VerdictJsonReader {
             String field = requireFieldName(p);
             p.nextToken();
             switch (field) {
-                case "status" -> status = p.getText();
+                case FIELD_STATUS -> status = p.getText();
                 case "jacoco-line" -> jacocoLine = readMetric(p);
                 case "strict-line" -> strictLine = readMetric(p);
                 case "sonar-compatible" -> sonarCompatible = readMetric(p);
@@ -347,7 +352,7 @@ public final class VerdictJsonReader {
             p.nextToken();
             switch (field) {
                 case "path" -> path = p.getText();
-                case "module" -> module = p.getText();
+                case FIELD_MODULE -> module = p.getText();
                 case "classification" -> classification = classificationFromSchemaValue(p.getText());
                 case "newLines" -> newLines = p.getIntValue();
                 case "coveredNewLines" -> coveredNewLines = p.getIntValue();
@@ -400,7 +405,7 @@ public final class VerdictJsonReader {
                 case "rule" -> rule = p.getText();
                 case "severity" -> severity = Severity.valueOf(p.getText());
                 case "confidence" -> confidence = Confidence.valueOf(p.getText());
-                case "module" -> module = p.getText();
+                case FIELD_MODULE -> module = p.getText();
                 case "path" -> path = p.getText();
                 case "startLine" -> startLine = p.getIntValue();
                 case "endLine" -> endLine = p.getIntValue();
@@ -432,7 +437,7 @@ public final class VerdictJsonReader {
                 case "code" -> code = p.getText();
                 case "message" -> message = p.getText();
                 case "path" -> path = p.getText();
-                case "module" -> module = p.getText();
+                case FIELD_MODULE -> module = p.getText();
                 case "count" -> count = p.getIntValue();
                 default -> p.skipChildren();
             }
@@ -446,7 +451,7 @@ public final class VerdictJsonReader {
         while (p.nextToken() != JsonToken.END_OBJECT) {
             String field = requireFieldName(p);
             p.nextToken();
-            if ("modules".equals(field)) {
+            if (FIELD_MODULES.equals(field)) {
                 modules = readArray(p, VerdictJsonReader::readPerTestModule);
             } else {
                 p.skipChildren();
@@ -501,8 +506,8 @@ public final class VerdictJsonReader {
             String field = requireFieldName(p);
             p.nextToken();
             switch (field) {
-                case "className" -> className = p.getText();
-                case "methodName" -> methodName = p.getText();
+                case FIELD_CLASS_NAME -> className = p.getText();
+                case FIELD_METHOD_NAME -> methodName = p.getText();
                 case "lines" -> lines = readArray(p, VerdictJsonReader::readRawPerTestLine);
                 default -> p.skipChildren();
             }
@@ -538,7 +543,7 @@ public final class VerdictJsonReader {
         while (p.nextToken() != JsonToken.END_OBJECT) {
             String field = requireFieldName(p);
             p.nextToken();
-            if ("modules".equals(field)) {
+            if (FIELD_MODULES.equals(field)) {
                 modules = readArray(p, VerdictJsonReader::readMutationModule);
             } else {
                 p.skipChildren();
@@ -592,8 +597,8 @@ public final class VerdictJsonReader {
             String field = requireFieldName(p);
             p.nextToken();
             switch (field) {
-                case "className" -> className = p.getText();
-                case "methodName" -> methodName = p.getText();
+                case FIELD_CLASS_NAME -> className = p.getText();
+                case FIELD_METHOD_NAME -> methodName = p.getText();
                 case "methodDescription" -> methodDescription = p.getText();
                 case "firstLine" -> firstLine = p.getIntValue();
                 case "lastLine" -> lastLine = p.getIntValue();
@@ -616,7 +621,7 @@ public final class VerdictJsonReader {
             switch (field) {
                 case "mutator" -> mutator = p.getText();
                 case "line" -> line = p.getIntValue();
-                case "status" -> status = p.getText();
+                case FIELD_STATUS -> status = p.getText();
                 case "killingTests" -> killingTestIndexes = readArray(p, JsonParser::getIntValue);
                 default -> p.skipChildren();
             }
@@ -629,50 +634,6 @@ public final class VerdictJsonReader {
     }
 
     private record RawMutant(String mutator, int line, String status, List<Integer> killingTestIndexes) {
-    }
-
-    private static MutatedMethod readMutatedMethod(JsonParser p) throws IOException {
-        expectObjectStart(p);
-        String className = null;
-        String methodName = null;
-        String methodDescription = null;
-        int firstLine = 0;
-        int lastLine = 0;
-        List<Mutant> mutants = List.of();
-        while (p.nextToken() != JsonToken.END_OBJECT) {
-            String field = requireFieldName(p);
-            p.nextToken();
-            switch (field) {
-                case "className" -> className = p.getText();
-                case "methodName" -> methodName = p.getText();
-                case "methodDescription" -> methodDescription = p.getText();
-                case "firstLine" -> firstLine = p.getIntValue();
-                case "lastLine" -> lastLine = p.getIntValue();
-                case "mutants" -> mutants = readArray(p, VerdictJsonReader::readMutant);
-                default -> p.skipChildren();
-            }
-        }
-        return new MutatedMethod(className, methodName, methodDescription, firstLine, lastLine, mutants);
-    }
-
-    private static Mutant readMutant(JsonParser p) throws IOException {
-        expectObjectStart(p);
-        String mutator = null;
-        int line = 0;
-        String status = null;
-        List<String> killingTests = List.of();
-        while (p.nextToken() != JsonToken.END_OBJECT) {
-            String field = requireFieldName(p);
-            p.nextToken();
-            switch (field) {
-                case "mutator" -> mutator = p.getText();
-                case "line" -> line = p.getIntValue();
-                case "status" -> status = p.getText();
-                case "killingTests" -> killingTests = readArray(p, JsonParser::getText);
-                default -> p.skipChildren();
-            }
-        }
-        return new Mutant(mutator, line, status, killingTests);
     }
 
     private static FileCoverageBlock readFileCoverageBlock(JsonParser p) throws IOException {
@@ -701,7 +662,7 @@ public final class VerdictJsonReader {
             String field = requireFieldName(p);
             p.nextToken();
             switch (field) {
-                case "module" -> module = p.getText();
+                case FIELD_MODULE -> module = p.getText();
                 case "path" -> path = p.getText();
                 case "metrics" -> metrics = readMetricSet(p);
                 case "lines" -> lines = readArray(p, VerdictJsonReader::readLineCoverage);

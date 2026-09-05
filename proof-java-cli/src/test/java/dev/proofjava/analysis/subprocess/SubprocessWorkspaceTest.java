@@ -163,9 +163,10 @@ class SubprocessWorkspaceTest {
     @Test
     void writeLinesOnAMissingDirectoryThrowsUncheckedIOException() {
         Path missing = Path.of(System.getProperty("java.io.tmpdir"), "proof-java-does-not-exist-" + System.nanoTime());
+        List<String> lines = List.of("a");
 
         UncheckedIOException thrown = assertThrows(UncheckedIOException.class,
-            () -> SubprocessWorkspace.writeLines(missing, "list.txt", List.of("a")));
+            () -> SubprocessWorkspace.writeLines(missing, "list.txt", lines));
 
         assertInstanceOf(IOException.class, thrown.getCause());
     }
@@ -186,9 +187,10 @@ class SubprocessWorkspaceTest {
     @Test
     void writeClasspathArgFileOnAMissingDirectoryThrowsUncheckedIOException() {
         Path missing = Path.of(System.getProperty("java.io.tmpdir"), "proof-java-does-not-exist-" + System.nanoTime());
+        List<String> classpath = List.of("a.jar");
 
         UncheckedIOException thrown = assertThrows(UncheckedIOException.class,
-            () -> SubprocessWorkspace.writeClasspathArgFile(missing, "cp.args", List.of("a.jar")));
+            () -> SubprocessWorkspace.writeClasspathArgFile(missing, "cp.args", classpath));
 
         assertInstanceOf(IOException.class, thrown.getCause());
     }
@@ -214,12 +216,13 @@ class SubprocessWorkspaceTest {
         try {
             // The JDK's single-file source launcher gives a real, long-lived child
             // process without needing a main class on Surefire's classpath.
-            Path source = Files.writeString(dir.resolve("Sleeper.java"),
-                "public class Sleeper {\n"
-                    + "    public static void main(String[] args) throws Exception {\n"
-                    + "        Thread.sleep(600_000L);\n"
-                    + "    }\n"
-                    + "}\n",
+            Path source = Files.writeString(dir.resolve("Sleeper.java"), """
+                public class Sleeper {
+                    public static void main(String[] args) throws Exception {
+                        Thread.sleep(600_000L);
+                    }
+                }
+                """,
                 StandardCharsets.UTF_8);
             process = new ProcessBuilder(SubprocessWorkspace.javaExecutable(), source.toString())
                 .redirectOutput(ProcessBuilder.Redirect.DISCARD)
@@ -260,20 +263,21 @@ class SubprocessWorkspaceTest {
         try {
             // Run with three arguments it spawns a copy of itself and records that
             // copy's pid; run with none (the copy) it just sleeps.
-            Path source = Files.writeString(dir.resolve("Spawner.java"),
-                "import java.nio.file.*;\n"
-                    + "public class Spawner {\n"
-                    + "    public static void main(String[] args) throws Exception {\n"
-                    + "        if (args.length == 3) {\n"
-                    + "            Process child = new ProcessBuilder(args[0], args[1])\n"
-                    + "                .redirectOutput(ProcessBuilder.Redirect.DISCARD)\n"
-                    + "                .redirectError(ProcessBuilder.Redirect.DISCARD)\n"
-                    + "                .start();\n"
-                    + "            Files.writeString(Path.of(args[2]), Long.toString(child.pid()));\n"
-                    + "        }\n"
-                    + "        Thread.sleep(600_000L);\n"
-                    + "    }\n"
-                    + "}\n",
+            Path source = Files.writeString(dir.resolve("Spawner.java"), """
+                import java.nio.file.*;
+                public class Spawner {
+                    public static void main(String[] args) throws Exception {
+                        if (args.length == 3) {
+                            Process child = new ProcessBuilder(args[0], args[1])
+                                .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                                .redirectError(ProcessBuilder.Redirect.DISCARD)
+                                .start();
+                            Files.writeString(Path.of(args[2]), Long.toString(child.pid()));
+                        }
+                        Thread.sleep(600_000L);
+                    }
+                }
+                """,
                 StandardCharsets.UTF_8);
             Path pidFile = dir.resolve("grandchild.pid");
             String java = SubprocessWorkspace.javaExecutable();

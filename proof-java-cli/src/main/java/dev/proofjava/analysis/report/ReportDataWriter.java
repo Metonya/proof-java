@@ -55,6 +55,8 @@ final class ReportDataWriter {
     private static final Locale REPORT_LOCALE = Locale.ENGLISH;
     private static final DateTimeFormatter GENERATED_AT_FORMAT = DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm", REPORT_LOCALE);
     private static final JsonFactory FACTORY = new JsonFactory();
+    private static final String FIELD_MODULE = "module";
+    private static final String FIELD_SEARCH = "search";
 
     private ReportDataWriter() {
     }
@@ -256,10 +258,10 @@ final class ReportDataWriter {
         for (ChangedFile file : doc.changedFiles()) {
             used.add(file.classification().schemaValue());
             g.writeStartObject();
-            g.writeStringField("module", file.module());
+            g.writeStringField(FIELD_MODULE, file.module());
             g.writeStringField("path", file.path());
             g.writeStringField("classification", file.classification().schemaValue());
-            g.writeStringField("search",
+            g.writeStringField(FIELD_SEARCH,
                 joinNonBlank(file.module(), file.path(), file.classification().schemaValue()).toLowerCase(Locale.ROOT));
             if (file.newLines() != null) {
                 g.writeNumberField("newLines", file.newLines());
@@ -313,7 +315,7 @@ final class ReportDataWriter {
             if (f.fingerprint() != null) {
                 g.writeStringField("fingerprint", f.fingerprint());
             }
-            g.writeStringField("search", joinNonBlank(f.rule(), f.severity().name(), f.confidence().name(), f.path(),
+            g.writeStringField(FIELD_SEARCH, joinNonBlank(f.rule(), f.severity().name(), f.confidence().name(), f.path(),
                 anchorMethod, f.message(), f.suggestedAction()).toLowerCase(Locale.ROOT));
             g.writeEndObject();
         }
@@ -350,12 +352,12 @@ final class ReportDataWriter {
                 g.writeStringField("path", r.path());
             }
             if (r.module() != null) {
-                g.writeStringField("module", r.module());
+                g.writeStringField(FIELD_MODULE, r.module());
             }
             if (r.count() != null) {
                 g.writeNumberField("count", r.count());
             }
-            g.writeStringField("search", joinNonBlank(r.code(), r.message(), r.path()).toLowerCase(Locale.ROOT));
+            g.writeStringField(FIELD_SEARCH, joinNonBlank(r.code(), r.message(), r.path()).toLowerCase(Locale.ROOT));
             g.writeEndObject();
         }
         g.writeEndArray();
@@ -587,7 +589,7 @@ final class ReportDataWriter {
         Metric metric = entry.metrics().sonarCompatible();
         String display = sourceRelativePath(entry, modules);
         g.writeStartObject();
-        g.writeStringField("module", entry.module());
+        g.writeStringField(FIELD_MODULE, entry.module());
         g.writeStringField("path", entry.path());
         g.writeStringField("displayPath", display);
         g.writeStringField("packagePath", packageOf(display));

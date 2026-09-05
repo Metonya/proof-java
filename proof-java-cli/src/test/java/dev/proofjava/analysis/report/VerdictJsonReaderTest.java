@@ -1,6 +1,7 @@
 package dev.proofjava.analysis.report;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -131,7 +132,7 @@ class VerdictJsonReaderTest {
         assertEquals(finding.confidence(), readFinding.confidence());
         assertEquals(finding.relatedTestMethod(), readFinding.relatedTestMethod());
         assertEquals(finding.relatedPath(), readFinding.relatedPath());
-        assertTrue(read.newCode().metrics() != null);
+        assertNotNull(read.newCode().metrics());
     }
 
     @Test

@@ -29,8 +29,16 @@ final class TestIdentity {
     private static final Pattern JUNIT4_VINTAGE_ID =
         Pattern.compile("\\[runner:([^]]+)].*\\[test:([^](\\[]+)");
 
-    /** What a fully qualified class name can contain - nothing else may be treated as one. */
-    private static final Pattern PLAUSIBLE_CLASS_NAME = Pattern.compile("[\\w$]+(\\.[\\w$]+)*");
+    /**
+     * What a fully qualified class name can contain - nothing else may be
+     * treated as one. Possessive quantifiers (SonarQube S5998): with
+     * {@code .matches()}, a literal {@code .} uniquely determines every
+     * segment boundary, so there is nothing to backtrack into - only the
+     * risk of it on a very long, ultimately-non-matching input (a
+     * {@code StackOverflowError}, not a correctness change, since Java's
+     * backtracking implementation for {@code +} recurses per character).
+     */
+    private static final Pattern PLAUSIBLE_CLASS_NAME = Pattern.compile("[\\w$]++(\\.[\\w$]++)*+");
 
     /**
      * What a Java method name can contain. Generated suite descriptors put
@@ -38,7 +46,7 @@ final class TestIdentity {
      * method name would go; those name no method this can locate, so they are
      * unresolved rather than searched for.
      */
-    private static final Pattern PLAUSIBLE_METHOD_NAME = Pattern.compile("[\\w$]+");
+    private static final Pattern PLAUSIBLE_METHOD_NAME = Pattern.compile("[\\w$]++");
 
     private TestIdentity() {
     }

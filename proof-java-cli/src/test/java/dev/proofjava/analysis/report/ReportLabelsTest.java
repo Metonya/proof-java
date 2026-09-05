@@ -2,6 +2,7 @@ package dev.proofjava.analysis.report;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Field;
@@ -112,8 +113,8 @@ class ReportLabelsTest {
         assertNotNull(ReportLabels.lookup("NO_RECOGNIZED_ORACLE"));
         List<String> unknown = new ArrayList<>();
         unknown.add(null);
-        assertTrue(ReportLabels.lookup(unknown.get(0)) == null);
-        assertTrue(ReportLabels.lookup("THIS_CODE_DOES_NOT_EXIST") == null);
+        assertNull(ReportLabels.lookup(unknown.get(0)));
+        assertNull(ReportLabels.lookup("THIS_CODE_DOES_NOT_EXIST"));
     }
 
     private void assertLabeled(String code) {

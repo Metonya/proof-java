@@ -118,13 +118,7 @@ public final class MutationRunner {
             // log, drained by one thread with no writer contention.
             pb.redirectErrorStream(true);
 
-            Process process;
-            try {
-                process = pb.start();
-            } catch (IOException e) {
-                throw new MutationCollectionException("Could not start the mutation subprocess for module '"
-                    + moduleId + "'", e);
-            }
+            Process process = startProcess(pb, moduleId);
 
             AtomicInteger classesDone = new AtomicInteger();
             ProcessOutputTail output = ProcessOutputTail.of(process.getInputStream(), log,
@@ -274,6 +268,15 @@ public final class MutationRunner {
     /** {@code "42/219 class(es)"} - the denominator is the requested target-class count, which is exact. */
     private static String progressCount(Run run) {
         return run.classesDone().get() + "/" + run.targetCount() + " class(es)";
+    }
+
+    private static Process startProcess(ProcessBuilder pb, String moduleId) {
+        try {
+            return pb.start();
+        } catch (IOException e) {
+            throw new MutationCollectionException("Could not start the mutation subprocess for module '"
+                + moduleId + "'", e);
+        }
     }
 
     private static Path createWorkDir(String moduleId) {

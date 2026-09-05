@@ -27,7 +27,6 @@ import dev.proofjava.analysis.mutation.Mutant;
 import dev.proofjava.analysis.mutation.MutationModuleEvidence;
 import dev.proofjava.analysis.pertest.PerTestEntry;
 import dev.proofjava.analysis.pertest.PerTestLine;
-import dev.proofjava.analysis.pertest.PerTestJsonWriter;
 import dev.proofjava.analysis.pertest.PerTestModuleEvidence;
 import dev.proofjava.analysis.vcs.VcsIdentity;
 
@@ -49,6 +48,7 @@ public final class VerdictJsonWriter {
     private static final JsonFactory FACTORY = new JsonFactory();
     private static final String FIELD_MODULE = "module";
     private static final String FIELD_MODULES = "modules";
+    private static final String FIELD_STATUS = "status";
 
     private VerdictJsonWriter() {
     }
@@ -70,7 +70,7 @@ public final class VerdictJsonWriter {
             g.writeEndObject();
 
             g.writeObjectFieldStart("analysis");
-            g.writeStringField("status", doc.complete() ? "complete" : "incomplete");
+            g.writeStringField(FIELD_STATUS, doc.complete() ? "complete" : "incomplete");
             g.writeNumberField("exitCode", doc.complete() ? 0 : 3);
             g.writeArrayFieldStart("incompleteReasons");
             for (AnalysisReason reason : sortedReasons(doc.incompleteReasons())) {
@@ -89,7 +89,7 @@ public final class VerdictJsonWriter {
             if (doc.newCode().metrics() != null) {
                 writeMetricSet(g, doc.newCode().metrics());
             } else {
-                g.writeStringField("status", doc.newCode().unavailableStatus());
+                g.writeStringField(FIELD_STATUS, doc.newCode().unavailableStatus());
             }
             g.writeEndObject();
             g.writeEndObject();
@@ -245,7 +245,7 @@ public final class VerdictJsonWriter {
                 g.writeStartObject();
                 g.writeStringField("mutator", mutant.mutator());
                 g.writeNumberField("line", mutant.line());
-                g.writeStringField("status", mutant.status());
+                g.writeStringField(FIELD_STATUS, mutant.status());
                 g.writeArrayFieldStart("killingTests");
                 for (String test : mutant.killingTests()) {
                     g.writeNumber(testIds.get(test));

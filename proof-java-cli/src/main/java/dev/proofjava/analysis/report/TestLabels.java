@@ -60,13 +60,15 @@ final class TestLabels {
             return raw;
         }
         StringBuilder out = new StringBuilder(raw.length());
-        for (int i = 0; i < raw.length(); i++) {
+        int i = 0;
+        while (i < raw.length()) {
             char c = raw.charAt(i);
             if (c == '%' && i + 2 < raw.length() && isHex(raw.charAt(i + 1)) && isHex(raw.charAt(i + 2))) {
                 out.append((char) Integer.parseInt(raw.substring(i + 1, i + 3), 16));
-                i += 2;
+                i += 3;
             } else {
                 out.append(c);
+                i++;
             }
         }
         return out.toString();
