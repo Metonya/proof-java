@@ -38,7 +38,17 @@ final class TestLocator {
         String outerClassName = stripNestedSuffix(identity.className());
 
         for (String testRoot : module.testRoots()) {
-            Path candidate = repoRoot.resolve(testRoot).resolve(outerClassName.replace('.', '/') + ".java");
+            Path candidate;
+            try {
+                candidate = repoRoot.resolve(testRoot).resolve(outerClassName.replace('.', '/') + ".java");
+            } catch (java.nio.file.InvalidPathException e) {
+                // Belt and braces alongside TestIdentity's own validation: a
+                // name that cannot even become a path is unresolved, which this
+                // class already promises to handle, not an analysis-aborting
+                // crash. Windows rejects ':' outright, so a leaked test id
+                // aborted the whole run there while passing on Linux.
+                return null;
+            }
             if (Files.isRegularFile(candidate)) {
                 String repoRelative = RepoPaths.normalizeSeparators(repoRoot.relativize(candidate).toString());
                 int line = findMethodLine(candidate, identity.methodName());

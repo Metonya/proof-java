@@ -20,6 +20,26 @@ final class TestIdentity {
     private static final Pattern JUNIT5_UNIQUE_ID =
         Pattern.compile("\\[class:([^]]+)].*\\[method:([^](]+)");
 
+    /**
+     * JUnit 4 through the vintage engine, which names the class in
+     * {@code [runner:...]} and the method in {@code [test:...]} rather than in
+     * {@code [class:]}/{@code [method:]}. Found by running against google/gson,
+     * whose suite-driven tests produce exactly this shape.
+     */
+    private static final Pattern JUNIT4_VINTAGE_ID =
+        Pattern.compile("\\[runner:([^]]+)].*\\[test:([^](\\[]+)");
+
+    /** What a fully qualified class name can contain - nothing else may be treated as one. */
+    private static final Pattern PLAUSIBLE_CLASS_NAME = Pattern.compile("[\\w$]+(\\.[\\w$]+)*");
+
+    /**
+     * What a Java method name can contain. Generated suite descriptors put
+     * things like {@code JsonArray#asList %5Bcollection size%3A zero%5D} where a
+     * method name would go; those name no method this can locate, so they are
+     * unresolved rather than searched for.
+     */
+    private static final Pattern PLAUSIBLE_METHOD_NAME = Pattern.compile("[\\w$]+");
+
     private TestIdentity() {
     }
 
@@ -27,7 +47,11 @@ final class TestIdentity {
     static Parsed parse(String rawTestId) {
         Matcher unique = JUNIT5_UNIQUE_ID.matcher(rawTestId);
         if (unique.find()) {
-            return new Parsed(unique.group(1), unique.group(2));
+            return parsedOrNull(unique.group(1), unique.group(2));
+        }
+        Matcher vintage = JUNIT4_VINTAGE_ID.matcher(rawTestId);
+        if (vintage.find()) {
+            return parsedOrNull(vintage.group(1), vintage.group(2));
         }
         int hash = rawTestId.indexOf('#');
         if (hash > 0 && hash < rawTestId.length() - 1) {
@@ -36,10 +60,27 @@ final class TestIdentity {
             int paren = rest.indexOf('(');
             String methodName = paren >= 0 ? rest.substring(0, paren) : rest;
             if (!methodName.isEmpty()) {
-                return new Parsed(className, methodName);
+                return parsedOrNull(className, methodName);
             }
         }
         return null;
+    }
+
+    /**
+     * Guards every path out of {@link #parse}: an id shape none of the patterns
+     * really understood used to come back with the whole raw string as the
+     * "class name", which {@code TestLocator} then turned into a file path.
+     * On a gson vintage-suite id that produced a
+     * {@code java.nio.file.InvalidPathException} and aborted the whole analysis.
+     * Unrecognized is null - callers skip the enrichment (hard rule 3a).
+     */
+    private static Parsed parsedOrNull(String className, String methodName) {
+        if (className == null || methodName == null
+            || !PLAUSIBLE_CLASS_NAME.matcher(className).matches()
+            || !PLAUSIBLE_METHOD_NAME.matcher(methodName).matches()) {
+            return null;
+        }
+        return new Parsed(className, methodName);
     }
 
     record Parsed(String className, String methodName) {
