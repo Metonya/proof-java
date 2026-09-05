@@ -660,12 +660,21 @@
       "additionalProperties": false,
       "required": [
         "id",
+        "testIds",
         "methods"
       ],
       "properties": {
         "id": {
           "type": "string",
           "minLength": 1
+        },
+        "testIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "D-86: every distinct killing-test id this module's mutants reference, sorted. Mutants carry indexes into this array."
         },
         "methods": {
           "type": "array",
@@ -752,10 +761,10 @@
         "killingTests": {
           "type": "array",
           "items": {
-            "type": "string",
-            "minLength": 1
+            "type": "integer",
+            "minimum": 0
           },
-          "description": "Every test that killed this mutant (setFullMutationMatrix(true)), not just the first - M4's redundancy gate needs the full kill set. Empty for a SURVIVED or NO_COVERAGE mutant."
+          "description": "D-86: indexes into the enclosing module's testIds array."
         }
       }
     },

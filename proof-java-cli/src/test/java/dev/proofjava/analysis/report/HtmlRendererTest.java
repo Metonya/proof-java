@@ -258,7 +258,12 @@ class HtmlRendererTest {
         assertEquals(2, mutants.size());
         assertEquals("KILLED", obj(mutants.get(0)).get("status"));
         assertEquals("SURVIVED", obj(mutants.get(1)).get("status"));
-        assertEquals(List.of("com.example.CalculatorTest#add()"), arr(obj(mutants.get(0)).get("killingTests")));
+        // D-86: a killing-test id is written once, in the report-wide testIds
+        // table, and each mutant references it by index. On gson this was the
+        // difference between a 67 MB report and one a browser opens.
+        assertEquals(List.of("com.example.CalculatorTest#add()"), arr(data.get("testIds")));
+        assertEquals(List.of(0), arr(obj(mutants.get(0)).get("killingTests")).stream()
+            .map(i -> ((Number) i).intValue()).toList());
 
         // Every status this codebase can produce has a friendly label available.
         assertNotNull(obj(data.get("labels")).get("KILLED"));

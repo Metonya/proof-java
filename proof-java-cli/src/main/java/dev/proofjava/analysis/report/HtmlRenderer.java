@@ -405,6 +405,12 @@ public final class HtmlRenderer {
           }
           function txt(s) { return document.createTextNode(s === null || s === undefined ? '' : String(s)); }
           function fmtInt(n) { try { return n.toLocaleString('en-US'); } catch (e) { return String(n); } }
+          // D-86: killingTests holds indexes into DATA.testIds - the ids are
+          // written once for the whole report instead of once per mutant.
+          function killers(m) {
+            var ids = DATA.testIds || [];
+            return (m.killingTests || []).map(function (i) { return ids[i]; }).filter(Boolean);
+          }
           function debounce(fn, ms) {
             var t = null;
             return function () {
@@ -503,7 +509,7 @@ public final class HtmlRenderer {
                     if (!best || rank < best.rank) {
                       best = { rank: rank, moduleId: mod.moduleId, className: cls.className, methodName: method.methodName,
                         signatureShort: method.signatureShort, firstLine: method.firstLine, lastLine: method.lastLine,
-                        mutator: m.mutator, line: m.line, status: m.status, killingTests: m.killingTests };
+                        mutator: m.mutator, line: m.line, status: m.status, killingTests: killers(m) };
                     }
                   });
                 });
@@ -577,7 +583,7 @@ public final class HtmlRenderer {
             return card;
           }
           function mutantSearchText(className, methodName, m) {
-            return (className + ' ' + methodName + ' ' + m.mutator + ' ' + m.status + ' ' + m.killingTests.join(' ')).toLowerCase();
+            return (className + ' ' + methodName + ' ' + m.mutator + ' ' + m.status + ' ' + killers(m).join(' ')).toLowerCase();
           }
           function buildMutationDetailCard() {
             var card = el('section', { id: 'all-mutants', class: 'card col-12' });
@@ -634,7 +640,7 @@ public final class HtmlRenderer {
                     tr.appendChild(el('td', { text: m.mutator }));
                     tr.appendChild(el('td', { text: String(m.line) }));
                     tr.appendChild(el('td', { text: label(m.status).name }));
-                    tr.appendChild(el('td', { text: m.killingTests.length ? m.killingTests.join(', ') : '\\u2014' }));
+                    tr.appendChild(el('td', { text: killers(m).length ? killers(m).join(', ') : '\\u2014' }));
                     tbody.appendChild(tr);
                   });
                   table.appendChild(tbody);

@@ -75,7 +75,13 @@ final class ReportDataWriter {
                 writePerTest(g, doc.perTest());
             }
             if (doc.mutation() != null) {
-                writeMutation(g, doc.mutation(), used);
+                Map<String, Integer> testIds = internKillingTests(doc.mutation());
+                g.writeArrayFieldStart("testIds");
+                for (String testId : testIds.keySet()) {
+                    g.writeString(testId);
+                }
+                g.writeEndArray();
+                writeMutation(g, doc.mutation(), used, testIds);
             }
             if (doc.fileCoverage() != null) {
                 writeFileCoverage(g, doc.fileCoverage(), doc.modules());
@@ -373,7 +379,26 @@ final class ReportDataWriter {
 
     // ---- Mutation (L3): per-status counts (no "other" catch-all bucket - D-80 fix), simplified signatures ----
 
-    private static void writeMutation(JsonGenerator g, List<MutationModuleEvidence> mutation, Set<String> used)
+    /**
+     * D-86: the report embeds its data as JSON in the page, so it pays the same
+     * repetition cost the verdict did - a gson report was 67 MB, nearly all of
+     * it the same killing-test ids written once per mutant. One table for the
+     * whole report, indexes everywhere else; the page's script resolves them.
+     */
+    private static Map<String, Integer> internKillingTests(List<MutationModuleEvidence> mutation) {
+        Map<String, Integer> ids = new LinkedHashMap<>();
+        mutation.stream()
+            .flatMap(module -> module.methods().stream())
+            .flatMap(method -> method.mutants().stream())
+            .flatMap(mutant -> mutant.killingTests().stream())
+            .distinct()
+            .sorted()
+            .forEach(testId -> ids.put(testId, ids.size()));
+        return ids;
+    }
+
+    private static void writeMutation(JsonGenerator g, List<MutationModuleEvidence> mutation, Set<String> used,
+                                       Map<String, Integer> testIds)
         throws IOException {
         g.writeObjectFieldStart("mutation");
 
@@ -394,13 +419,14 @@ final class ReportDataWriter {
 
         g.writeArrayFieldStart("modules");
         for (MutationModuleEvidence module : mutation) {
-            writeMutationModule(g, module, used);
+            writeMutationModule(g, module, used, testIds);
         }
         g.writeEndArray();
         g.writeEndObject();
     }
 
-    private static void writeMutationModule(JsonGenerator g, MutationModuleEvidence module, Set<String> used)
+    private static void writeMutationModule(JsonGenerator g, MutationModuleEvidence module, Set<String> used,
+                                             Map<String, Integer> testIds)
         throws IOException {
         Map<String, List<MutatedMethod>> byClass = new LinkedHashMap<>();
         for (MutatedMethod method : module.methods()) {
@@ -430,7 +456,7 @@ final class ReportDataWriter {
             g.writeEndObject();
             g.writeArrayFieldStart("methods");
             for (MutatedMethod method : methods) {
-                writeMutatedMethod(g, method, used);
+                writeMutatedMethod(g, method, used, testIds);
             }
             g.writeEndArray();
             g.writeEndObject();
@@ -439,7 +465,8 @@ final class ReportDataWriter {
         g.writeEndObject();
     }
 
-    private static void writeMutatedMethod(JsonGenerator g, MutatedMethod method, Set<String> used) throws IOException {
+    private static void writeMutatedMethod(JsonGenerator g, MutatedMethod method, Set<String> used,
+                                            Map<String, Integer> testIds) throws IOException {
         g.writeStartObject();
         g.writeStringField("methodName", method.methodName());
         g.writeStringField("signatureShort", method.methodName() + simplifyParams(method.methodDescription()));
@@ -456,7 +483,7 @@ final class ReportDataWriter {
             g.writeStringField("status", m.status());
             g.writeArrayFieldStart("killingTests");
             for (String t : m.killingTests()) {
-                g.writeString(t);
+                g.writeNumber(testIds.get(t));
             }
             g.writeEndArray();
             g.writeEndObject();

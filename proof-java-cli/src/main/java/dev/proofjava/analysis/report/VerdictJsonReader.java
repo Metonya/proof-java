@@ -547,20 +547,88 @@ public final class VerdictJsonReader {
         return modules;
     }
 
+    /** D-86: {@code killingTests} holds indexes into the module's own {@code testIds} table, resolved once the object is fully read. */
     private static MutationModuleEvidence readMutationModule(JsonParser p) throws IOException {
         expectObjectStart(p);
         String id = null;
-        List<MutatedMethod> methods = List.of();
+        List<String> testIds = List.of();
+        List<RawMethod> methods = List.of();
         while (p.nextToken() != JsonToken.END_OBJECT) {
             String field = requireFieldName(p);
             p.nextToken();
             switch (field) {
                 case "id" -> id = p.getText();
-                case "methods" -> methods = readArray(p, VerdictJsonReader::readMutatedMethod);
+                case "testIds" -> testIds = readArray(p, JsonParser::getText);
+                case "methods" -> methods = readArray(p, VerdictJsonReader::readRawMutatedMethod);
                 default -> p.skipChildren();
             }
         }
-        return new MutationModuleEvidence(id, methods, List.of());
+        return new MutationModuleEvidence(id, resolveMethods(methods, testIds), List.of());
+    }
+
+    private static List<MutatedMethod> resolveMethods(List<RawMethod> raw, List<String> testIds) {
+        return raw.stream()
+            .map(m -> new MutatedMethod(m.className(), m.methodName(), m.methodDescription(),
+                m.firstLine(), m.lastLine(),
+                m.mutants().stream()
+                    .map(mut -> new Mutant(mut.mutator(), mut.line(), mut.status(),
+                        mut.killingTestIndexes().stream()
+                            .filter(i -> i >= 0 && i < testIds.size())
+                            .map(testIds::get)
+                            .toList()))
+                    .toList()))
+            .toList();
+    }
+
+    private static RawMethod readRawMutatedMethod(JsonParser p) throws IOException {
+        expectObjectStart(p);
+        String className = null;
+        String methodName = null;
+        String methodDescription = null;
+        int firstLine = 0;
+        int lastLine = 0;
+        List<RawMutant> mutants = List.of();
+        while (p.nextToken() != JsonToken.END_OBJECT) {
+            String field = requireFieldName(p);
+            p.nextToken();
+            switch (field) {
+                case "className" -> className = p.getText();
+                case "methodName" -> methodName = p.getText();
+                case "methodDescription" -> methodDescription = p.getText();
+                case "firstLine" -> firstLine = p.getIntValue();
+                case "lastLine" -> lastLine = p.getIntValue();
+                case "mutants" -> mutants = readArray(p, VerdictJsonReader::readRawMutant);
+                default -> p.skipChildren();
+            }
+        }
+        return new RawMethod(className, methodName, methodDescription, firstLine, lastLine, mutants);
+    }
+
+    private static RawMutant readRawMutant(JsonParser p) throws IOException {
+        expectObjectStart(p);
+        String mutator = null;
+        int line = 0;
+        String status = null;
+        List<Integer> killingTestIndexes = List.of();
+        while (p.nextToken() != JsonToken.END_OBJECT) {
+            String field = requireFieldName(p);
+            p.nextToken();
+            switch (field) {
+                case "mutator" -> mutator = p.getText();
+                case "line" -> line = p.getIntValue();
+                case "status" -> status = p.getText();
+                case "killingTests" -> killingTestIndexes = readArray(p, JsonParser::getIntValue);
+                default -> p.skipChildren();
+            }
+        }
+        return new RawMutant(mutator, line, status, killingTestIndexes);
+    }
+
+    private record RawMethod(String className, String methodName, String methodDescription,
+                              int firstLine, int lastLine, List<RawMutant> mutants) {
+    }
+
+    private record RawMutant(String mutator, int line, String status, List<Integer> killingTestIndexes) {
     }
 
     private static MutatedMethod readMutatedMethod(JsonParser p) throws IOException {

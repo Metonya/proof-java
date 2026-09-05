@@ -23,7 +23,7 @@ import dev.proofjava.analysis.model.ChangedFile;
 import dev.proofjava.analysis.model.Finding;
 import dev.proofjava.analysis.model.LineRange;
 import dev.proofjava.analysis.mutation.MutatedMethod;
-import dev.proofjava.analysis.mutation.MutationJsonWriter;
+import dev.proofjava.analysis.mutation.Mutant;
 import dev.proofjava.analysis.mutation.MutationModuleEvidence;
 import dev.proofjava.analysis.pertest.PerTestEntry;
 import dev.proofjava.analysis.pertest.PerTestLine;
@@ -214,6 +214,50 @@ public final class VerdictJsonWriter {
         }
     }
 
+    /**
+     * D-86, mutation side: the same interning as {@link #internTestIds}. A
+     * mutant lists every test that killed it, and a heavily covered line is
+     * killed by many - measured on google/gson, {@code killingTests} was 64 MB
+     * of a 64 MB mutation block.
+     */
+    private static Map<String, Integer> internKillingTests(List<MutatedMethod> methods) {
+        Map<String, Integer> ids = new LinkedHashMap<>();
+        methods.stream()
+            .flatMap(method -> method.mutants().stream())
+            .flatMap(mutant -> mutant.killingTests().stream())
+            .distinct()
+            .sorted()
+            .forEach(testId -> ids.put(testId, ids.size()));
+        return ids;
+    }
+
+    private static void writeInternedMethods(JsonGenerator g, List<MutatedMethod> methods,
+                                              Map<String, Integer> testIds) throws IOException {
+        for (MutatedMethod method : methods) {
+            g.writeStartObject();
+            g.writeStringField("className", method.className());
+            g.writeStringField("methodName", method.methodName());
+            g.writeStringField("methodDescription", method.methodDescription());
+            g.writeNumberField("firstLine", method.firstLine());
+            g.writeNumberField("lastLine", method.lastLine());
+            g.writeArrayFieldStart("mutants");
+            for (Mutant mutant : method.mutants()) {
+                g.writeStartObject();
+                g.writeStringField("mutator", mutant.mutator());
+                g.writeNumberField("line", mutant.line());
+                g.writeStringField("status", mutant.status());
+                g.writeArrayFieldStart("killingTests");
+                for (String test : mutant.killingTests()) {
+                    g.writeNumber(testIds.get(test));
+                }
+                g.writeEndArray();
+                g.writeEndObject();
+            }
+            g.writeEndArray();
+            g.writeEndObject();
+        }
+    }
+
     /** Schema ordering rule: perTest entries/ambient sort by (className, methodName) - the shared writer itself stays unsorted (D-55). */
     private static List<PerTestEntry> sortedPerTestEntries(List<PerTestEntry> entries) {
         return entries.stream()
@@ -233,8 +277,15 @@ public final class VerdictJsonWriter {
         for (MutationModuleEvidence module : sorted) {
             g.writeStartObject();
             g.writeStringField("id", module.moduleId());
+            List<MutatedMethod> methods = sortedMutatedMethods(module.methods());
+            Map<String, Integer> testIds = internKillingTests(methods);
+            g.writeArrayFieldStart("testIds");
+            for (String testId : testIds.keySet()) {
+                g.writeString(testId);
+            }
+            g.writeEndArray();
             g.writeArrayFieldStart("methods");
-            MutationJsonWriter.writeMethods(g, sortedMutatedMethods(module.methods()));
+            writeInternedMethods(g, methods, testIds);
             g.writeEndArray();
             g.writeEndObject();
         }
