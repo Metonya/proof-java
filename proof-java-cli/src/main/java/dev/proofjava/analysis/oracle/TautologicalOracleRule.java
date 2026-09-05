@@ -8,6 +8,7 @@ import java.util.Set;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
+import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.ArrayAccessExpr;
 import com.github.javaparser.ast.expr.BinaryExpr;
 import com.github.javaparser.ast.expr.BooleanLiteralExpr;
@@ -49,6 +50,7 @@ final class TautologicalOracleRule {
         String testClassFqn = testMethod.findAncestor(ClassOrInterfaceDeclaration.class)
             .flatMap(TypeDeclaration::getFullyQualifiedName)
             .orElse(null);
+        boolean selfComparisonSuppressed = suppressesEqualsWithItself(testMethod);
 
         for (OracleOccurrence occ : traversal.oracles()) {
             // Fluent-chain argument shapes are not inspected (see class javadoc); only a
@@ -57,7 +59,8 @@ final class TautologicalOracleRule {
                 && (OracleAllowlist.JUNIT5_ASSERTIONS.equals(occ.declaringTypeFqn())
                     || OracleAllowlist.JUNIT4_ASSERT.equals(occ.declaringTypeFqn()));
             if (isDirectJunitCall) {
-                Optional<RuleFinding> finding = matchPattern(occ.methodName(), occ.anchorCall(), testClassFqn);
+                Optional<RuleFinding> finding = matchPattern(occ.methodName(), occ.anchorCall(), testClassFqn,
+                    selfComparisonSuppressed);
                 if (finding.isPresent()) {
                     return finding;
                 }
@@ -66,10 +69,42 @@ final class TautologicalOracleRule {
         return Optional.empty();
     }
 
-    private static Optional<RuleFinding> matchPattern(String methodName, MethodCallExpr call, String testClassFqn) {
+    /**
+     * Self-comparison (pattern 3) has one well-established legitimate use:
+     * verifying an {@code equals()} implementation's reflexivity, part of
+     * the {@code Object.equals} contract - {@code assertEquals(x, x)} is
+     * exactly the right call, not a copy-paste mistake, when that is the
+     * point of the test. Found on commons-io's own {@code ByteOrderMarkTest}
+     * (real repo, real false positive): {@code @SuppressWarnings
+     * ("EqualsWithItself")} directly above the method is IDE/static-analysis
+     * convention for exactly this - an author who did not mean the
+     * comparison suppresses a different, unrelated inspection, not this
+     * one. Checked on the test method first (the common case, right next to
+     * the assertion) and its enclosing class (a class-level suppression
+     * covers every method in it). The other three patterns are unaffected -
+     * this suppression is specific to "the same expression compared to
+     * itself," not "any tautological assertion in this test."
+     */
+    private static boolean suppressesEqualsWithItself(MethodDeclaration testMethod) {
+        if (hasEqualsWithItselfSuppression(testMethod.getAnnotations())) {
+            return true;
+        }
+        return testMethod.findAncestor(ClassOrInterfaceDeclaration.class)
+            .map(type -> hasEqualsWithItselfSuppression(type.getAnnotations()))
+            .orElse(false);
+    }
+
+    private static boolean hasEqualsWithItselfSuppression(List<AnnotationExpr> annotations) {
+        return annotations.stream()
+            .filter(a -> "SuppressWarnings".equals(a.getNameAsString()))
+            .anyMatch(a -> a.toString().contains("EqualsWithItself"));
+    }
+
+    private static Optional<RuleFinding> matchPattern(String methodName, MethodCallExpr call, String testClassFqn,
+                                                        boolean selfComparisonSuppressed) {
         List<Expression> args = call.getArguments();
         if ("assertEquals".equals(methodName) && args.size() >= 2) {
-            Optional<RuleFinding> f = matchAssertEquals(args.get(0), args.get(1), testClassFqn);
+            Optional<RuleFinding> f = matchAssertEquals(args.get(0), args.get(1), testClassFqn, selfComparisonSuppressed);
             if (f.isPresent()) {
                 return f;
             }
@@ -84,11 +119,13 @@ final class TautologicalOracleRule {
         return Optional.empty();
     }
 
-    private static Optional<RuleFinding> matchAssertEquals(Expression a, Expression b, String testClassFqn) {
+    private static Optional<RuleFinding> matchAssertEquals(Expression a, Expression b, String testClassFqn,
+                                                             boolean selfComparisonSuppressed) {
         if (isPlainConstant(a, testClassFqn) && isPlainConstant(b, testClassFqn)) {
             return Optional.of(new RuleFinding(Confidence.HIGH, "Both operands are compile-time constants; this assertion holds for any implementation."));
         }
-        if (a.toString().equals(b.toString()) && a.findAll(MethodCallExpr.class).isEmpty() && b.findAll(MethodCallExpr.class).isEmpty()) {
+        if (!selfComparisonSuppressed && a.toString().equals(b.toString())
+            && a.findAll(MethodCallExpr.class).isEmpty() && b.findAll(MethodCallExpr.class).isEmpty()) {
             if (a instanceof NameExpr || a instanceof FieldAccessExpr) {
                 return Optional.of(new RuleFinding(Confidence.HIGH, "Both operands are the same expression; this assertion holds regardless of behavior."));
             }

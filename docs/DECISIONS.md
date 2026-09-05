@@ -2323,6 +2323,27 @@ This is a real, visible side effect of an explicitly opt-in `--fix` - it
 writes jars to `~/.m2` - not something attempted silently. See
 `campaign/dropwizard/run-log.md` Step A2.
 
+**D-98 · TAUTOLOGICAL_ORACLE's self-comparison pattern recognizes
+`@SuppressWarnings("EqualsWithItself")`** (2026-09-06)
+Found on apache/commons-io's real test suite (a genuine false positive, not
+a target-repo defect): `ByteOrderMarkTest.testEquals` does
+`assertEquals(ByteOrderMark.UTF_16BE, ByteOrderMark.UTF_16BE)`, the standard,
+deliberate way to verify an `equals()` implementation's reflexivity (part of
+the `Object.equals` contract) - not a copy-paste mistake. The method carries
+`@SuppressWarnings("EqualsWithItself")`, the conventional IDE/static-analysis
+marker for exactly this pattern, which TAUTOLOGICAL_ORACLE's self-comparison
+check (pattern 3, docs/rules/TAUTOLOGICAL_ORACLE.md) had no carve-out for.
+
+Fix: `TautologicalOracleRule` checks the test method and its enclosing class
+for that exact suppression before evaluating pattern 3 only - patterns 1
+(constant-vs-constant), 2 (literal boolean), and 4 (fresh-object null check)
+are unaffected, and an unrelated suppression (`@SuppressWarnings("unchecked")`)
+does not silence anything. `TautologicalOracleEqualsReflexivityTest` (new)
+covers the method-level and class-level suppression, the still-fires-without-
+it baseline, the unrelated-suppression negative control, and that the
+suppression doesn't leak into the other three patterns. See
+`campaign/commons-io/run-log.md`.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

@@ -38,6 +38,12 @@ list requires updating this spec and its fixtures first.
   constants (`assertEquals(3.14159, MathLib.PI)` is a legitimate contract
   pin) — operand resolving to a non-test-class field does not count as a
   plain constant.
+- Pattern 3 (self-comparison) when the test method or its enclosing class
+  carries `@SuppressWarnings("EqualsWithItself")` (D-98) — the standard
+  IDE/static-analysis marker for a deliberate `equals()` reflexivity check
+  (`x.equals(x)` must hold per the `Object.equals` contract), found as a real
+  false positive on apache/commons-io's `ByteOrderMarkTest`. Scoped to
+  pattern 3 only: the same suppression does not silence patterns 1, 2, or 4.
 
 ## Suggested action text
 
