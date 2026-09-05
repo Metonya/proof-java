@@ -2344,6 +2344,21 @@ it baseline, the unrelated-suppression negative control, and that the
 suppression doesn't leak into the other three patterns. See
 `campaign/commons-io/run-log.md`.
 
+Verified live against the real file and found the first version of this fix
+incomplete: `matchAssertEquals` checked pattern 1 (constant-vs-constant)
+*before* the suppression-gated self-comparison check, and
+`ByteOrderMark.UTF_16BE` compared to itself also satisfies
+`isPlainConstant`'s field-resolution branch on the real file (not
+reproduced by the synthetic test fixtures, which use an unresolvable type) -
+so the finding survived, just relabeled from "same expression" to "compile-
+time constants". Restructured: a syntactic self-comparison
+(`a.toString().equals(b.toString())`, no method calls, one of the four
+pattern-3 expression shapes) is now checked and suppression-gated *first*,
+before pattern 1 is ever consulted, so the fix applies regardless of which
+underlying pattern the expression would otherwise satisfy. Confirmed on the
+real repo: the finding count dropped from 255 to 254 and the specific line
+no longer appears.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

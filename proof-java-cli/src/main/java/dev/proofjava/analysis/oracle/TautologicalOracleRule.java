@@ -121,17 +121,25 @@ final class TautologicalOracleRule {
 
     private static Optional<RuleFinding> matchAssertEquals(Expression a, Expression b, String testClassFqn,
                                                              boolean selfComparisonSuppressed) {
+        // Checked before pattern 1: a syntactic self-comparison (D-98's real
+        // shape, ByteOrderMark.UTF_16BE compared to itself) can *also* satisfy
+        // isPlainConstant's own "resolves to a field" branch depending on how
+        // the symbol solver classifies it - the suppression must win over
+        // either pattern for the exact same expression, not just pattern 3's
+        // own wording of it. A pattern-1 case that is not a self-comparison
+        // (two genuinely different constants) is untouched below.
+        boolean isSelfComparison = a.toString().equals(b.toString())
+            && a.findAll(MethodCallExpr.class).isEmpty() && b.findAll(MethodCallExpr.class).isEmpty()
+            && (a instanceof NameExpr || a instanceof FieldAccessExpr || a instanceof ArrayAccessExpr || a instanceof CastExpr);
+        if (isSelfComparison) {
+            if (selfComparisonSuppressed) {
+                return Optional.empty();
+            }
+            Confidence confidence = (a instanceof NameExpr || a instanceof FieldAccessExpr) ? Confidence.HIGH : Confidence.MEDIUM;
+            return Optional.of(new RuleFinding(confidence, "Both operands are the same expression; this assertion holds regardless of behavior."));
+        }
         if (isPlainConstant(a, testClassFqn) && isPlainConstant(b, testClassFqn)) {
             return Optional.of(new RuleFinding(Confidence.HIGH, "Both operands are compile-time constants; this assertion holds for any implementation."));
-        }
-        if (!selfComparisonSuppressed && a.toString().equals(b.toString())
-            && a.findAll(MethodCallExpr.class).isEmpty() && b.findAll(MethodCallExpr.class).isEmpty()) {
-            if (a instanceof NameExpr || a instanceof FieldAccessExpr) {
-                return Optional.of(new RuleFinding(Confidence.HIGH, "Both operands are the same expression; this assertion holds regardless of behavior."));
-            }
-            if (a instanceof ArrayAccessExpr || a instanceof CastExpr) {
-                return Optional.of(new RuleFinding(Confidence.MEDIUM, "Both operands are the same expression; this assertion holds regardless of behavior."));
-            }
         }
         return Optional.empty();
     }
