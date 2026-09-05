@@ -45,6 +45,18 @@ public final class ProcessOutputTail implements Runnable {
     /** Kept small on purpose: this is a failure-message tail, not a log. Full output goes to the tee writer. */
     public static final int TAIL_LINES = 20;
 
+    /**
+     * A total-character ceiling on {@link #tailMessage()}, independent of
+     * {@link #TAIL_LINES}. PIT's own logging emits one line per record, but a
+     * "line" can itself be enormous - a single {@code detected = KILLED by
+     * [...]} record lists every killing test, and a high-fan-out method (a
+     * gson mutation run stalled on one with 2 201 relevant tests) can turn 20
+     * such lines into a gigabyte-scale failure message, ending up embedded
+     * verbatim in the verdict JSON. {@link #TAIL_LINES} bounds record count,
+     * not record size; this bounds the message actually produced.
+     */
+    static final int MAX_TAIL_MESSAGE_CHARS = 4_000;
+
     private final InputStream in;
     private final Writer tee;
     private final Consumer<String> lineSink;
@@ -131,7 +143,15 @@ public final class ProcessOutputTail implements Runnable {
         if (tail.isEmpty()) {
             return "";
         }
-        return " (output tail:\n" + String.join("\n", tail) + ")";
+        String joined = String.join("\n", tail);
+        if (joined.length() <= MAX_TAIL_MESSAGE_CHARS) {
+            return " (output tail:\n" + joined + ")";
+        }
+        // Keep the newest content - a stalled run's last words matter most -
+        // and say plainly that older lines (or part of one huge line) were cut.
+        String kept = joined.substring(joined.length() - MAX_TAIL_MESSAGE_CHARS);
+        return " (output tail, truncated to the last " + MAX_TAIL_MESSAGE_CHARS + " chars"
+            + " - one or more captured lines were far larger than a failure message should embed:\n" + kept + ")";
     }
 
     /** Joins {@code thread}, restoring the interrupt flag rather than propagating. */

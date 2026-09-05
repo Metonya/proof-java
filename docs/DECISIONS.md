@@ -2165,6 +2165,43 @@ An unknown level is rejected (exit 2) rather than defaulting, so a typo cannot
 silently pick a verbosity. The 25 MB cap from D-89 stays as a backstop for
 `verbose`.
 
+**D-92 · A failure message's "output tail" is capped by size, not just by line
+count** (2026-09-05)
+Closes the campaign's own long-open question: what makes a real gson mutation
+run stall for several minutes on one class and never come back on its own.
+Root-caused with `--diagnostics-level verbose`: PIT's own minion-coordinator
+wait (`MutationTestUnit.waitForMinionToDie`) has no timeout of its own, so
+when the minion hangs (here, a mutant of `LinkedTreeMap#find`, a method with
+2 201 relevant tests, likely tripping something in the JUnit4-vintage/Guava
+collection-testing suite's own machinery) nothing inside PIT ever recovers.
+D-85's idle timeout is the only safety net in the stack for this - and it
+works exactly as designed: it fired at the configured budget, killed the
+process tree, and kept the 19-of-37 classes already measured. **The stall
+itself was never a bug; D-85 already covers it.**
+
+What surfaced instead is a second, previously-unnoticed defect on the same
+path: `MutationCollectionException`'s message embeds
+`ProcessOutputTail.tailMessage()`, capped at `TAIL_LINES = 20` - a count, not
+a size. PIT's verbose logging writes one record per line, but a record is not
+bounded in length: a `detected = KILLED by [...]` line lists every killing
+test, so a high-fan-out method turns 20 such lines into an enormous message.
+On this run it produced a **1.3 GB verdict.json** with a single 1.3-billion-
+character line - far past even the 312 MB case D-86 was written for, since
+that fix interns the *structured* evidence (`killingTests`/`testIds`) and
+this blob is unstructured free text inside an incomplete-reason's message,
+outside D-86's reach entirely.
+
+Fix: `ProcessOutputTail.tailMessage()` now also caps the *joined* tail at
+4 000 characters (`MAX_TAIL_MESSAGE_CHARS`), keeping the newest content and
+saying plainly when it cut something - the same "never silently truncate"
+posture as D-89's `CappedWriter`, applied to a message string instead of a
+log file. `TAIL_LINES` still bounds record count for the ordinary case; this
+is the backstop for the record itself being unexpectedly huge.
+
+No gson defect, no proof-java PR-worthy finding for gson's own repository -
+the stall is an interaction between PIT's minion protocol and a
+high-fan-out test suite, not a gson bug. See `campaign/gson/run-log.md`.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

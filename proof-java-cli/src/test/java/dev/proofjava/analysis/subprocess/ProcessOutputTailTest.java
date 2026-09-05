@@ -39,6 +39,33 @@ class ProcessOutputTailTest {
         assertEquals(ProcessOutputTail.TAIL_LINES, message.lines().count() - 1, "one header line plus the tail");
     }
 
+    /** D-92: a single PIT log record can itself be huge (a killed-by list for a high-fan-out method). */
+    @Test
+    void aSingleEnormousLineIsTruncatedRatherThanEmbeddedWhole() {
+        String enormousLine = "x".repeat(ProcessOutputTail.MAX_TAIL_MESSAGE_CHARS * 3);
+        ProcessOutputTail tail = ProcessOutputTail.tailOnly(lines(enormousLine));
+        tail.run();
+
+        String message = tail.tailMessage();
+
+        assertTrue(message.length() < enormousLine.length(), "must not embed the whole line");
+        assertTrue(message.contains("truncated"), "says plainly that it cut something");
+    }
+
+    @Test
+    void manyModeratelyLongLinesAreStillCappedInTotal() {
+        String[] many = IntStream.rangeClosed(1, ProcessOutputTail.TAIL_LINES)
+            .mapToObj(i -> "line " + i + ": " + "y".repeat(500)).toArray(String[]::new);
+
+        ProcessOutputTail tail = ProcessOutputTail.tailOnly(lines(many));
+        tail.run();
+
+        String message = tail.tailMessage();
+
+        assertTrue(message.length() <= ProcessOutputTail.MAX_TAIL_MESSAGE_CHARS + 200,
+            "the cap applies to the joined total, not just single lines");
+    }
+
     @Test
     void anEmptyStreamProducesNoTailMessageAtAll() {
         ProcessOutputTail tail = ProcessOutputTail.tailOnly(new ByteArrayInputStream(new byte[0]));
