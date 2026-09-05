@@ -149,6 +149,13 @@ class AnalyzeCommand implements Callable<Integer> {
     @Option(names = "--diagnostics-dir", description = "Directory for per-module L2/L3 subprocess logs. Also turns the engine verbose, which is the only way to see why its own coverage minion died (D-64). Off by default: verbose output with nowhere to land is just a slower run.")
     private String diagnosticsDirOption;
 
+    @Option(names = "--diagnostics-level", defaultValue = "errors",
+        description = "How much the engine itself logs into --diagnostics-dir: 'errors' (default) keeps it quiet, so"
+            + " the log holds its failures and its summary; 'verbose' adds a line per mutant per test, which is what"
+            + " makes a stuck coverage minion diagnosable but reached 184 MB for one module on a real repo (D-91)."
+            + " Ignored without --diagnostics-dir.")
+    private String diagnosticsLevelOption;
+
     @Option(names = "--language-level", defaultValue = "17", description = "Java language level for JavaParser (oracle critic), 8-21, and recorded as provenance.")
     private int languageLevel;
 
@@ -910,7 +917,19 @@ class AnalyzeCommand implements Callable<Integer> {
         if (diagnosticsDirOption == null || diagnosticsDirOption.isBlank()) {
             return EvidenceDiagnostics.progressOnly(sink);
         }
-        return new EvidenceDiagnostics(Path.of(diagnosticsDirOption), sink);
+        return new EvidenceDiagnostics(Path.of(diagnosticsDirOption), diagnosticsLevel(), sink);
+    }
+
+    /** @throws CliUsageException on an unknown level - a typo must not silently pick a verbosity. */
+    private EvidenceDiagnostics.Level diagnosticsLevel() {
+        if ("errors".equalsIgnoreCase(diagnosticsLevelOption)) {
+            return EvidenceDiagnostics.Level.ERRORS;
+        }
+        if ("verbose".equalsIgnoreCase(diagnosticsLevelOption)) {
+            return EvidenceDiagnostics.Level.VERBOSE;
+        }
+        throw new CliUsageException("--diagnostics-level must be 'errors' or 'verbose', got: "
+            + diagnosticsLevelOption);
     }
 
     private static java.util.Set<String> changedAndUntrackedPaths(DiffResult diffResult) {

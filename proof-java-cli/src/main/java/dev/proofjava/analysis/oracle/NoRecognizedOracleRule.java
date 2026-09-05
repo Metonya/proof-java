@@ -1,5 +1,6 @@
 package dev.proofjava.analysis.oracle;
 
+import java.util.List;
 import java.util.Optional;
 
 import com.github.javaparser.ast.body.MethodDeclaration;
@@ -18,6 +19,26 @@ final class NoRecognizedOracleRule {
         "Add an assertion on the observed behavior, or register the helper as a custom oracle in configuration.";
 
     private NoRecognizedOracleRule() {
+    }
+
+    /**
+     * D-90: when the test did call something that reads like an assertion and it
+     * resolved to a real method, say which one. Without this the finding is a
+     * dead end - it says nothing was recognized, and leaves the reader to hunt
+     * for the helper to put in {@code customOracles}.
+     *
+     * <p>Deliberately does not change the verdict. The helper may genuinely
+     * assert nothing; the tool cannot tell from here (D-17), so it names what it
+     * saw rather than deciding for the reader. At most two are listed - the
+     * point is a starting place, not an inventory.
+     */
+    private static String unrecognizedHelperHint(TraversalResult traversal) {
+        List<String> candidates = traversal.resolvedSuggestiveNonOracleCalls().limit(2).toList();
+        if (candidates.isEmpty()) {
+            return "";
+        }
+        return " It does call " + String.join(" and ", candidates)
+            + ", which is not a recognized oracle - if that helper does assert, add it to customOracles.";
     }
 
     static Optional<RuleFinding> evaluate(MethodDeclaration testMethod, TraversalResult traversal) {
@@ -44,6 +65,7 @@ final class NoRecognizedOracleRule {
         Confidence confidence = traversal.anyUnresolvedNonSuggestive() ? Confidence.MEDIUM : Confidence.HIGH;
         return Optional.of(new RuleFinding(confidence,
             "Test '" + testMethod.getNameAsString()
-                + "' contains no recognized assertion, verification, or expected exception."));
+                + "' contains no recognized assertion, verification, or expected exception."
+                + unrecognizedHelperHint(traversal)));
     }
 }

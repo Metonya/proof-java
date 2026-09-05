@@ -76,9 +76,11 @@ final class ReportDataWriter {
             }
             if (doc.mutation() != null) {
                 Map<String, Integer> testIds = internKillingTests(doc.mutation());
+                // D-90: the report shows labels, not engine ids. The raw id
+                // stays in the verdict JSON, which is the machine contract.
                 g.writeArrayFieldStart("testIds");
                 for (String testId : testIds.keySet()) {
-                    g.writeString(testId);
+                    g.writeString(TestLabels.readable(testId));
                 }
                 g.writeEndArray();
                 writeMutation(g, doc.mutation(), used, testIds);
@@ -479,6 +481,7 @@ final class ReportDataWriter {
             used.add(m.status());
             g.writeStartObject();
             g.writeStringField("mutator", m.mutator());
+            g.writeStringField("mutatorShort", TestLabels.shortMutator(m.mutator()));
             g.writeNumberField("line", m.line());
             g.writeStringField("status", m.status());
             g.writeArrayFieldStart("killingTests");

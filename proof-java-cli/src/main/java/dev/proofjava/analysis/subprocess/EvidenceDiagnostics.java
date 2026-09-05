@@ -36,9 +36,25 @@ import java.util.function.Consumer;
  * @param progressSink where a human-readable progress line goes; never null
  *                     (use {@link #none()} for a run that reports nothing).
  */
-public record EvidenceDiagnostics(Path logDir, Consumer<String> progressSink) {
+public record EvidenceDiagnostics(Path logDir, Level level, Consumer<String> progressSink) {
 
-    private static final EvidenceDiagnostics NONE = new EvidenceDiagnostics(null, message -> { });
+    /**
+     * D-91: how much the engine itself should say.
+     *
+     * <p>{@link #ERRORS} is the default and what almost every run wants: the
+     * engine stays quiet, so the log holds its errors and its summary and
+     * nothing else. {@link #VERBOSE} adds a line per mutant per test, which is
+     * what makes a stuck coverage minion diagnosable (D-64) and what produced a
+     * 184 MB file for one module on google/gson.
+     */
+    public enum Level { ERRORS, VERBOSE }
+
+    /** Backwards-compatible shape for callers that only care about the directory. */
+    public EvidenceDiagnostics(Path logDir, Consumer<String> progressSink) {
+        this(logDir, Level.ERRORS, progressSink);
+    }
+
+    private static final EvidenceDiagnostics NONE = new EvidenceDiagnostics(null, Level.ERRORS, message -> { });
 
     /**
      * D-89: a single module's verbose PIT log reached 184 MB on google/gson,
@@ -57,17 +73,19 @@ public record EvidenceDiagnostics(Path logDir, Consumer<String> progressSink) {
 
     /** Progress only, no subprocess log capture - the default for a run without {@code --diagnostics-dir}. */
     public static EvidenceDiagnostics progressOnly(Consumer<String> progressSink) {
-        return new EvidenceDiagnostics(null, progressSink);
+        return new EvidenceDiagnostics(null, Level.ERRORS, progressSink);
     }
 
     /**
-     * Whether the PIT drivers should run verbose. Tied to {@link #logDir}
-     * rather than being separately switchable: verbose output with nowhere
-     * to put it is just a slower run, since the in-memory tail only ever
-     * keeps {@link ProcessOutputTail#TAIL_LINES} lines either way.
+     * Whether the PIT drivers should run verbose. Needs both a log directory and
+     * {@link Level#VERBOSE}: verbose output with nowhere to land is just a
+     * slower run (the in-memory tail keeps only
+     * {@link ProcessOutputTail#TAIL_LINES} lines either way), and a log
+     * directory alone should not cost a line per mutant per test - D-91 split
+     * these after one module's log reached 184 MB.
      */
     public boolean verbose() {
-        return logDir != null;
+        return logDir != null && level == Level.VERBOSE;
     }
 
     /** Reports one progress line; the sink itself decides how to render it. */

@@ -1,0 +1,101 @@
+package dev.proofjava.analysis.report;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Turns a raw engine test id into something a person can read in a report cell.
+ *
+ * <p>D-90: a real gson report showed killing tests as walls of text like
+ * {@code com.google.gson.JsonArrayAsListSuiteTest.[engine:junit-vintage]/[runner:
+ * com.google.gson.JsonArrayAsListSuiteTest]/[test:JsonArray#asList %5Bcollection
+ * size%3A several%5D]/[test:com.google.common.collect.testing.testers
+ * .CollectionContainsAllTester]/...}, dozens per mutant. The percent escapes are
+ * URL encoding for {@code [} and {@code :}, and the bracket scaffolding is the
+ * engine's addressing, not information. A reader's question is which test killed
+ * this mutant, and the answer fits in a few words.
+ *
+ * <p>The raw id stays in the verdict JSON, which is the machine contract. This
+ * only shapes what the HTML shows.
+ */
+final class TestLabels {
+
+    private static final Pattern JUNIT5 = Pattern.compile("\\[class:([^]]+)].*?\\[method:([^](]+)");
+    private static final Pattern VINTAGE = Pattern.compile("\\[runner:([^]]+)].*?\\[test:([^](\\[]+)");
+    private static final Pattern PLAIN = Pattern.compile("([\\w.$]+)#([\\w$]+)");
+
+    private TestLabels() {
+    }
+
+    /** @return {@code SimpleClass#method}, or a decoded and shortened form when nothing parses. */
+    static String readable(String rawTestId) {
+        if (rawTestId == null || rawTestId.isBlank()) {
+            return "";
+        }
+        String decoded = decodePercentEscapes(rawTestId);
+
+        Matcher junit5 = JUNIT5.matcher(decoded);
+        if (junit5.find()) {
+            return simpleName(junit5.group(1)) + "#" + junit5.group(2).trim();
+        }
+        Matcher vintage = VINTAGE.matcher(decoded);
+        if (vintage.find()) {
+            return simpleName(vintage.group(1)) + "#" + vintage.group(2).trim();
+        }
+        Matcher plain = PLAIN.matcher(decoded);
+        if (plain.find()) {
+            return simpleName(plain.group(1)) + "#" + plain.group(2);
+        }
+        return shorten(decoded);
+    }
+
+    /**
+     * Engine ids percent-encode the characters they use structurally, so
+     * {@code %5B} and {@code %3A} appear literally in a suite descriptor. Decoded
+     * by hand rather than with {@code URLDecoder}, which would also turn {@code +}
+     * into a space and mangle method names that legitimately contain one.
+     */
+    private static String decodePercentEscapes(String raw) {
+        if (raw.indexOf('%') < 0) {
+            return raw;
+        }
+        StringBuilder out = new StringBuilder(raw.length());
+        for (int i = 0; i < raw.length(); i++) {
+            char c = raw.charAt(i);
+            if (c == '%' && i + 2 < raw.length() && isHex(raw.charAt(i + 1)) && isHex(raw.charAt(i + 2))) {
+                out.append((char) Integer.parseInt(raw.substring(i + 1, i + 3), 16));
+                i += 2;
+            } else {
+                out.append(c);
+            }
+        }
+        return out.toString();
+    }
+
+    private static boolean isHex(char c) {
+        return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+    }
+
+    private static String simpleName(String fqn) {
+        String trimmed = fqn.trim();
+        int lastDot = trimmed.lastIndexOf('.');
+        return lastDot < 0 ? trimmed : trimmed.substring(lastDot + 1);
+    }
+
+    private static String shorten(String value) {
+        return value.length() <= 80 ? value : value.substring(0, 77) + "...";
+    }
+
+    /**
+     * {@code org.pitest.mutationtest.engine.gregor.mutators.returns
+     * .BooleanFalseReturnValsMutator} to {@code BooleanFalseReturnVals}. The full
+     * name was wrapping into unreadable fragments in a narrow table column.
+     */
+    static String shortMutator(String mutator) {
+        if (mutator == null || mutator.isBlank()) {
+            return "";
+        }
+        String simple = simpleName(mutator);
+        return simple.endsWith("Mutator") ? simple.substring(0, simple.length() - "Mutator".length()) : simple;
+    }
+}

@@ -2113,6 +2113,58 @@ Verbosity is deliberately tied to the log directory (D-64) - verbose output with
 nowhere to land is just a slower run - and a compressed log cannot be tailed
 while a run is stuck, which is the situation it exists for.
 
+**D-90 · A finding names the helper it did not recognize; the report shows test
+labels, not engine ids** (2026-09-05)
+Two readability defects found by looking at a real gson report rather than at
+test fixtures.
+
+**The finding was a dead end.** `NO_RECOGNIZED_ORACLE` said a test contains no
+recognized assertion and stopped there, leaving the reader to work out which
+helper to put in `customOracles`. On google/gson this was 13 of 33 findings, and
+every one of them called a real assertion in `MoreAsserts` or
+`DefaultTypeAdaptersTest`. The information was already in hand -
+`CallResolution` carries the declaring type of every resolved call - so the
+message now ends with, for example, "It does call
+`com.google.gson.common.MoreAsserts#assertEqualsAndHashCode`, which is not a
+recognized oracle". The config line writes itself.
+
+Deliberately additive: it does not change the verdict or the confidence. The
+helper may genuinely assert nothing, and the tool cannot tell from here (D-17),
+so it names what it saw instead of deciding. At most two are listed - a starting
+point, not an inventory. A test that called nothing assertion-shaped gets no
+hint, because there is nothing to suggest.
+
+**The report showed engine ids.** A mutant's killing-test column rendered raw
+ids like `com.google.gson.JsonArrayAsListSuiteTest.[engine:junit-vintage]/
+[runner:...]/[test:JsonArray#asList %5Bcollection size%3A several%5D]/...`,
+dozens per mutant, roughly 250 characters each, with `%5B` and `%3A` left as
+URL escapes. gson generates its suites from Guava testlib, so one mutant is
+killed by dozens of generated testers.
+
+The report's `testIds` table now holds readable labels (`SuiteTest#asList`), the
+column shows the first three with "+N more" and the full list in a tooltip, and
+the mutator column shows `BooleanFalseReturnVals` instead of a fully qualified
+class name that wrapped into unreadable fragments. The raw ids stay in the
+verdict JSON, which is the machine contract; this shapes only what a person
+reads.
+
+**D-91 · Diagnostics verbosity is a level, not a side effect of asking for a log
+directory** (2026-09-05)
+`--diagnostics-dir` implied `Verbosity.VERBOSE`, on the reasoning (D-64) that
+verbose output with nowhere to land is just a slower run. True, but it made the
+converse true as well: wanting a log at all bought a line per mutant per test.
+One module's log reached 184 MB on google/gson.
+
+`--diagnostics-level` now selects it. The default, `errors`, keeps the engine
+quiet, so the log holds its failures and its summary - which is what a run that
+worked needs to leave behind. `verbose` restores the old behaviour for the case
+it was built for: a coverage minion that dies without saying why. Both still
+require a log directory, because the original reasoning stands.
+
+An unknown level is rejected (exit 2) rather than defaulting, so a typo cannot
+silently pick a verbosity. The 25 MB cap from D-89 stays as a backstop for
+`verbose`.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

@@ -44,16 +44,39 @@ class EvidenceDiagnosticsTest {
     }
 
     @Test
-    void aLogDirectoryTurnsTheRunVerboseAndNamesTheFilePerModuleAndLayer() throws IOException {
+    void aLogDirectoryNamesTheFilePerModuleAndLayer() throws IOException {
         EvidenceDiagnostics diagnostics = new EvidenceDiagnostics(tempDir.resolve("logs"), message -> { });
 
-        assertTrue(diagnostics.verbose());
         try (Writer w = diagnostics.openLog("service", "mutation")) {
             assertNotNull(w);
             w.write("hello");
         }
 
         assertEquals("hello", Files.readString(tempDir.resolve("logs").resolve("service-mutation.log")));
+    }
+
+    /**
+     * D-91: a log directory used to imply verbose, which meant asking for any
+     * diagnostics at all bought a line per mutant per test - 184 MB for one
+     * module on google/gson. The default now keeps the engine quiet, so the log
+     * holds its failures and its summary, and verbosity is asked for separately.
+     */
+    @Test
+    void aLogDirectoryAloneDoesNotTurnTheEngineVerbose() {
+        EvidenceDiagnostics defaulted = new EvidenceDiagnostics(tempDir.resolve("logs"), message -> { });
+
+        assertFalse(defaulted.verbose(), "a place to write is not a request for every line");
+    }
+
+    @Test
+    void verbosityIsAskedForExplicitlyAndStillNeedsSomewhereToWrite() {
+        EvidenceDiagnostics asked = new EvidenceDiagnostics(tempDir.resolve("logs"),
+            EvidenceDiagnostics.Level.VERBOSE, message -> { });
+        EvidenceDiagnostics nowhereToWrite = new EvidenceDiagnostics(null,
+            EvidenceDiagnostics.Level.VERBOSE, message -> { });
+
+        assertTrue(asked.verbose());
+        assertFalse(nowhereToWrite.verbose(), "verbose output with nowhere to land is just a slower run");
     }
 
     /** Module ids reach this from the command line; the same sanitizing rule {@link SubprocessWorkspace} uses applies. */

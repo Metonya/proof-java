@@ -75,6 +75,52 @@ class CustomOraclesTest {
         assertEquals("NO_RECOGNIZED_ORACLE", result.findings().get(0).rule());
     }
 
+    /**
+     * D-90: the finding above is correct but was a dead end - it said nothing
+     * was recognized and left the reader to find the helper themselves. On
+     * google/gson this shape was 13 of 33 findings, every one a real assertion
+     * in MoreAsserts. Naming the call makes the customOracles line copyable.
+     */
+    @Test
+    void theFindingNamesTheUnrecognizedHelperItSaw() throws IOException {
+        writeExternalHelperAndTest();
+
+        OracleScanResult result = OracleRuleEngine.scan(repoRoot, List.of(module()), 17, "UTF-8", null);
+
+        String message = result.findings().get(0).message();
+        assertTrue(message.contains("com.example.MoreAsserts#assertContainsRegex"),
+            "the message must name the helper to allowlist: " + message);
+        assertTrue(message.contains("customOracles"), message);
+    }
+
+    /**
+     * The hint is additive: naming the helper must not change the verdict, since
+     * the tool cannot tell from here whether that helper asserts anything.
+     */
+    @Test
+    void aTestWithNoSuggestiveCallAtAllGetsNoHint() throws IOException {
+        Path dir = repoRoot.resolve("src/test/java/com/example");
+        Files.createDirectories(dir);
+        Files.writeString(dir.resolve("QuietTest.java"), String.join("\n",
+            "package com.example;",
+            "",
+            "import org.junit.jupiter.api.Test;",
+            "",
+            "class QuietTest {",
+            "    @Test",
+            "    void doesSomethingWithoutChecking() {",
+            "        String.valueOf(1);",
+            "    }",
+            "}",
+            ""));
+
+        OracleScanResult result = OracleRuleEngine.scan(repoRoot, List.of(module()), 17, "UTF-8", null);
+
+        String message = result.findings().get(0).message();
+        assertTrue(!message.contains("customOracles"),
+            "nothing assertion-shaped was called, so there is nothing to suggest: " + message);
+    }
+
     @Test
     void namingTheHelperInCustomOraclesRecognizesItAndTheFindingDisappears() throws IOException {
         writeExternalHelperAndTest();

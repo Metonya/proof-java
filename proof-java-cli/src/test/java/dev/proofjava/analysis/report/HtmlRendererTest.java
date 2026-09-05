@@ -261,7 +261,9 @@ class HtmlRendererTest {
         // D-86: a killing-test id is written once, in the report-wide testIds
         // table, and each mutant references it by index. On gson this was the
         // difference between a 67 MB report and one a browser opens.
-        assertEquals(List.of("com.example.CalculatorTest#add()"), arr(data.get("testIds")));
+        // D-90: the report's table holds readable labels, not engine ids. The
+        // raw id stays in the verdict JSON, which is the machine contract.
+        assertEquals(List.of("CalculatorTest#add"), arr(data.get("testIds")));
         assertEquals(List.of(0), arr(obj(mutants.get(0)).get("killingTests")).stream()
             .map(i -> ((Number) i).intValue()).toList());
 

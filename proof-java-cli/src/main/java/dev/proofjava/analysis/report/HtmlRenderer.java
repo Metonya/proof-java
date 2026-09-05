@@ -411,6 +411,16 @@ public final class HtmlRenderer {
             var ids = DATA.testIds || [];
             return (m.killingTests || []).map(function (i) { return ids[i]; }).filter(Boolean);
           }
+          // A generated suite can kill one mutant with dozens of tests. The
+          // question a reader has is which test killed it, and a few answer it -
+          // the full list is in the verdict JSON.
+          var KILLERS_SHOWN = 3;
+          function killersSummary(m) {
+            var all = killers(m);
+            if (!all.length) { return '\u2014'; }
+            if (all.length <= KILLERS_SHOWN) { return all.join(', '); }
+            return all.slice(0, KILLERS_SHOWN).join(', ') + ' +' + (all.length - KILLERS_SHOWN) + ' more';
+          }
           function debounce(fn, ms) {
             var t = null;
             return function () {
@@ -509,7 +519,7 @@ public final class HtmlRenderer {
                     if (!best || rank < best.rank) {
                       best = { rank: rank, moduleId: mod.moduleId, className: cls.className, methodName: method.methodName,
                         signatureShort: method.signatureShort, firstLine: method.firstLine, lastLine: method.lastLine,
-                        mutator: m.mutator, line: m.line, status: m.status, killingTests: killers(m) };
+                        mutator: m.mutator, mutatorShort: m.mutatorShort, line: m.line, status: m.status, killingTests: killers(m) };
                     }
                   });
                 });
@@ -551,7 +561,7 @@ public final class HtmlRenderer {
               var callout = el('div', { class: 'mut-callout' });
               callout.appendChild(el('span', { class: 'mut-callout-code', text: concern.className + '#' + concern.signatureShort }));
               var killLabel = concern.killingTests.length ? (concern.killingTests.length + ' killing tests') : 'no killing test';
-              callout.appendChild(el('span', { class: 'mut-callout-meta', text: concern.mutator + ' \\u00b7 line ' + concern.line + ' \\u00b7 ' + killLabel }));
+              callout.appendChild(el('span', { class: 'mut-callout-meta', title: concern.mutator, text: (concern.mutatorShort || concern.mutator) + ' \\u00b7 line ' + concern.line + ' \\u00b7 ' + killLabel }));
               card.appendChild(callout);
               var more = el('a', { href: '#mutant-detail', class: 'mut-more-link', text: 'Go to mutant detail \\u2192' });
               card.appendChild(more);
@@ -572,7 +582,7 @@ public final class HtmlRenderer {
               text: 'line ' + concern.firstLine + '-' + concern.lastLine }));
             card.appendChild(top);
             var mutRow = el('div', { style: 'margin-top:12px;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;padding:10px 13px;border-radius:8px;background:var(--surf2);border:1px solid var(--line);font-family:var(--mono);font-size:12px' });
-            mutRow.appendChild(el('span', { style: 'color:var(--bad);font-weight:600;min-width:0;overflow-wrap:anywhere', text: concern.mutator }));
+            mutRow.appendChild(el('span', { style: 'color:var(--bad);font-weight:600;min-width:0;overflow-wrap:anywhere', title: concern.mutator, text: concern.mutatorShort || concern.mutator }));
             mutRow.appendChild(el('span', { style: 'color:var(--ink3);margin-left:auto;min-width:0;overflow-wrap:anywhere',
               text: concern.killingTests.length ? concern.killingTests.join(', ') : 'no killing test' }));
             card.appendChild(mutRow);
@@ -637,10 +647,10 @@ public final class HtmlRenderer {
                   method.mutants.forEach(function (m) {
                     var tr = el('tr', { class: 'mutant-row status-' + m.status, 'data-status': m.status,
                       'data-search': mutantSearchText(cls.className, method.methodName, m) });
-                    tr.appendChild(el('td', { text: m.mutator }));
+                    tr.appendChild(el('td', { title: m.mutator, text: m.mutatorShort || m.mutator }));
                     tr.appendChild(el('td', { text: String(m.line) }));
                     tr.appendChild(el('td', { text: label(m.status).name }));
-                    tr.appendChild(el('td', { text: killers(m).length ? killers(m).join(', ') : '\\u2014' }));
+                    tr.appendChild(el('td', { title: killers(m).join(', '), text: killersSummary(m) }));
                     tbody.appendChild(tr);
                   });
                   table.appendChild(tbody);
