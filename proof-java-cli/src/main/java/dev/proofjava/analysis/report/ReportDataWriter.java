@@ -556,7 +556,7 @@ final class ReportDataWriter {
     //
     // D-80 tried a nested, path-compressed folder tree here; D-81 replaced it with a flat list
     // once the report moved to a fixed dashboard (no more expand-a-folder browsing UI - the
-    // "Dosyalar" card sorts/filters this flat list by risk or groups it by immediate package
+    // "Files" card sorts/filters this flat list by risk or groups it by immediate package
     // client-side). displayPath strips each entry's own module-root+source-root prefix (from
     // that module's declared sourceRoots, never a guess) so "gson/src/main/java/com/google/gson/
     // internal/bind/TreeTypeAdapter.java" reads as "com/google/gson/internal/bind/TreeTypeAdapter.java"

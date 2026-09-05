@@ -60,7 +60,7 @@ public final class HtmlRenderer {
     public static String render(VerdictDocument doc) {
         String dataJson = ReportDataWriter.write(doc);
         StringBuilder sb = new StringBuilder();
-        sb.append("<!doctype html>\n<html lang=\"tr\">\n<head>\n");
+        sb.append("<!doctype html>\n<html lang=\"en\">\n<head>\n");
         sb.append("<meta charset=\"utf-8\">\n");
         sb.append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n");
         sb.append("<title>proof-java report</title>\n");
@@ -68,6 +68,7 @@ public final class HtmlRenderer {
         sb.append("</head>\n<body>\n");
         sb.append("<noscript><div class=\"noscript-warning\">This report is rendered with JavaScript - ")
             .append("it appears to be disabled in your browser, so the content stays empty.</div></noscript>\n");
+        sb.append(BRAND_ICON_SVG).append('\n');
         sb.append("<div id=\"app\"></div>\n");
         sb.append("<script id=\"proof-data\" type=\"application/json\">")
             .append(jsonEscapeForScript(dataJson)).append("</script>\n");
@@ -92,6 +93,62 @@ public final class HtmlRenderer {
         }
         return out.toString();
     }
+
+    /**
+     * The sidebar brand mark. "Inkbrush person reviewing proof" by Koboyo
+     * (koboyo.com/icons), free for commercial use, no attribution required
+     * (koboyo.com/icons/license) - kept here as a literal, since the whole
+     * shell this belongs to (title, CSS, this markup) is static and authored
+     * by the tool itself, never built from a document-derived value; the
+     * report's one escaping boundary ({@link #jsonEscapeForScript}) is about
+     * the embedded verdict data, not this. Held in a {@code <template>} so the
+     * static shell carries it without the script needing an SVG string
+     * literal of its own; the script only clones it.
+     */
+    private static final String BRAND_ICON_SVG = """
+        <template id="brand-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" \
+        aria-label="A person reviewing a proof" viewBox="-0.0 -18.5 297.0 297.0">\
+        <g transform="translate(0.000000,260.000000) scale(0.100000,-0.100000)"><path d="M1105 2410 c-166 -26 -290 -116 -356 -255 -58 -122 -61 -244 -9 -353
+        26 -56 58 -96 43 -55 -3 10 10 0 30 -22 39 -43 46 -38 22 18 -8 20 -15 39 -15
+        43 0 4 7 1 15 -6 13 -10 15 -9 15 11 0 13 -7 60 -14 103 -28 156 24 289 142
+        365 158 101 377 75 500 -59 25 -27 82 -137 82 -157 0 -7 4 -13 9 -13 15 0 18
+        -83 4 -131 -7 -26 -29 -73 -48 -105 -33 -54 -35 -64 -35 -141 l0 -83 -27 0
+        c-34 -1 -58 -17 -67 -47 -4 -12 -15 -25 -25 -28 -10 -3 -31 -24 -46 -45 -34
+        -50 -62 -58 -122 -35 -45 17 -113 28 -113 19 0 -3 12 -16 28 -31 44 -41 103
+        -66 155 -67 47 0 50 2 122 78 70 72 77 77 106 71 19 -4 41 -2 54 5 22 12 23
+        18 22 116 l-1 103 37 53 c42 61 67 126 67 173 0 37 -24 111 -43 135 -7 8 -19
+        37 -25 64 -45 177 -289 311 -507 276z M1768 1718 c-8 -7 -44 -83 -78 -168 -34
+        -85 -82 -204 -106 -265 -46 -112 -54 -163 -15 -87 12 24 28 45 35 48 7 3 57
+        97 112 209 l99 205 53 0 c94 0 719 -82 768 -100 l22 -9 -23 -73 c-13 -40 -54
+        -156 -91 -258 -37 -102 -84 -234 -106 -295 -21 -60 -42 -119 -47 -130 -5 -11
+        -33 -73 -61 -137 -50 -112 -69 -146 -55 -95 11 37 -11 2 -72 -118 -30 -60 -59
+        -115 -65 -122 -7 -8 -23 -8 -66 3 -31 7 -142 34 -247 59 -104 25 -238 52 -297
+        61 -96 14 -110 14 -129 0 -21 -14 -21 -15 17 -31 143 -62 735 -240 769 -231
+        13 3 37 23 54 44 30 38 44 72 146 352 29 80 62 168 73 196 12 29 19 54 16 57
+        -6 6 76 189 88 198 10 7 75 158 144 334 30 77 61 152 69 167 18 32 19 62 3 76
+        -25 20 -97 32 -389 67 -507 61 -590 67 -621 43z m693 -864 c-94 -207 -113
+        -246 -117 -241 -2 2 35 87 83 190 48 103 88 185 90 183 2 -1 -23 -61 -56 -132z
+        m-140 -301 c-12 -20 -14 -14 -5 12 4 9 9 14 11 11 3 -2 0 -13 -6 -23z M597
+        1696 c-169 -70 -294 -215 -387 -450 -17 -44 -30 -91 -28 -105 3 -25 4 -25 27
+        14 26 43 65 87 200 227 79 82 148 134 294 219 48 28 55 35 37 37 -21 3 -20 5
+        11 24 l34 21 -25 9 c-14 5 -35 7 -48 5 -18 -3 -20 -2 -11 9 19 23 -38 17 -104
+        -10z M916 1508 c17 -19 17 -21 2 -15 -12 4 -7 -9 17 -48 80 -124 95 -213 92
+        -526 -2 -173 1 -219 12 -233 10 -12 17 -14 25 -6 5 5 17 10 27 10 30 0 239
+        201 239 231 0 21 59 69 127 104 28 14 54 25 57 25 19 0 1 -65 -34 -118 -29
+        -45 -35 -62 -24 -62 8 0 12 -4 9 -10 -10 -16 5 -12 41 11 18 11 47 39 64 61
+        49 68 37 155 -27 179 -56 21 -198 -55 -248 -133 -16 -26 -33 -47 -38 -47 -4
+        -1 -31 -17 -59 -36 -28 -20 -53 -33 -56 -30 -3 3 -6 85 -7 183 -2 148 -5 187
+        -22 240 -25 74 -79 149 -149 203 -56 43 -78 51 -48 17z M2294 1319 c-50 -32
+        -217 -171 -297 -248 -32 -31 -62 -57 -67 -59 -5 -2 -20 19 -34 45 -28 56 -40
+        69 -78 78 -24 6 -28 3 -34 -20 -8 -34 53 -239 78 -262 35 -32 69 -6 298 221
+        121 121 218 222 215 224 -2 3 -13 -1 -22 -9 -13 -9 -12 -6 3 11 33 39 34 45 6
+        45 -14 0 -45 -12 -68 -26z M1436 747 c-3 -16 -11 -25 -16 -22 -5 3 -20 -16
+        -34 -43 -37 -73 -136 -202 -197 -255 -80 -71 -188 -122 -258 -121 -120 1 -223
+        90 -330 285 -22 42 -50 84 -62 94 -20 19 -20 19 -14 -26 18 -121 86 -299 116
+        -299 5 0 15 -15 23 -34 15 -37 102 -96 142 -96 11 0 29 -7 40 -15 41 -31 164
+        -10 277 46 88 45 231 190 281 287 39 75 60 169 46 206 -6 18 -8 17 -14 -7z"/>\
+        </g></svg></template>
+        """;
 
     private static final String CSS = """
         :root {
@@ -139,7 +196,7 @@ public final class HtmlRenderer {
           border-right: 1px solid var(--line); display: flex; flex-direction: column; }
         .side-head { padding: 20px 20px 18px; border-bottom: 1px solid var(--line); display: flex;
           align-items: center; gap: 10px; }
-        .side-mark { width: 9px; height: 22px; border-radius: 2px; background: var(--good); flex: none; }
+        .side-mark { width: 30px; height: 30px; flex: none; color: var(--good); }
         .side-brand { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
         .side-brand-name { font-size: 15px; font-weight: 680; letter-spacing: -0.01em; }
         .side-brand-sub { font-size: 11px; color: var(--ink3); font-family: var(--mono); white-space: nowrap;
@@ -260,8 +317,13 @@ public final class HtmlRenderer {
         .pill code { font-family: var(--mono); font-size: 10.5px; color: var(--ink3); }
         .pill-n { font-family: var(--mono); font-size: 11.5px; color: var(--good); font-weight: 600; }
         .pill-n-nonzero { color: var(--warn); }
-        button.pill { cursor: pointer; border-style: solid; }
+        button.pill { cursor: pointer; border-style: solid; font: inherit; }
+        button.pill:hover { border-color: var(--ink3); }
         button.pill[data-on="1"] { border-color: var(--good); background: var(--good-dim); color: var(--good); }
+        .pill-clear { display: inline-flex; align-items: center; padding: 7px 13px; border-radius: 99px;
+          border: 1px dashed var(--line2); background: none; font: inherit; font-size: 12px; color: var(--ink3);
+          cursor: pointer; }
+        .pill-clear:hover { color: var(--ink); border-color: var(--ink3); }
 
         .finding-group { border: 1px solid var(--line); border-radius: 8px; background: var(--surf2);
           padding: 0.6rem 0.8rem; margin: 12px 0 0; }
@@ -459,7 +521,7 @@ public final class HtmlRenderer {
               'stroke-dasharray': c.toFixed(1), 'stroke-dashoffset': offset.toFixed(1) }));
             wrap.appendChild(svg);
             var overlay = el('div', { class: 'donut-label' });
-            overlay.appendChild(el('span', { class: 'donut-pct', text: pct === null ? 'n/a' : String(pct).replace('.', ',') + '%' }));
+            overlay.appendChild(el('span', { class: 'donut-pct', text: pct === null ? 'n/a' : pct + '%' }));
             overlay.appendChild(el('span', { class: 'donut-mode', text: 'JACOCO-LINE' }));
             wrap.appendChild(overlay);
             return wrap;
@@ -568,7 +630,7 @@ public final class HtmlRenderer {
             }
             return card;
           }
-          function buildDetayCard(concern, otherCount) {
+          function buildMutantDetailCard(concern, otherCount) {
             var card = el('section', { id: 'mutant-detail', class: 'card col-12' });
             var head = el('div', { style: 'margin:-22px -26px 18px;padding:18px 26px;background:var(--bad-dim);border-bottom:1px solid var(--line);border-radius:12px 12px 0 0;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap' });
             head.appendChild(el('span', { class: 'mut-flag mut-flag-bad', text: label(concern.status).name.toUpperCase() }));
@@ -606,7 +668,7 @@ public final class HtmlRenderer {
             var search = el('input', { type: 'text', id: 'mut-search', placeholder: 'filter by class, method, mutator or killing test' });
             toolbar.appendChild(search);
             var survivedOnly = el('input', { type: 'checkbox', id: 'mut-survived-only' });
-            toolbar.appendChild(el('label', {}, [survivedOnly, ' sadece SURVIVED']));
+            toolbar.appendChild(el('label', {}, [survivedOnly, ' SURVIVED only']));
             card.appendChild(toolbar);
 
             function applyMutFilter() {
@@ -679,16 +741,26 @@ public final class HtmlRenderer {
                 ? DATA.ruleIds.length + ' rules ran, none of them triggered. The rule list stays visible at zero too \\u2014 which checks actually ran matters more when the result is empty.'
                 : f.items.length + ' findings, ' + Object.keys(groups).length + ' rules.' }));
 
+            // Rule pills double as a filter (multi-select: click adds a rule to
+            // the filter, click again removes it; empty selection means "show
+            // all", same as no search text). A pill for a rule with zero
+            // findings is still clickable - selecting only zero-count rules is
+            // a valid, if empty, filter state, not a disabled one.
+            var selectedRules = new Set();
+            var pillButtons = {};
             var pillRow = el('div', { class: 'pill-row' });
             DATA.ruleIds.forEach(function (rule) {
               var count = (groups[rule] || []).length;
               var l = label(rule);
-              var pill = el('span', { class: 'pill', title: l.description });
+              var pill = el('button', { type: 'button', class: 'pill', title: l.description, 'data-on': '0' });
               pill.appendChild(txt(l.name + ' '));
               pill.appendChild(el('code', { text: rule }));
               pill.appendChild(el('span', { class: 'pill-n' + (count > 0 ? ' pill-n-nonzero' : ''), text: String(count) }));
+              pillButtons[rule] = pill;
               pillRow.appendChild(pill);
             });
+            var clearPillsBtn = el('button', { type: 'button', class: 'pill-clear', text: 'Clear filter', hidden: '' });
+            pillRow.appendChild(clearPillsBtn);
             card.appendChild(pillRow);
 
             if (f.items.length > 0) {
@@ -696,18 +768,19 @@ public final class HtmlRenderer {
               var search = el('input', { type: 'text', id: 'finding-search', placeholder: 'filter by rule, file, test or message' });
               toolbar.appendChild(search);
               card.appendChild(toolbar);
+              var noMatch = el('p', { class: 'card-sub', text: 'No findings match the selected filters.', hidden: '' });
 
               var list = el('div', { class: 'finding-groups' });
               Object.keys(groups).sort().forEach(function (rule) {
                 var items = groups[rule];
                 var l = label(rule);
-                var group = el('details', { class: 'finding-group', open: '' });
+                var group = el('details', { class: 'finding-group', 'data-rule': rule, open: '' });
                 group.open = true;
                 var gsum = el('summary');
                 gsum.appendChild(txt(l.name + ' '));
                 gsum.appendChild(el('code', { text: rule }));
                 gsum.appendChild(el('span', { class: 'sev-badge sev-' + items[0].severity, text: label(items[0].severity).name }));
-                gsum.appendChild(el('span', { class: 'finding-group-count', text: items.length + ' bulgu' }));
+                gsum.appendChild(el('span', { class: 'finding-group-count', text: items.length + ' finding(s)' }));
                 group.appendChild(gsum);
                 group.appendChild(el('p', { class: 'finding-group-desc', text: l.description }));
                 var action = el('p', { class: 'finding-group-action' });
@@ -732,20 +805,50 @@ public final class HtmlRenderer {
                 list.appendChild(group);
               });
               card.appendChild(list);
+              card.appendChild(noMatch);
 
-              search.addEventListener('input', debounce(function () {
+              function applyFindingsFilter() {
                 var q = search.value.trim().toLowerCase();
-                card.querySelectorAll('.finding-row').forEach(function (row) {
-                  row.classList.toggle('search-hidden', !(q === '' || row.dataset.search.indexOf(q) !== -1));
-                });
+                var anyGroupVisible = false;
                 card.querySelectorAll('details.finding-group').forEach(function (grp) {
+                  var ruleMatch = selectedRules.size === 0 || selectedRules.has(grp.dataset.rule);
+                  if (!ruleMatch) {
+                    grp.style.display = 'none';
+                    return;
+                  }
                   var rows2 = grp.querySelectorAll('.finding-row');
-                  var anyVisible = false;
-                  rows2.forEach(function (r) { if (!r.classList.contains('search-hidden')) { anyVisible = true; } });
-                  grp.style.display = anyVisible ? '' : 'none';
-                  if (q !== '') { grp.open = anyVisible; }
+                  var anyRowVisible = false;
+                  rows2.forEach(function (r) {
+                    var visible = q === '' || r.dataset.search.indexOf(q) !== -1;
+                    r.classList.toggle('search-hidden', !visible);
+                    if (visible) { anyRowVisible = true; }
+                  });
+                  grp.style.display = anyRowVisible ? '' : 'none';
+                  if (anyRowVisible) { anyGroupVisible = true; }
+                  if (q !== '' || selectedRules.size > 0) { grp.open = anyRowVisible; }
                 });
-              }, 60));
+                noMatch.hidden = anyGroupVisible;
+              }
+
+              search.addEventListener('input', debounce(applyFindingsFilter, 60));
+
+              function togglePill(rule) {
+                if (selectedRules.has(rule)) { selectedRules.delete(rule); } else { selectedRules.add(rule); }
+                Object.keys(pillButtons).forEach(function (r) {
+                  pillButtons[r].setAttribute('data-on', selectedRules.has(r) ? '1' : '0');
+                });
+                clearPillsBtn.hidden = selectedRules.size === 0;
+                applyFindingsFilter();
+              }
+              Object.keys(pillButtons).forEach(function (rule) {
+                pillButtons[rule].addEventListener('click', function () { togglePill(rule); });
+              });
+              clearPillsBtn.addEventListener('click', function () {
+                selectedRules.clear();
+                Object.keys(pillButtons).forEach(function (r) { pillButtons[r].setAttribute('data-on', '0'); });
+                clearPillsBtn.hidden = true;
+                applyFindingsFilter();
+              });
             }
             return card;
           }
@@ -806,7 +909,7 @@ public final class HtmlRenderer {
               var p = map[k];
               var pct = p.denominator === 0 ? null : Math.round((p.numerator / p.denominator) * 1000) / 10;
               return { name: p.name, sub: p.count + ' files', pct: pct,
-                pctText: pct === null ? 'n/a' : String(pct).replace('.', ',') + '%' };
+                pctText: pct === null ? 'n/a' : pct + '%' };
             });
           }
           function buildFilesCard() {
@@ -953,7 +1056,7 @@ public final class HtmlRenderer {
           }
 
           // ---------- Run card ----------
-          function buildKosuCard(emptyList) {
+          function buildRunCard(emptyList) {
             var card = el('section', { id: 'run', class: 'card col-5' });
             card.appendChild(el('h2', { class: 'card-title', text: 'Run and diagnostics' }));
             var m = DATA.meta;
@@ -995,7 +1098,12 @@ public final class HtmlRenderer {
           function buildSidebar(navItems) {
             var side = el('nav', { class: 'side' });
             var head = el('div', { class: 'side-head' });
-            head.appendChild(el('span', { class: 'side-mark' }));
+            var markTemplate = document.getElementById('brand-icon');
+            var mark = markTemplate
+              ? markTemplate.content.firstElementChild.cloneNode(true)
+              : el('span'); // template missing (e.g. a hand-edited copy) - degrade to an empty mark, never break the page
+            mark.classList.add('side-mark');
+            head.appendChild(mark);
             var brand = el('div', { class: 'side-brand' });
             brand.appendChild(el('span', { class: 'side-brand-name', text: 'proof-java' }));
             brand.appendChild(el('span', { class: 'side-brand-sub', text: DATA.meta.modules + ' \\u00b7 Java ' + DATA.meta.languageLevel }));
@@ -1055,7 +1163,7 @@ public final class HtmlRenderer {
           function setTheme(theme) {
             if (theme === 'dark') { document.documentElement.setAttribute('data-theme', 'dark'); }
             else { document.documentElement.removeAttribute('data-theme'); }
-            try { window.localStorage.setItem('proof-report-theme', theme); } catch (e) { /* file:// veya gizli sekmede engellenebilir */ }
+            try { window.localStorage.setItem('proof-report-theme', theme); } catch (e) { /* may be blocked under file:// or in a private tab */ }
             updateThemeButton();
           }
           function toggleTheme() { setTheme(effectiveTheme() === 'dark' ? 'light' : 'dark'); }
@@ -1163,7 +1271,7 @@ public final class HtmlRenderer {
               var concerning = 0;
               Object.keys(totals).forEach(function (s) { if (s !== 'KILLED') { concerning += totals[s]; } });
               otherConcern = Math.max(0, concerning - 1);
-              grid.appendChild(buildDetayCard(concern, otherConcern));
+              grid.appendChild(buildMutantDetailCard(concern, otherConcern));
               navItems.push({ id: 'mutant-detail', label: 'Highlighted mutant', count: String(otherConcern + 1), group: 'MUTATION DETAIL' });
             }
 
@@ -1194,7 +1302,7 @@ public final class HtmlRenderer {
               emptyList.push({ name: 'Per-test evidence (L2)', why: DATA.perTest ? '0 records' : 'not collected' });
             }
 
-            grid.appendChild(buildKosuCard(emptyList));
+            grid.appendChild(buildRunCard(emptyList));
             navItems.push({ id: 'run', label: 'Run and diagnostics', count: '', group: 'DIAGNOSTICS' });
 
             app.appendChild(buildSidebar(navItems));
