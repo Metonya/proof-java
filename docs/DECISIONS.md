@@ -2219,6 +2219,30 @@ declaration order) whose testRoot contains it. `TestSourceScannerTest`
 gained a case with two modules sharing one root, asserting exactly one
 `TestSourceFile` comes back. See `campaign/junit-framework/run-log.md` Step B.
 
+**D-94 · `assertThatThrownBy`/`thenThrownBy` are unconditional oracles, not
+chain anchors** (2026-09-05)
+Found on assertj's own test suite: `Assertions.assertThatThrownBy` and
+`BDDAssertions.thenThrownBy` share the `assertThatXxx`/`thenXxx` name shape
+`isChainAnchor` matches by prefix, but not the behavior - their body is
+`return assertThat(catchThrowable(callable)).hasBeenThrown();`
+(`@CanIgnoreReturnValue` in AssertJ's own source), so the assertion has
+already run by the time the call returns. Used unchained -
+`assertThatThrownBy(() -> { throw x; });`, a common shape in code that
+merely *consumes* AssertJ, not only in AssertJ's own tests -
+`isChainAnchor`'s "nothing chained onto it -> not an oracle" rule silently
+dropped a complete, self-contained oracle. `assertThatCode`/
+`assertThatNoException` have no such annotation and their bodies return a
+plain, unasserted assert object - those genuinely still need a chained
+terminal call, so stay under `isChainAnchor` unchanged.
+
+Fix: both moved to `isUnconditionalOracle`, excluded from `isChainAnchor`'s
+prefix match by name. `AssertThatThrownByOracleTest` (new, real
+`assertj-core.jar` on the solver's path) covers unchained and chained
+`assertThatThrownBy`, unchained `thenThrownBy`, and the `assertThatCode`
+negative control. See `campaign/assertj/run-log.md` Step C.
+
+## Rejected
+
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not
 reproducible in CI; also the crowded, undifferentiated corner of the market.
 **R-02 · Building on OpenClover for per-test coverage** — source

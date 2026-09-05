@@ -44,7 +44,24 @@ final class OracleAllowlist {
             return methodName.startsWith("assert") || "fail".equals(methodName);
         }
         if (ASSERTJ_ASSERTIONS.equals(declaringTypeFqn)) {
-            return "fail".equals(methodName);
+            // assertThatThrownBy(D-94) is a chain-anchor-shaped name
+            // (assertThat* prefix) but not chain-anchor behavior: its body is
+            // `return assertThat(catchThrowable(callable)).hasBeenThrown();`
+            // (@CanIgnoreReturnValue in AssertJ's own source) - the assertion
+            // already ran before the call returns. Used unchained, e.g.
+            // assertThatThrownBy(() -> { throw x; });, isChainAnchor's
+            // "nothing chained -> not an oracle" rule silently dropped a
+            // complete, self-contained oracle. assertThatCode/
+            // assertThatNoException have no such annotation and their bodies
+            // do nothing but return a plain assert object - those genuinely
+            // still need something chained, so stay under isChainAnchor.
+            return "fail".equals(methodName) || "assertThatThrownBy".equals(methodName);
+        }
+        if (ASSERTJ_BDD_ASSERTIONS.equals(declaringTypeFqn)) {
+            // Mirrors assertThatThrownBy exactly (D-94): thenThrownBy's body
+            // is `return assertThat(catchThrowable(callable)).hasBeenThrown();`,
+            // self-contained, @CanIgnoreReturnValue in AssertJ's own source.
+            return "thenThrownBy".equals(methodName);
         }
         if (HAMCREST_MATCHER_ASSERT.equals(declaringTypeFqn)) {
             return ASSERT_THAT.equals(methodName);
@@ -72,18 +89,24 @@ final class OracleAllowlist {
      *
      * <p>AssertJ's {@code Assertions}/{@code BDDAssertions} each declare a
      * whole family of entry points sharing one prefix ({@code assertThatXxx},
-     * {@code thenXxx} - `assertThatThrownBy`, `thenCode`,
-     * `assertThatNullPointerException`, etc., all typed-subject overloads of
-     * the same chain-anchor shape) - matched by prefix, the same style
-     * already used for JUnit's own {@code assert*}/{@code fail} in {@link
-     * #isUnconditionalOracle} (D-34).
+     * {@code thenXxx} - {@code assertThatCode}, {@code thenCode},
+     * {@code assertThatNullPointerException}, etc., all typed-subject
+     * overloads of the same chain-anchor shape) - matched by prefix, the
+     * same style already used for JUnit's own {@code assert*}/{@code fail}
+     * in {@link #isUnconditionalOracle} (D-34). {@code assertThatThrownBy}/
+     * {@code thenThrownBy} share the name shape but not the behavior
+     * (D-94) - excluded here, handled as unconditional instead.
      */
     static boolean isChainAnchor(String declaringTypeFqn, String methodName) {
         if (ASSERTJ_ASSERTIONS.equals(declaringTypeFqn)) {
-            return methodName.startsWith(ASSERT_THAT);
+            // assertThatThrownBy is handled as unconditional (D-94), not
+            // chain-anchor, despite sharing the assertThat* name shape.
+            return methodName.startsWith(ASSERT_THAT) && !"assertThatThrownBy".equals(methodName);
         }
         if (ASSERTJ_BDD_ASSERTIONS.equals(declaringTypeFqn)) {
-            return methodName.startsWith("then");
+            // thenThrownBy is handled as unconditional (D-94), mirroring
+            // assertThatThrownBy, despite sharing the then* name shape.
+            return methodName.startsWith("then") && !"thenThrownBy".equals(methodName);
         }
         if (MOCKITO_BDD.equals(declaringTypeFqn)) {
             return "then".equals(methodName);
