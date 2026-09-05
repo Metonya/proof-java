@@ -516,42 +516,56 @@ final class ReportDataWriter {
         List<String> parts = new ArrayList<>();
         int i = 0;
         while (i < params.length()) {
-            int arrayDims = 0;
-            while (i < params.length() && params.charAt(i) == '[') {
-                arrayDims++;
-                i++;
-            }
-            if (i >= params.length()) {
+            ParsedParam parsed = parseOneParam(params, i);
+            if (parsed == null) {
                 break;
             }
-            char c = params.charAt(i);
-            String type;
-            if (c == 'L') {
-                int semi = params.indexOf(';', i);
-                if (semi < 0) {
-                    break;
-                }
-                String full = params.substring(i + 1, semi);
-                int cut = Math.max(full.lastIndexOf('/'), full.lastIndexOf('$'));
-                type = cut >= 0 ? full.substring(cut + 1) : full;
-                i = semi + 1;
-            } else {
-                type = switch (c) {
-                    case 'B' -> "byte";
-                    case 'C' -> "char";
-                    case 'D' -> "double";
-                    case 'F' -> "float";
-                    case 'I' -> "int";
-                    case 'J' -> "long";
-                    case 'S' -> "short";
-                    case 'Z' -> "boolean";
-                    default -> String.valueOf(c);
-                };
-                i++;
-            }
-            parts.add(type + "[]".repeat(arrayDims));
+            parts.add(parsed.rendered());
+            i = parsed.nextIndex();
         }
         return "(" + String.join(", ", parts) + ")";
+    }
+
+    /** One descriptor parameter's simple-name rendering plus the index just past it, or {@code null} on a truncated/malformed descriptor (SonarQube java:S3776 - the loop body in {@link #simplifyParams} above). */
+    private record ParsedParam(String rendered, int nextIndex) {
+    }
+
+    private static ParsedParam parseOneParam(String params, int start) {
+        int i = start;
+        int arrayDims = 0;
+        while (i < params.length() && params.charAt(i) == '[') {
+            arrayDims++;
+            i++;
+        }
+        if (i >= params.length()) {
+            return null;
+        }
+        char c = params.charAt(i);
+        String type;
+        if (c == 'L') {
+            int semi = params.indexOf(';', i);
+            if (semi < 0) {
+                return null;
+            }
+            String full = params.substring(i + 1, semi);
+            int cut = Math.max(full.lastIndexOf('/'), full.lastIndexOf('$'));
+            type = cut >= 0 ? full.substring(cut + 1) : full;
+            i = semi + 1;
+        } else {
+            type = switch (c) {
+                case 'B' -> "byte";
+                case 'C' -> "char";
+                case 'D' -> "double";
+                case 'F' -> "float";
+                case 'I' -> "int";
+                case 'J' -> "long";
+                case 'S' -> "short";
+                case 'Z' -> "boolean";
+                default -> String.valueOf(c);
+            };
+            i++;
+        }
+        return new ParsedParam(type + "[]".repeat(arrayDims), i);
     }
 
     // ---- File coverage: flat, source-root-relative file list (D-81) ----

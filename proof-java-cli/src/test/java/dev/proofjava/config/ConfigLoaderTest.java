@@ -132,32 +132,6 @@ class ConfigLoaderTest {
         assertNull(config.modules().get(0).report());
     }
 
-    @Test
-    void aDuplicateModuleIdIsRejected() throws IOException {
-        writeConfig("{\"modules\": [{\"id\": \"app\", \"root\": \"a\"}, {\"id\": \"app\", \"root\": \"b\"}]}");
-
-        ConfigException e = assertThrows(ConfigException.class, () -> ConfigLoader.load(repoRoot, null));
-
-        assertTrue(e.getMessage().contains("Duplicate module id 'app'"), e.getMessage());
-    }
-
-    @Test
-    void aModuleMissingRootIsRejected() throws IOException {
-        writeConfig("{\"modules\": [{\"id\": \"app\"}]}");
-
-        ConfigException e = assertThrows(ConfigException.class, () -> ConfigLoader.load(repoRoot, null));
-
-        assertTrue(e.getMessage().contains("'id' and 'root'"), e.getMessage());
-    }
-
-    @Test
-    void anUnknownKeyInsideAModuleIsRejected() throws IOException {
-        writeConfig("{\"modules\": [{\"id\": \"app\", \"root\": \"app\", \"typoRoot\": \"x\"}]}");
-
-        ConfigException e = assertThrows(ConfigException.class, () -> ConfigLoader.load(repoRoot, null));
-
-        assertTrue(e.getMessage().contains("typoRoot"), e.getMessage());
-    }
 
     // --- strictness: each of these would otherwise be a silent misconfiguration ---
 
@@ -186,7 +160,14 @@ class ConfigLoaderTest {
             Arguments.of("a duplicate top-level key (rather than silently letting the last one win)",
                 "{\"languageLevel\": 11, \"languageLevel\": 17}", "Duplicate"),
             Arguments.of("a customOracles entry with no '#' separating type and method",
-                "{\"customOracles\": [\"NoHashHere\"]}", "NoHashHere"));
+                "{\"customOracles\": [\"NoHashHere\"]}", "NoHashHere"),
+            Arguments.of("a duplicate module id (S5976)",
+                "{\"modules\": [{\"id\": \"app\", \"root\": \"a\"}, {\"id\": \"app\", \"root\": \"b\"}]}",
+                "Duplicate module id 'app'"),
+            Arguments.of("a module missing its mandatory root (S5976)",
+                "{\"modules\": [{\"id\": \"app\"}]}", "'id' and 'root'"),
+            Arguments.of("an unknown key inside a module (S5976)",
+                "{\"modules\": [{\"id\": \"app\", \"root\": \"app\", \"typoRoot\": \"x\"}]}", "typoRoot"));
     }
 
     @ParameterizedTest(name = "{0}")

@@ -677,49 +677,79 @@ class AnalyzeCommand implements Callable<Integer> {
         List<AnalysisReason> warnings = new ArrayList<>(extraWarnings);
         warnings.addAll(binding.warnings());
 
-        ToolVersion.Info version = ToolVersion.read();
+        SharedContext ctx = new SharedContext(evidencedModules, scanOptions, warnings, moduleInputs, overall,
+            fileCoverageBlock, ToolVersion.read(), binding.resolvedFiles());
 
-        if (DIFF_MODE_NO_VCS.equals(diffMode)) {
-            // findings-scope=changed is rejected in --no-vcs mode by call() already, so "all" always holds here.
-            OracleScanResult scan = OracleRuleEngine.scan(repoRoot, evidencedModules, languageLevel, encoding, null, scanOptions);
-            List<AnalysisReason> allReasons = new ArrayList<>(scan.incompleteReasons());
-            List<AnalysisReason> noVcsWarnings = new ArrayList<>(warnings);
-            noVcsWarnings.addAll(scan.warnings());
-            List<Finding> noVcsFindings = new ArrayList<>(scan.findings());
+        return DIFF_MODE_NO_VCS.equals(diffMode) ? analyzeNoVcs(inv, ctx) : analyzeDiffMode(inv, ctx);
+    }
 
-            // --per-test-target is the only way --per-test-report reaches this
-            // branch (validatePerTestReport rejects bare --no-vcs + --per-test-report) - it names its own
-            // targets, so no diff is needed (Faz 14a, mirrors --mutation-target).
-            List<dev.proofjava.analysis.pertest.PerTestModuleEvidence> perTest = null;
-            if (perTestReport && !pitEvidenceBlocked(allReasons, "PER_TEST_JDK_UNSUPPORTED", "--per-test-report")) {
-                PerTestOutcome outcome = collectPerTestEvidence(repoRoot, evidencedModules, List.of(),
-                    inv.perTestClasspathFilesById(), inv.perTestTargetFqcnsById(), buildDiagnostics());
-                perTest = outcome.perTest();
-                noVcsWarnings.addAll(outcome.warnings());
-                allReasons.addAll(outcome.incompleteReasons());
-            }
+    /**
+     * Everything both {@code analyze} branches below need that the setup
+     * phase above already computed once (SonarQube java:S3776/S6541 -
+     * {@code analyze} itself stayed a "Brain Method" even after {@link
+     * #collectPerTestEvidence}/{@link #collectMutationEvidence} were already
+     * extracted; splitting its two diff-mode branches out is what the LOC/
+     * complexity budget needed next). Not in {@link Invocation} because
+     * these are computed, not supplied - {@code inv} is this call's raw
+     * input, this is its derived, shared intermediate state.
+     */
+    private record SharedContext(List<ModuleDefinition> evidencedModules, OracleScanOptions scanOptions,
+                                  List<AnalysisReason> warnings, List<ModuleInput> moduleInputs, MetricSet overall,
+                                  FileCoverageBlock fileCoverageBlock, ToolVersion.Info version,
+                                  List<ResolvedSourceFile> resolvedFiles) {
+    }
 
-            // --mutation-target is the only way --mutation-report reaches this
-            // branch (validateMutationReport rejects bare --no-vcs + --mutation-report) - it names its own
-            // targets, so no diff is needed (Plan.md Faz 2).
-            List<MutationModuleEvidence> mutation = null;
-            if (mutationReport && !pitEvidenceBlocked(allReasons, "MUTATION_JDK_UNSUPPORTED", "--mutation-report")) {
-                MutationOutcome outcome = collectMutationEvidence(repoRoot, evidencedModules, List.of(),
-                    inv.mutationClasspathFilesById(), inv.mutationTargetFqcnsById(), buildDiagnostics());
-                mutation = outcome.mutation();
-                noVcsFindings.addAll(outcome.findings());
-                noVcsWarnings.addAll(outcome.warnings());
-                allReasons.addAll(outcome.incompleteReasons());
-            }
+    /**
+     * {@code --no-vcs}: {@code findings-scope=changed} is rejected in this
+     * mode by {@code call()} already, so "all" always holds here.
+     * {@code --per-test-target}/{@code --mutation-target} are the only way
+     * {@code --per-test-report}/{@code --mutation-report} reach this branch
+     * (bare {@code --no-vcs} + either is rejected earlier) - both name their
+     * own targets, so no diff is needed (Faz 14a / Plan.md Faz 2).
+     */
+    private VerdictDocument analyzeNoVcs(Invocation inv, SharedContext ctx) {
+        Path repoRoot = inv.repoRoot();
+        OracleScanResult scan = OracleRuleEngine.scan(repoRoot, ctx.evidencedModules(), languageLevel, encoding,
+            null, ctx.scanOptions());
+        List<AnalysisReason> allReasons = new ArrayList<>(scan.incompleteReasons());
+        List<AnalysisReason> noVcsWarnings = new ArrayList<>(ctx.warnings());
+        noVcsWarnings.addAll(scan.warnings());
+        List<Finding> noVcsFindings = new ArrayList<>(scan.findings());
 
-            return new VerdictDocument(version.schemaVersion(), version.version(), allReasons.isEmpty(), allReasons,
-                languageLevel, encoding, exclusions, moduleInputs, diffMode, findingsScopeOption, null, overall,
-                NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), noVcsFindings, noVcsWarnings,
-                perTest, mutation, fileCoverageBlock);
+        List<dev.proofjava.analysis.pertest.PerTestModuleEvidence> perTest = null;
+        if (perTestReport && !pitEvidenceBlocked(allReasons, "PER_TEST_JDK_UNSUPPORTED", "--per-test-report")) {
+            PerTestOutcome outcome = collectPerTestEvidence(repoRoot, ctx.evidencedModules(), List.of(),
+                inv.perTestClasspathFilesById(), inv.perTestTargetFqcnsById(), buildDiagnostics());
+            perTest = outcome.perTest();
+            noVcsWarnings.addAll(outcome.warnings());
+            allReasons.addAll(outcome.incompleteReasons());
         }
 
-        // Diff-mode phase: a failure here does NOT discard the overall data
-        // computed above (D-26) - only diff-specific fields fall back.
+        List<MutationModuleEvidence> mutation = null;
+        if (mutationReport && !pitEvidenceBlocked(allReasons, "MUTATION_JDK_UNSUPPORTED", "--mutation-report")) {
+            MutationOutcome outcome = collectMutationEvidence(repoRoot, ctx.evidencedModules(), List.of(),
+                inv.mutationClasspathFilesById(), inv.mutationTargetFqcnsById(), buildDiagnostics());
+            mutation = outcome.mutation();
+            noVcsFindings.addAll(outcome.findings());
+            noVcsWarnings.addAll(outcome.warnings());
+            allReasons.addAll(outcome.incompleteReasons());
+        }
+
+        ToolVersion.Info version = ctx.version();
+        return new VerdictDocument(version.schemaVersion(), version.version(), allReasons.isEmpty(), allReasons,
+            languageLevel, encoding, inv.exclusions(), ctx.moduleInputs(), inv.diffMode(), findingsScopeOption, null,
+            ctx.overall(), NewCodeCoverage.unavailable("unavailable_no_vcs"), List.of(), noVcsFindings, noVcsWarnings,
+            perTest, mutation, ctx.fileCoverageBlock());
+    }
+
+    /**
+     * A failure here does NOT discard the overall data the setup phase
+     * already computed (D-26) - only diff-specific fields fall back.
+     */
+    private VerdictDocument analyzeDiffMode(Invocation inv, SharedContext ctx) {
+        Path repoRoot = inv.repoRoot();
+        String diffMode = inv.diffMode();
+        ToolVersion.Info version = ctx.version();
         try {
             GitClient git = new GitClient(repoRoot);
             DiffResult diffResult = DIFF_MODE_BASE_REF.equals(diffMode)
@@ -728,17 +758,18 @@ class AnalyzeCommand implements Callable<Integer> {
 
             ClassificationResult classification = ChangedFileClassifier.classify(
                 diffResult.changedLinesByPath(), diffResult.untrackedFiles(),
-                evidencedModules, exclusions, binding.resolvedFiles());
+                ctx.evidencedModules(), inv.exclusions(), ctx.resolvedFiles());
 
             MetricSet newCode = MetricsEngine.compute(classification.newCodeDataset());
 
             java.util.Set<String> findingsPaths = FINDINGS_SCOPE_CHANGED.equals(findingsScopeOption)
                 ? changedAndUntrackedPaths(diffResult) : null;
-            OracleScanResult scan = OracleRuleEngine.scan(repoRoot, evidencedModules, languageLevel, encoding, findingsPaths, scanOptions);
+            OracleScanResult scan = OracleRuleEngine.scan(repoRoot, ctx.evidencedModules(), languageLevel, encoding,
+                findingsPaths, ctx.scanOptions());
 
             List<AnalysisReason> allIncompleteReasons = new ArrayList<>(classification.incompleteReasons());
             allIncompleteReasons.addAll(scan.incompleteReasons());
-            List<AnalysisReason> allWarnings = new ArrayList<>(warnings);
+            List<AnalysisReason> allWarnings = new ArrayList<>(ctx.warnings());
             allWarnings.addAll(classification.warnings());
             allWarnings.addAll(scan.warnings());
 
@@ -750,7 +781,7 @@ class AnalyzeCommand implements Callable<Integer> {
                 // --per-test-target takes priority over diff-derived targets,
                 // all-or-nothing across every module in this run (Faz 14a,
                 // mirrors --mutation-target's collectMutationEvidence).
-                PerTestOutcome outcome = collectPerTestEvidence(repoRoot, evidencedModules, classification.changedFiles(),
+                PerTestOutcome outcome = collectPerTestEvidence(repoRoot, ctx.evidencedModules(), classification.changedFiles(),
                     inv.perTestClasspathFilesById(), inv.perTestTargetFqcnsById(), diagnostics);
                 perTest = outcome.perTest();
                 allWarnings.addAll(outcome.warnings());
@@ -761,7 +792,7 @@ class AnalyzeCommand implements Callable<Integer> {
             List<MutationModuleEvidence> mutation = null;
             if (mutationReport
                 && !pitEvidenceBlocked(allIncompleteReasons, "MUTATION_JDK_UNSUPPORTED", "--mutation-report")) {
-                MutationOutcome outcome = collectMutationEvidence(repoRoot, evidencedModules,
+                MutationOutcome outcome = collectMutationEvidence(repoRoot, ctx.evidencedModules(),
                     classification.changedFiles(), inv.mutationClasspathFilesById(), inv.mutationTargetFqcnsById(),
                     diagnostics);
                 mutation = outcome.mutation();
@@ -772,22 +803,22 @@ class AnalyzeCommand implements Callable<Integer> {
 
             boolean complete = allIncompleteReasons.isEmpty();
             return new VerdictDocument(version.schemaVersion(), version.version(), complete,
-                allIncompleteReasons, languageLevel, encoding, exclusions, moduleInputs,
-                diffMode, findingsScopeOption, diffResult.identity(), overall, NewCodeCoverage.available(newCode),
-                classification.changedFiles(), allFindings, allWarnings, perTest, mutation, fileCoverageBlock);
+                allIncompleteReasons, languageLevel, encoding, inv.exclusions(), ctx.moduleInputs(),
+                diffMode, findingsScopeOption, diffResult.identity(), ctx.overall(), NewCodeCoverage.available(newCode),
+                classification.changedFiles(), allFindings, allWarnings, perTest, mutation, ctx.fileCoverageBlock());
         } catch (AnalysisException e) {
             // findings-scope=all does not need the diff that just failed - real
             // oracle evidence is still worth reporting alongside the failure.
             OracleScanResult scan = FINDINGS_SCOPE_ALL.equals(findingsScopeOption)
-                ? OracleRuleEngine.scan(repoRoot, evidencedModules, languageLevel, encoding, null)
+                ? OracleRuleEngine.scan(repoRoot, ctx.evidencedModules(), languageLevel, encoding, null)
                 : new OracleScanResult(List.of(), List.of());
             List<AnalysisReason> allReasons = new ArrayList<>();
             allReasons.add(new AnalysisReason(e.code(), e.getMessage()));
             allReasons.addAll(scan.incompleteReasons());
             return new VerdictDocument(version.schemaVersion(), version.version(), false,
-                allReasons, languageLevel, encoding, exclusions,
-                moduleInputs, diffMode, findingsScopeOption, null, overall, NewCodeCoverage.unavailable("unavailable_incomplete"),
-                List.of(), scan.findings(), warnings, null, null, fileCoverageBlock);
+                allReasons, languageLevel, encoding, inv.exclusions(),
+                ctx.moduleInputs(), diffMode, findingsScopeOption, null, ctx.overall(), NewCodeCoverage.unavailable("unavailable_incomplete"),
+                List.of(), scan.findings(), ctx.warnings(), null, null, ctx.fileCoverageBlock());
         }
     }
 

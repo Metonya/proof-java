@@ -167,40 +167,41 @@ public final class JacocoXmlParser {
                 skipSubtree(r, sourceLabel);
             }
         }
-    }
 
-    private List<SourceFileReport> readPackage(XMLStreamReader r, String packageName, String sourceLabel) throws XMLStreamException {
-        List<SourceFileReport> result = new ArrayList<>();
-        // Uniform depth rule for this whole class: every START_ELEMENT we
-        // observe here increments depth by one, and either a later
-        // END_ELEMENT decrements it back (self-closing elements like <line>
-        // and <counter> still emit a separate END_ELEMENT in StAX - there is
-        // no distinct "empty element" event), or - when we hand the element
-        // off to a subtree-consuming call (skipSubtree/readSourceFile) that
-        // reads through and including its own END_ELEMENT - we decrement
-        // immediately to compensate, since no separate END_ELEMENT event for
-        // it will reach this loop.
-        int depth = 1;
-        while (depth > 0) {
-            int event = r.next();
-            switch (event) {
-                case XMLStreamConstants.ENTITY_REFERENCE -> throw entityReferenceRejected(r, sourceLabel);
-                case XMLStreamConstants.START_ELEMENT -> {
-                    depth++;
-                    String local = r.getLocalName();
-                    if ("sourcefile".equals(local)) {
-                        result.add(readSourceFile(r, packageName, attrOrEmpty(r, "name"), sourceLabel));
-                        depth--; // readSourceFile already consumed through </sourcefile>
-                    } else {
-                        skipSubtree(r, sourceLabel);
-                        depth--; // skipSubtree already consumed through its own end tag
+        /** Moved here from the outer class (SonarQube java:S3398) - this was already its only caller. */
+        private List<SourceFileReport> readPackage(XMLStreamReader r, String packageName, String sourceLabel) throws XMLStreamException {
+            List<SourceFileReport> result = new ArrayList<>();
+            // Uniform depth rule for this whole class: every START_ELEMENT we
+            // observe here increments depth by one, and either a later
+            // END_ELEMENT decrements it back (self-closing elements like <line>
+            // and <counter> still emit a separate END_ELEMENT in StAX - there is
+            // no distinct "empty element" event), or - when we hand the element
+            // off to a subtree-consuming call (skipSubtree/readSourceFile) that
+            // reads through and including its own END_ELEMENT - we decrement
+            // immediately to compensate, since no separate END_ELEMENT event for
+            // it will reach this loop.
+            int depth = 1;
+            while (depth > 0) {
+                int event = r.next();
+                switch (event) {
+                    case XMLStreamConstants.ENTITY_REFERENCE -> throw entityReferenceRejected(r, sourceLabel);
+                    case XMLStreamConstants.START_ELEMENT -> {
+                        depth++;
+                        String local = r.getLocalName();
+                        if ("sourcefile".equals(local)) {
+                            result.add(readSourceFile(r, packageName, attrOrEmpty(r, "name"), sourceLabel));
+                            depth--; // readSourceFile already consumed through </sourcefile>
+                        } else {
+                            skipSubtree(r, sourceLabel);
+                            depth--; // skipSubtree already consumed through its own end tag
+                        }
                     }
+                    case XMLStreamConstants.END_ELEMENT -> depth--;
+                    default -> { /* ignore */ }
                 }
-                case XMLStreamConstants.END_ELEMENT -> depth--;
-                default -> { /* ignore */ }
             }
+            return result;
         }
-        return result;
     }
 
     private SourceFileReport readSourceFile(XMLStreamReader r, String packageName, String fileName, String sourceLabel) throws XMLStreamException {
