@@ -2278,6 +2278,25 @@ already covers (the *running* JVM's own version).
    real cost - opening every jar - for what is, so far, a one-repo finding).
    See `campaign/junit-framework/run-log.md` Step C.
 
+**D-96 · `doctor` names Gradle-only repositories instead of a bare Maven
+error** (2026-09-06)
+Found on junit-framework: `doctor` is entirely Maven-specific
+(`MavenProjectScanner`, `mvn dependency:build-classpath`), and with no
+`pom.xml` anywhere it said only `no Maven module found under . (no pom.xml,
+or an unparsable one)` - identical wording for a genuinely unrelated
+directory and for a real, large, actively-maintained Gradle project. Nothing
+pointed at the fact that `analyze` itself is build-tool-agnostic and can
+still be wired by hand.
+
+Not a Gradle-support feature (parsing `settings.gradle(.kts)`, resolving
+classpaths via Gradle tasks, is real scope this is not attempting) - just
+one additional sentence, appended only when a Gradle marker file
+(`settings.gradle[.kts]`/`build.gradle[.kts]`) is actually present, pointing
+at `--source-roots`/`--test-roots`/`--report`/`--mutation-classpath`/
+`--per-test-classpath` as the manual path. `DoctorCommandTest` (new) covers
+both marker shapes and the negative case (no build file of any kind gets no
+suggestion). See `campaign/junit-framework/run-log.md` Step A1.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

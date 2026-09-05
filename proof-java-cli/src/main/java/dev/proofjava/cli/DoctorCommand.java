@@ -53,7 +53,8 @@ class DoctorCommand implements Callable<Integer> {
         List<MavenModule> modules = MavenProjectScanner.scan(repoRoot);
 
         if (modules.isEmpty()) {
-            printErr("proof-java: no Maven module found under " + repoRoot + " (no pom.xml, or an unparsable one).");
+            printErr("proof-java: no Maven module found under " + repoRoot + " (no pom.xml, or an unparsable one)."
+                + gradleHintOrEmpty(repoRoot));
             return ExitCode.INCOMPLETE.value();
         }
 
@@ -109,6 +110,30 @@ class DoctorCommand implements Callable<Integer> {
             printErr("proof-java: doctor: no module has a usable report yet - " + ConfigLoader.DEFAULT_FILE_NAME
                 + " not written");
         }
+    }
+
+    /**
+     * D-96: found on junit-framework - {@code doctor} is Maven-only and, with
+     * no {@code pom.xml} anywhere, said only that, with no hint that a
+     * Gradle-only repository (this tool's own {@code build.gradle.kts}-based
+     * layout, for one) needs `analyze` wired by hand instead of through
+     * {@code doctor}. Not a Gradle-support feature - just the one sentence
+     * that turns a dead end into a pointer, printed only when a Gradle
+     * marker file is actually present so a genuinely unrelated directory
+     * (no build file of any kind) does not get an irrelevant suggestion.
+     */
+    private static String gradleHintOrEmpty(Path repoRoot) {
+        boolean looksLikeGradle = java.nio.file.Files.exists(repoRoot.resolve("settings.gradle"))
+            || java.nio.file.Files.exists(repoRoot.resolve("settings.gradle.kts"))
+            || java.nio.file.Files.exists(repoRoot.resolve("build.gradle"))
+            || java.nio.file.Files.exists(repoRoot.resolve("build.gradle.kts"));
+        if (!looksLikeGradle) {
+            return "";
+        }
+        return " This looks like a Gradle project - 'doctor' does not discover Gradle modules or generate their "
+            + "L2/L3 classpaths. 'analyze' itself is build-tool-agnostic: wire it by hand with "
+            + "--source-roots/--test-roots/--report (and --mutation-classpath/--per-test-classpath for L2/L3, "
+            + "built from your own build's test runtime classpath).";
     }
 
     private void printErr(String message) {
