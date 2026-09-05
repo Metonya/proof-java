@@ -2297,6 +2297,32 @@ at `--source-roots`/`--test-roots`/`--report`/`--mutation-classpath`/
 both marker shapes and the negative case (no build file of any kind gets no
 suggestion). See `campaign/junit-framework/run-log.md` Step A1.
 
+**D-97 · `doctor --fix` installs a reactor's siblings first when
+`dependency:build-classpath` cannot see them** (2026-09-06)
+Found on dropwizard: `mvn -pl <module> dependency:build-classpath` resolves
+purely against the local/remote repository, never the in-memory reactor.
+Confirmed empirically that `-am` does not change this - it builds the
+sibling modules a target needs within the same invocation, but the
+dependency-plugin's own resolution still cannot see their (unbuilt,
+uninstalled) output, so a genuine multi-module project (dropwizard - gson
+and assertj are shallower, no real inter-module compile dependency between
+the module analyzed and its Maven siblings) fails `doctor --fix` outright
+for every module with an inter-module compile dependency, with a raw
+`Could not resolve dependencies` stack trace and no path through it at all.
+
+Fix: `MavenClient` gained `installReactor` (`mvn -pl <module> -am install
+-DskipTests`, the same manual step this campaign used by hand); `ClasspathFixer`
+retries `buildClasspath` once after a failed first try installs the reactor,
+never attempting it when the first try already succeeds (the common case).
+Verified live on dropwizard: `dropwizard-jdbi3` (depends on the previously-
+uninstalled `dropwizard-db`) went from a hard failure to `[ok] ... 116
+entries` after this fix, unchanged code otherwise. `ClasspathFixerTest`
+gained cases for the retry-then-succeed, retry-then-still-fail (both
+problems reported, not just the first), and no-retry-when-unnecessary paths.
+This is a real, visible side effect of an explicitly opt-in `--fix` - it
+writes jars to `~/.m2` - not something attempted silently. See
+`campaign/dropwizard/run-log.md` Step A2.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

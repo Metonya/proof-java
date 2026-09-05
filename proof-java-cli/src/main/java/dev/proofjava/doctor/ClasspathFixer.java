@@ -41,7 +41,23 @@ public final class ClasspathFixer {
     static FixResult fix(MavenClient maven, Path repoRoot, MavenModule module) {
         MavenClient.Result mavenResult = maven.buildClasspath(module.root());
         if (!mavenResult.ok()) {
-            return new FixResult(false, "Maven dependency resolution failed: " + mavenResult.problem());
+            // D-97: dependency:build-classpath resolves against ~/.m2, never
+            // the in-memory reactor, so a genuine multi-module project whose
+            // sibling SNAPSHOT modules were never installed fails here on
+            // the first try, every time. Retry once, installing the module
+            // and its reactor dependencies first - the fallback, not the
+            // default path, since most modules (gson, assertj's shallower
+            // shape) never need it and a real `mvn install` is real cost.
+            MavenClient.Result installResult = maven.installReactor(module.root());
+            if (!installResult.ok()) {
+                return new FixResult(false, "Maven dependency resolution failed: " + mavenResult.problem()
+                    + "; retried by installing the reactor first, which also failed: " + installResult.problem());
+            }
+            mavenResult = maven.buildClasspath(module.root());
+            if (!mavenResult.ok()) {
+                return new FixResult(false, "Maven dependency resolution failed even after installing the "
+                    + "reactor: " + mavenResult.problem());
+            }
         }
 
         List<String> dependencyEntries;

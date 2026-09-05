@@ -61,6 +61,31 @@ public class MavenClient {
             "-Dmdep.includeScope=test");
     }
 
+    /**
+     * D-97: {@code dependency:build-classpath} resolves purely against the
+     * local/remote repository - confirmed empirically, {@code -am} does not
+     * make it reactor-aware even though {@code -am} does build the sibling
+     * modules it needs in the same invocation. A genuine multi-module
+     * reactor project (dropwizard, not gson or assertj's shallower shape)
+     * whose sibling SNAPSHOT modules were never {@code mvn install}ed fails
+     * {@link #buildClasspath} outright with a raw dependency-resolution
+     * stack trace, for every module with an inter-module compile dependency
+     * - {@code doctor --fix} had no path through this at all.
+     *
+     * <p>Installs the module and everything it depends on within the
+     * reactor ({@code -am install}), skipping test execution (not
+     * compilation) to keep this reasonably fast - the same manual step this
+     * campaign used by hand before {@link #buildClasspath} could see the
+     * result. Writes real jars to the local {@code ~/.m2} repository: a
+     * real, visible side effect of an explicitly opt-in {@code --fix}, not
+     * something to attempt silently or on every module regardless of need
+     * (see {@link ClasspathFixer}, which only calls this as a fallback after
+     * {@link #buildClasspath} has already failed).
+     */
+    public Result installReactor(String moduleRoot) {
+        return run("-pl", moduleRoot, "-am", "install", "-DskipTests");
+    }
+
     private Result run(String... args) {
         List<String> command = new ArrayList<>(args.length + 1);
         command.add(mavenExecutable());
