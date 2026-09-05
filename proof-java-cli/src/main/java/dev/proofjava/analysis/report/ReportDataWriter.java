@@ -243,11 +243,11 @@ final class ReportDataWriter {
         g.writeEndObject();
     }
 
-    private static String formatPercent(BigDecimal percent) {
+    static String formatPercent(BigDecimal percent) {
         return percent == null ? "n/a" : percent + "%";
     }
 
-    private static String formatInt(int n) {
+    static String formatInt(int n) {
         return String.format(REPORT_LOCALE, "%,d", n);
     }
 
@@ -273,7 +273,7 @@ final class ReportDataWriter {
         g.writeEndArray();
     }
 
-    private static String formatRanges(List<LineRange> ranges) {
+    static String formatRanges(List<LineRange> ranges) {
         StringBuilder sb = new StringBuilder();
         for (LineRange r : ranges) {
             if (!sb.isEmpty()) {
@@ -377,7 +377,7 @@ final class ReportDataWriter {
         g.writeEndArray();
     }
 
-    private static int countLines(List<PerTestEntry> entries) {
+    static int countLines(List<PerTestEntry> entries) {
         return entries.stream().mapToInt(e -> e.lines().size()).sum();
     }
 

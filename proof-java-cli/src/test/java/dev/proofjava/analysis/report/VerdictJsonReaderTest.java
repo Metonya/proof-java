@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -188,5 +189,35 @@ class VerdictJsonReaderTest {
         String json = "{\"tool\": {\"name\": \"proof-java\", \"version\": \"0.1.0\"}}";
         assertThrows(VerdictJsonReader.VerdictJsonReadException.class,
             () -> VerdictJsonReader.read(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))));
+    }
+
+    /**
+     * Syntactically valid JSON with the wrong shape at a block boundary
+     * (an object expected where a string was written) - expectObjectStart's
+     * own guard, distinct from a missing field entirely (no test fed it a
+     * present-but-wrong-shaped block before, PSEUDO_TESTED_METHOD self-scan).
+     */
+    @Test
+    void aBlockThatShouldBeAnObjectButIsAStringThrowsNamingBoth() {
+        String json = "{\"schemaVersion\": \"0.1.0\", \"tool\": \"not an object\"}";
+
+        VerdictJsonReader.VerdictJsonReadException e = assertThrows(VerdictJsonReader.VerdictJsonReadException.class,
+            () -> VerdictJsonReader.read(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))));
+
+        assertTrue(e.getMessage().contains("START_OBJECT"), e.getMessage());
+        assertTrue(e.getMessage().contains("VALUE_STRING"), e.getMessage());
+    }
+
+    /** Same guard, this time expectArrayStart: a field documented as an array written as a bare object. */
+    @Test
+    void aBlockThatShouldBeAnArrayButIsAnObjectThrowsNamingBoth() {
+        String json = "{\"schemaVersion\": \"0.1.0\", \"tool\": {\"name\": \"proof-java\", \"version\": \"0.1.0\"}, "
+            + "\"analysis\": {\"status\": \"complete\", \"incompleteReasons\": {}}}";
+
+        VerdictJsonReader.VerdictJsonReadException e = assertThrows(VerdictJsonReader.VerdictJsonReadException.class,
+            () -> VerdictJsonReader.read(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))));
+
+        assertTrue(e.getMessage().contains("START_ARRAY"), e.getMessage());
+        assertTrue(e.getMessage().contains("START_OBJECT"), e.getMessage());
     }
 }

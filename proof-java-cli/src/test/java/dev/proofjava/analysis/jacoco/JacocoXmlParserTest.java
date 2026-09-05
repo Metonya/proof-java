@@ -119,6 +119,25 @@ class JacocoXmlParserTest {
         assertEquals(expectedCode.trim(), e.code());
     }
 
+    /**
+     * The two {@code <line>}-attribute fixtures above share one exception
+     * code, which lets a mutant that fires the wrong one of intAttr's two
+     * branches (missing vs. non-numeric) go unnoticed (PSEUDO_TESTED_METHOD,
+     * self-scan) - the message text is what actually distinguishes them.
+     */
+    @Test
+    void missingAndNonNumericLineAttributesProduceDistinctMessages() {
+        AnalysisException missing = assertThrows(AnalysisException.class,
+            () -> parser.parse(FIXTURES.resolve("missing-line-attribute.xml")));
+        assertTrue(missing.getMessage().contains("Missing required attribute 'ci'"), missing.getMessage());
+
+        AnalysisException nonNumeric = assertThrows(AnalysisException.class,
+            () -> parser.parse(FIXTURES.resolve("non-numeric-line-attribute.xml")));
+        assertTrue(nonNumeric.getMessage().contains("'mi'"), nonNumeric.getMessage());
+        assertTrue(nonNumeric.getMessage().contains("not an integer"), nonNumeric.getMessage());
+        assertTrue(nonNumeric.getMessage().contains("not-a-number"), nonNumeric.getMessage());
+    }
+
     @Test
     void preservesUnicodeAndSpacesInPackageAndFileNames() {
         JacocoReport report = parser.parse(FIXTURES.resolve("unicode-and-spaces.xml"));
@@ -126,6 +145,22 @@ class JacocoXmlParserTest {
         assertEquals("com/exämple/wëird pkg", file.packageName());
         assertEquals("Ünïcödé File.java", file.fileName());
         assertEquals(2, file.lines().size());
+    }
+
+    /**
+     * This fixture's {@code <line>} elements omit {@code mb}/{@code cb}
+     * entirely - JaCoCo's own convention for "no branch on this line", which
+     * must default to 0, not fail (PSEUDO_TESTED_METHOD, self-scan: no test
+     * asserted on the branch counts for this fixture, only its names/count).
+     */
+    @Test
+    void aLineWithNoBranchAttributesDefaultsBothBranchCountsToZero() {
+        JacocoReport report = parser.parse(FIXTURES.resolve("unicode-and-spaces.xml"));
+        SourceFileReport file = report.sourceFiles().get(0);
+        for (LineCoverage line : file.lines()) {
+            assertEquals(0, line.missedBranches(), line.toString());
+            assertEquals(0, line.coveredBranches(), line.toString());
+        }
     }
 
     @Test

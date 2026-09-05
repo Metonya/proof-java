@@ -252,6 +252,44 @@ class AnalyzeCommandTest {
         assertEquals(ExitCode.INVALID_INPUT.value(), exitCode);
     }
 
+    /**
+     * A single {@code --test-roots} value can name several directories,
+     * comma-separated (parseIdCsvValue) - no test exercised the actual
+     * splitting/trimming/blank-filtering before this (PSEUDO_TESTED_METHOD,
+     * self-scan). A weak test placed only in the *second* comma-separated
+     * directory, with a stray space before it and a trailing empty entry,
+     * proves all three behaviors at once: the finding only appears if that
+     * second root was actually scanned.
+     */
+    @Test
+    void commaSeparatedTestRootsAreAllScanned() throws IOException {
+        Files.createDirectories(repoRoot.resolve("src/test/java"));
+        Path secondRoot = repoRoot.resolve("src/test/other-java");
+        Files.createDirectories(secondRoot);
+        Files.writeString(secondRoot.resolve("WeakTest.java"), String.join("\n",
+            "import org.junit.jupiter.api.Test;",
+            "class WeakTest {",
+            "    @Test",
+            "    void checksNothing() {",
+            "        new StringBuilder().append(\"x\").toString();",
+            "    }",
+            "}",
+            ""));
+        Path outFile = outputDir.resolve("verdict.json");
+
+        int exitCode = run("analyze", "--no-vcs",
+            "--repo", repoRoot.toString(),
+            "--module", "demo=.",
+            "--test-roots", "demo=src/test/java, src/test/other-java,",
+            "--report", "demo=" + FIXTURES.resolve("mixed-coverage.xml"),
+            "--out", outFile.toString());
+
+        assertEquals(ExitCode.COMPLETE.value(), exitCode);
+        String verdict = Files.readString(outFile, StandardCharsets.UTF_8);
+        assertTrue(verdict.contains("NO_RECOGNIZED_ORACLE"), verdict);
+        assertTrue(verdict.contains("WeakTest.java"), verdict);
+    }
+
     @Test
     void repeatingTheSameModuleIdAcrossMultipleReportOptionsIsStillValid() {
         // --report has its own parser and legitimately allows multiple

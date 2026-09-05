@@ -50,6 +50,22 @@ class TestLabelsTest {
             "org.pitest.mutationtest.engine.gregor.mutators.returns.BooleanFalseReturnValsMutator"));
     }
 
+    /**
+     * A '%' not followed by two hex digits is not a percent escape and must
+     * be left as literal text, not decoded or dropped - no existing test
+     * fed decodePercentEscapes a malformed escape, so isHex's false branch
+     * had never actually been observed (PSEUDO_TESTED_METHOD, self-scan).
+     */
+    @Test
+    void aPercentNotFollowedByTwoHexDigitsIsLeftLiteral() {
+        assertEquals("unstructured%zzend", TestLabels.readable("unstructured%zzend"));
+    }
+
+    @Test
+    void aPercentAtTheVeryEndOfTheStringIsLeftLiteral() {
+        assertEquals("unstructuredend%", TestLabels.readable("unstructuredend%"));
+    }
+
     @Test
     void leavesSomethingItCannotParseUsableRatherThanEmpty() {
         assertEquals("", TestLabels.readable(null));
