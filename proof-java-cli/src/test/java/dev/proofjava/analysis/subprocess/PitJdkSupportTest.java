@@ -39,4 +39,35 @@ class PitJdkSupportTest {
     void theCeilingMatchesTheEmbeddedEngine() {
         assertEquals(22, PitJdkSupport.MAX_SUPPORTED_JDK);
     }
+
+    /**
+     * D-95: the same ASM ceiling can crash PIT on a class file that has
+     * nothing to do with the running JDK - any classpath entry compiled past
+     * it. Found on junit-framework: its own junit-jupiter-api test-fixtures
+     * jar was JDK 25 bytecode, and PIT's KotlinVerifier pre-flight step
+     * scanned it before ever mutating the (ordinary Java 17) target class.
+     */
+    @Test
+    void aClasspathBytecodeCrashIsRecognizedByItsSignature() {
+        String realFailure = "Module 'demo' mutation subprocess exited 1 (0/1 class(es) completed) (output tail:\n"
+            + "Exception in thread \"main\" java.lang.IllegalArgumentException: Unsupported class file major version 69\n"
+            + "\tat org.pitest.mutationtest.verify.KotlinVerifier.kotlinClassesToBeMutated(KotlinVerifierFactory.java:42))";
+
+        assertTrue(PitJdkSupport.isClasspathBytecodeCrash(realFailure), realFailure);
+    }
+
+    @Test
+    void anUnrelatedFailureIsNotMisclassifiedAsABytecodeCrash() {
+        assertFalse(PitJdkSupport.isClasspathBytecodeCrash("Module 'demo' mutation subprocess exited 1"));
+    }
+
+    @Test
+    void aNullMessageIsNotABytecodeCrash() {
+        assertFalse(PitJdkSupport.isClasspathBytecodeCrash(null));
+    }
+
+    @Test
+    void theHintNamesTheCeilingSoAReaderKnowsWhatToLookFor() {
+        assertTrue(PitJdkSupport.classpathBytecodeHint().contains(String.valueOf(PitJdkSupport.MAX_SUPPORTED_JDK)));
+    }
 }

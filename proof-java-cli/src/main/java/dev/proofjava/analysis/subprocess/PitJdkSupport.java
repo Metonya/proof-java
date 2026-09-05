@@ -40,6 +40,34 @@ public final class PitJdkSupport {
             + "Re-run this analysis with a supported JDK.";
     }
 
+    /**
+     * The signature PIT's embedded ASM throws when it reads any class file
+     * past its ceiling - not only when the running JDK itself is too new
+     * ({@link #isRuntimeSupported}), but whenever such a class file sits
+     * anywhere on the mutation/per-test classpath (D-95). Found on
+     * junit-framework: its own {@code junit-jupiter-api} test-fixtures jar
+     * was compiled to JDK 25 bytecode (class file major version 69), and
+     * PIT's {@code KotlinVerifier} pre-flight step - which scans every
+     * classpath entry for Kotlin metadata before mutating anything - crashed
+     * the whole run on that one unrelated jar, even though the actual target
+     * class was ordinary Java 17 bytecode that never got a chance to be
+     * mutated.
+     */
+    private static final String CLASSPATH_BYTECODE_SIGNATURE = "Unsupported class file major version";
+
+    /** @return true if a subprocess failure message names PIT's own class-file-version ceiling, wherever it hit it. */
+    public static boolean isClasspathBytecodeCrash(String subprocessFailureMessage) {
+        return subprocessFailureMessage != null && subprocessFailureMessage.contains(CLASSPATH_BYTECODE_SIGNATURE);
+    }
+
+    /** Appended to the raw subprocess message so the real cause is named, not just PIT's opaque exception. */
+    public static String classpathBytecodeHint() {
+        return " - a class file somewhere on this module's mutation/per-test classpath was compiled to a JDK "
+            + "newer than " + MAX_SUPPORTED_JDK + " (a stale build artifact, or a dependency built with a newer "
+            + "toolchain than the target class itself uses); the embedded mutation engine cannot read it, and "
+            + "PIT aborts the whole run before mutating anything, regardless of the target class's own language level.";
+    }
+
     private PitJdkSupport() {
     }
 }

@@ -12,6 +12,7 @@ import dev.proofjava.analysis.model.AnalysisReason;
 import dev.proofjava.analysis.model.ChangedFile;
 import dev.proofjava.analysis.model.ModuleDefinition;
 import dev.proofjava.analysis.subprocess.EvidenceDiagnostics;
+import dev.proofjava.analysis.subprocess.PitJdkSupport;
 
 /**
  * D-46's evidence-layer orchestrator: runs {@link PerTestRunner} once per
@@ -124,9 +125,11 @@ public final class PerTestCollector {
             // D-85: same reasoning as MutationCollector - --per-test-report was
             // requested and produced nothing, so the run is incomplete, not
             // complete-with-a-note.
+            String hint = PitJdkSupport.isClasspathBytecodeCrash(e.getMessage())
+                ? PitJdkSupport.classpathBytecodeHint() : "";
             acc.incompleteReasons.add(new AnalysisReason("PER_TEST_COLLECTION_FAILED",
                 MODULE_PREFIX + module.id() + "' per-test coverage collection failed (" + e.getMessage()
-                    + "); per-test evidence skipped for this module.", null, module.id()));
+                    + "); per-test evidence skipped for this module." + hint, null, module.id()));
         }
     }
 

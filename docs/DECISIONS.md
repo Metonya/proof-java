@@ -2241,6 +2241,43 @@ prefix match by name. `AssertThatThrownByOracleTest` (new, real
 `assertThatThrownBy`, unchained `thenThrownBy`, and the `assertThatCode`
 negative control. See `campaign/assertj/run-log.md` Step C.
 
+**D-95 · Track the newest JUnit Platform 5.x line; name a classpath's own
+bytecode ceiling instead of leaving PIT's raw crash** (2026-09-05)
+Two related PIT-crash defects surfaced by the assertj/dropwizard/
+junit-framework campaign, both about a version proof-java's embedded PIT
+cannot handle - but neither is the JDK-ceiling case D-84's `PitJdkSupport`
+already covers (the *running* JVM's own version).
+
+1. **JUnit-Platform-launcher skew (assertj, dropwizard).** PIT's coverage
+   minion always launches through the `junit-platform-launcher` shaded into
+   `proof-java.jar` - pinned to whatever `junit.version` proof-java's own
+   root `pom.xml` uses for its own tests. A target module whose own
+   JUnit Platform is meaningfully newer crashes with `OutputDirectoryCreator
+   not available; probably due to unaligned versions` before a single class
+   is measured - confirmed on two unrelated repos (assertj: JUnit 6 vs our
+   ~1.12.x; dropwizard: JUnit Platform 1.14.4, an entirely ordinary current
+   Jupiter version, vs the same ~1.12.x). Bumped `junit.version` from 5.12.2
+   to 5.14.4, the newest 5.x release - the launcher is designed to stay
+   backward-compatible with older engines, so tracking the newest 5.x line
+   narrows the affected window to targets already on JUnit Platform 6.x
+   (a real, separate gap this bump does not close, since moving proof-java's
+   own test suite to a new major is a bigger, riskier change than a
+   dependency-version bump).
+2. **Classpath bytecode ceiling (junit-framework, new).** `Unsupported class
+   file major version 69` - PIT's `KotlinVerifier` pre-flight step scans
+   every classpath entry for Kotlin metadata before mutating anything, and
+   one unrelated JDK-25-bytecode jar (junit-framework's own
+   `junit-jupiter-api` test-fixtures artifact) crashed the whole run before
+   the ordinary Java 17 target class was ever touched. `PitJdkSupport`
+   gained `isClasspathBytecodeCrash`/`classpathBytecodeHint`: `MutationCollector`
+   and `PerTestCollector` now recognize this exact ASM signature in a
+   subprocess failure and append a clear explanation - a stale build
+   artifact or a dependency built with a newer toolchain, not the target
+   class's own fault - instead of leaving PIT's opaque stack trace as the
+   only clue. Detection only; still no pre-flight classpath scan (would add
+   real cost - opening every jar - for what is, so far, a one-repo finding).
+   See `campaign/junit-framework/run-log.md` Step C.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

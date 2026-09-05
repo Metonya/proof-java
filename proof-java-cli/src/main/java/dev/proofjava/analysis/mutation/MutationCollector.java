@@ -12,6 +12,7 @@ import dev.proofjava.analysis.model.AnalysisReason;
 import dev.proofjava.analysis.model.ChangedFile;
 import dev.proofjava.analysis.model.ModuleDefinition;
 import dev.proofjava.analysis.subprocess.EvidenceDiagnostics;
+import dev.proofjava.analysis.subprocess.PitJdkSupport;
 
 /**
  * D-56's evidence-layer orchestrator: runs {@link MutationRunner} once per
@@ -126,9 +127,11 @@ public final class MutationCollector {
             // promised. That is missing evidence, not a side note - as a warning
             // it left the run reporting "complete" with an empty mutation block,
             // the same silent-green shape the unsupported-JDK gate fixed.
+            String hint = PitJdkSupport.isClasspathBytecodeCrash(e.getMessage())
+                ? PitJdkSupport.classpathBytecodeHint() : "";
             incompleteReasons.add(new AnalysisReason(e.reasonCode(),
                 MODULE_PREFIX + module.id() + "' mutation evidence collection failed (" + e.getMessage()
-                    + "); mutation evidence for this module is partial or absent.", null, module.id()));
+                    + "); mutation evidence for this module is partial or absent." + hint, null, module.id()));
             // Whatever it did measure is still real evidence and still worth
             // reporting - the run is incomplete either way.
             e.partialEvidence().ifPresent(partial -> {
