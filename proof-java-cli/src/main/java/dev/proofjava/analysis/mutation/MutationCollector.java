@@ -39,6 +39,7 @@ public final class MutationCollector {
                                   EvidenceDiagnostics diagnostics) {
         List<MutationModuleEvidence> evidence = new ArrayList<>();
         List<AnalysisReason> warnings = new ArrayList<>();
+        List<AnalysisReason> incompleteReasons = new ArrayList<>();
 
         for (ModuleDefinition module : modules) {
             List<String> targetClasses = ChangedClassTargets.globsFor(module, changedFiles);
@@ -46,10 +47,10 @@ public final class MutationCollector {
                 MODULE_PREFIX + module.id() + "' has no mapped changed production class, so no mutation evidence "
                     + "was requested from the engine.", null, module.id(), 0);
             collectOneModule(repoRoot, module, targetClasses, noTargetsReason, mutationClasspathFilesById, budget,
-                evidence, warnings, diagnostics);
+                evidence, warnings, incompleteReasons, diagnostics);
         }
 
-        return new Result(List.copyOf(evidence), List.copyOf(warnings));
+        return new Result(List.copyOf(evidence), List.copyOf(warnings), List.copyOf(incompleteReasons));
     }
 
     /**
@@ -68,21 +69,23 @@ public final class MutationCollector {
                                             EvidenceDiagnostics diagnostics) {
         List<MutationModuleEvidence> evidence = new ArrayList<>();
         List<AnalysisReason> warnings = new ArrayList<>();
+        List<AnalysisReason> incompleteReasons = new ArrayList<>();
 
         for (ModuleDefinition module : modules) {
             List<String> targetClasses = targetGlobsById.getOrDefault(module.id(), List.of());
             collectOneModule(repoRoot, module, targetClasses, null, mutationClasspathFilesById, budget,
-                evidence, warnings, diagnostics);
+                evidence, warnings, incompleteReasons, diagnostics);
         }
 
-        return new Result(List.copyOf(evidence), List.copyOf(warnings));
+        return new Result(List.copyOf(evidence), List.copyOf(warnings), List.copyOf(incompleteReasons));
     }
 
     /** One module's collection attempt (SonarQube java:S135 - {@link #collect} stays continue-free). {@code noTargetsReason} may be {@code null} when the caller already explained an empty target list itself. */
     private static void collectOneModule(Path repoRoot, ModuleDefinition module, List<String> targetClasses,
                                           AnalysisReason noTargetsReason, Map<String, String> mutationClasspathFilesById,
                                           Duration budget, List<MutationModuleEvidence> evidence,
-                                          List<AnalysisReason> warnings, EvidenceDiagnostics diagnostics) {
+                                          List<AnalysisReason> warnings, List<AnalysisReason> incompleteReasons,
+                                          EvidenceDiagnostics diagnostics) {
         if (targetClasses.isEmpty()) {
             // D-64: see PerTestCollector - a silent return here is exactly
             // how WTA's first --mutation-report run produced an empty
@@ -113,9 +116,19 @@ public final class MutationCollector {
                 classpath.classPathElements(), classpath.codePaths(), targetClasses, budget, diagnostics);
             result.ifPresent(one -> recordEvidence(module, one, evidence, warnings));
         } catch (MutationCollectionException e) {
-            warnings.add(new AnalysisReason(e.reasonCode(),
+            // D-85: --mutation-report was asked for and did not deliver what it
+            // promised. That is missing evidence, not a side note - as a warning
+            // it left the run reporting "complete" with an empty mutation block,
+            // the same silent-green shape the unsupported-JDK gate fixed.
+            incompleteReasons.add(new AnalysisReason(e.reasonCode(),
                 MODULE_PREFIX + module.id() + "' mutation evidence collection failed (" + e.getMessage()
-                    + "); mutation evidence skipped for this module.", null, module.id()));
+                    + "); mutation evidence for this module is partial or absent.", null, module.id()));
+            // Whatever it did measure is still real evidence and still worth
+            // reporting - the run is incomplete either way.
+            e.partialEvidence().ifPresent(partial -> {
+                evidence.add(partial);
+                warnings.addAll(partial.warnings());
+            });
         }
     }
 
@@ -131,6 +144,7 @@ public final class MutationCollector {
         }
     }
 
-    public record Result(List<MutationModuleEvidence> modules, List<AnalysisReason> warnings) {
+    public record Result(List<MutationModuleEvidence> modules, List<AnalysisReason> warnings,
+                         List<AnalysisReason> incompleteReasons) {
     }
 }

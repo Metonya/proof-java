@@ -143,7 +143,7 @@ class AnalyzeCommand implements Callable<Integer> {
     @Option(names = "--mutation-classpath", description = "Repeatable <id>=<file>, same list-file shape as --per-test-classpath - a separate flag because L3 mutation evidence is a separate, independently opt-in evidence layer (D-56).")
     private List<String> mutationClasspathArgs = new ArrayList<>();
 
-    @Option(names = "--mutation-timeout", defaultValue = "300", description = "Wall-clock budget in seconds for one module's mutation run before it is force-killed (default 300s = 5 minutes - deliberately conservative, D-59: raise it only after confirming this environment doesn't spawn PIT minions faster than the default can safely bound).")
+    @Option(names = "--mutation-timeout", defaultValue = "300", description = "Idle timeout in seconds: a module's mutation run is stopped when no class has completed for this long (D-85). Not a total budget - a run that keeps completing classes keeps going, however long the module takes. Raise it only if a single class legitimately needs longer than this.")
     private long mutationTimeoutSeconds;
 
     @Option(names = "--diagnostics-dir", description = "Directory for per-module L2/L3 subprocess logs. Also turns the engine verbose, which is the only way to see why its own coverage minion died (D-64). Off by default: verbose output with nowhere to land is just a slower run.")
@@ -689,6 +689,7 @@ class AnalyzeCommand implements Callable<Integer> {
                     inv.perTestClasspathFilesById(), inv.perTestTargetFqcnsById(), buildDiagnostics());
                 perTest = outcome.perTest();
                 noVcsWarnings.addAll(outcome.warnings());
+                allReasons.addAll(outcome.incompleteReasons());
             }
 
             // --mutation-target is the only way --mutation-report reaches this
@@ -701,6 +702,7 @@ class AnalyzeCommand implements Callable<Integer> {
                 mutation = outcome.mutation();
                 noVcsFindings.addAll(outcome.findings());
                 noVcsWarnings.addAll(outcome.warnings());
+                allReasons.addAll(outcome.incompleteReasons());
             }
 
             return new VerdictDocument(version.schemaVersion(), version.version(), allReasons.isEmpty(), allReasons,
@@ -745,6 +747,7 @@ class AnalyzeCommand implements Callable<Integer> {
                     inv.perTestClasspathFilesById(), inv.perTestTargetFqcnsById(), diagnostics);
                 perTest = outcome.perTest();
                 allWarnings.addAll(outcome.warnings());
+                allIncompleteReasons.addAll(outcome.incompleteReasons());
             }
 
             List<Finding> allFindings = new ArrayList<>(scan.findings());
@@ -757,6 +760,7 @@ class AnalyzeCommand implements Callable<Integer> {
                 mutation = outcome.mutation();
                 allFindings.addAll(outcome.findings());
                 allWarnings.addAll(outcome.warnings());
+                allIncompleteReasons.addAll(outcome.incompleteReasons());
             }
 
             boolean complete = allIncompleteReasons.isEmpty();
@@ -780,10 +784,12 @@ class AnalyzeCommand implements Callable<Integer> {
         }
     }
 
-    private record MutationOutcome(List<MutationModuleEvidence> mutation, List<Finding> findings, List<AnalysisReason> warnings) {
+    private record MutationOutcome(List<MutationModuleEvidence> mutation, List<Finding> findings,
+                                    List<AnalysisReason> warnings, List<AnalysisReason> incompleteReasons) {
     }
 
-    private record PerTestOutcome(List<dev.proofjava.analysis.pertest.PerTestModuleEvidence> perTest, List<AnalysisReason> warnings) {
+    private record PerTestOutcome(List<dev.proofjava.analysis.pertest.PerTestModuleEvidence> perTest,
+                                   List<AnalysisReason> warnings, List<AnalysisReason> incompleteReasons) {
     }
 
     /**
@@ -813,7 +819,7 @@ class AnalyzeCommand implements Callable<Integer> {
             result = PerTestCollector.collect(repoRoot, evidencedModules, changedFiles, perTestClasspathFilesById, timeout, diagnostics);
         }
         warnings.addAll(result.warnings());
-        return new PerTestOutcome(result.modules(), warnings);
+        return new PerTestOutcome(result.modules(), warnings, result.incompleteReasons());
     }
 
     /**
@@ -836,6 +842,7 @@ class AnalyzeCommand implements Callable<Integer> {
                                                       Map<String, List<String>> mutationTargetFqcnsById,
                                                       EvidenceDiagnostics diagnostics) {
         List<AnalysisReason> warnings = new ArrayList<>();
+        List<AnalysisReason> incompleteReasons = new ArrayList<>();
         List<Finding> findings = new ArrayList<>();
         List<MutationModuleEvidence> mutation;
         Duration budget = Duration.ofSeconds(mutationTimeoutSeconds);
@@ -847,6 +854,7 @@ class AnalyzeCommand implements Callable<Integer> {
                 targets.targetGlobsById(), mutationClasspathFilesById, budget, diagnostics);
             mutation = mutationResult.modules();
             warnings.addAll(mutationResult.warnings());
+            incompleteReasons.addAll(mutationResult.incompleteReasons());
             MutationRuleEngine.Result ruleResult = MutationRuleEngine.evaluate(evidencedModules,
                 targets.classNameToPathByModuleId(), mutation);
             findings.addAll(ruleResult.findings());
@@ -856,6 +864,7 @@ class AnalyzeCommand implements Callable<Integer> {
                 changedFiles, mutationClasspathFilesById, budget, diagnostics);
             mutation = mutationResult.modules();
             warnings.addAll(mutationResult.warnings());
+            incompleteReasons.addAll(mutationResult.incompleteReasons());
             MutationRuleEngine.Result ruleResult = MutationRuleEngine.evaluate(evidencedModules, changedFiles, mutation);
             findings.addAll(ruleResult.findings());
             warnings.addAll(ruleResult.warnings());
@@ -864,7 +873,8 @@ class AnalyzeCommand implements Callable<Integer> {
         RedundancyRuleEngine.Result redundancyResult = RedundancyRuleEngine.evaluate(repoRoot, evidencedModules, mutation);
         findings.addAll(redundancyResult.findings());
 
-        return new MutationOutcome(mutation, List.copyOf(findings), List.copyOf(warnings));
+        return new MutationOutcome(mutation, List.copyOf(findings), List.copyOf(warnings),
+            List.copyOf(incompleteReasons));
     }
 
     /**

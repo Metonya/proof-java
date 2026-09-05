@@ -169,9 +169,14 @@ public final class MutationRunner {
             ProcessOutputTail.joinQuietly(run.outputThread());
             run.diagnostics().progress(PROGRESS_PREFIX + run.moduleId() + "' - FAILED, budget of "
                 + run.budget().toSeconds() + "s exhausted after " + progressCount(run) + " completed");
-            throw new MutationCollectionException("Module '" + run.moduleId() + "' mutation run exceeded its "
-                + run.budget().toSeconds() + "s budget (" + progressCount(run) + " completed)"
-                + run.output().tailMessage(), MutationCollectionException.BUDGET_EXCEEDED);
+            // D-85: the listener flushes as classes complete, so a killed run
+            // usually left real evidence behind. Report it, and still call the
+            // run incomplete - the classes never reached are exactly the ones a
+            // reader must not assume were clean (hard rule 3a).
+            throw new MutationCollectionException("Module '" + run.moduleId() + "' mutation run made no progress for "
+                + run.budget().toSeconds() + "s and was stopped (" + progressCount(run) + " measured)"
+                + run.output().tailMessage(),
+                MutationCollectionException.BUDGET_EXCEEDED, readPartialQuietly(run));
         }
         ProcessOutputTail.joinQuietly(run.outputThread());
 
@@ -199,23 +204,60 @@ public final class MutationRunner {
     }
 
     /**
-     * Waits for the process, emitting a progress line every {@link
-     * #HEARTBEAT} until it exits or the budget runs out. The counter comes
-     * from {@link MutationDriver}'s markers, so a run still in PIT's
-     * coverage phase reports 0 completed - the distinction between "slow
-     * mutation phase" and "never reached the mutation phase" that the WTA
-     * dogfood had no way to make.
+     * D-85: best-effort read of the incrementally flushed result file after a
+     * kill. Never throws - a partial read failing must not replace the real
+     * "budget exhausted" reason with a less informative one.
      *
-     * @return true if the process exited within its budget.
+     * @return the evidence measured before the kill, or {@code null}.
+     */
+    private static MutationModuleEvidence readPartialQuietly(Run run) {
+        if (!Files.exists(run.outputFile())) {
+            return null;
+        }
+        try (InputStream in = Files.newInputStream(run.outputFile())) {
+            MutationModuleEvidence partial = MutationJsonReader.read(in);
+            run.diagnostics().progress(PROGRESS_PREFIX + run.moduleId() + "' - kept partial evidence, "
+                + partial.methods().size() + " method(s) with mutants");
+            return partial;
+        } catch (IOException | RuntimeException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Waits for the process, emitting a progress line every {@link
+     * #HEARTBEAT}. The counter comes from {@link MutationDriver}'s markers, so a
+     * run still in PIT's coverage phase reports 0 completed - the distinction
+     * between "slow mutation phase" and "never reached the mutation phase" that
+     * the WTA dogfood had no way to make.
+     *
+     * <p>D-85: the budget is an <em>idle</em> timeout, not a total one. It
+     * expires when no class has completed for that long, not after that much
+     * wall-clock. A fixed total punished a large module and a hung process
+     * identically: gson's core needed more than the 300s default for 34 classes
+     * and was killed at 16, having done nothing wrong. What the timeout is
+     * actually there to catch (D-59) is a run that has stopped progressing, and
+     * the per-class markers already say precisely when that happens. A run that
+     * keeps completing classes keeps going - the user asked for mutation
+     * analysis and it is delivering it.
+     *
+     * @return true if the process exited before going idle for a full budget.
      */
     private static boolean awaitWithProgress(Run run) {
         long start = System.nanoTime();
-        long deadline = start + run.budget().toNanos();
+        long idleNanos = run.budget().toNanos();
+        long lastProgressAt = start;
+        int lastCount = run.classesDone().get();
         try {
-            while (System.nanoTime() < deadline) {
-                long remaining = Math.min(HEARTBEAT.toNanos(), deadline - System.nanoTime());
+            while (System.nanoTime() - lastProgressAt < idleNanos) {
+                long remaining = Math.min(HEARTBEAT.toNanos(), idleNanos - (System.nanoTime() - lastProgressAt));
                 if (run.process().waitFor(Math.max(1, remaining / 1_000_000L), TimeUnit.MILLISECONDS)) {
                     return true;
+                }
+                int count = run.classesDone().get();
+                if (count != lastCount) {
+                    lastCount = count;
+                    lastProgressAt = System.nanoTime();
                 }
                 run.diagnostics().progress(PROGRESS_PREFIX + run.moduleId() + "' - " + progressCount(run)
                     + ", " + ProgressMarker.formatElapsed(Duration.ofNanos(System.nanoTime() - start)) + " elapsed");

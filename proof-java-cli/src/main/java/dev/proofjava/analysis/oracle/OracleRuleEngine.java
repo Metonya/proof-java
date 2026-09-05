@@ -165,16 +165,23 @@ public final class OracleRuleEngine {
             return;
         }
         RuleFinding rf = ruleFinding.get();
-        // docs/rules/README.md: disabled tests are analyzed like any other,
-        // but their findings say so - a reader triaging a list needs to know
-        // that this one is not currently running.
-        String message = TestMethods.isDisabled(method) ? rf.message() + " (disabled test)" : rf.message();
+        // docs/rules/README.md: a disabled test is still analyzed and still
+        // reported - hiding it would be its own kind of dishonesty - but it is
+        // reported as INFO rather than at the rule's own severity, and says why.
+        // A test that never runs cannot be the reason a suite is weak, so
+        // ranking it alongside a live oracle-less test buries the ones that
+        // matter. Measured on google/gson: 9 of 33 findings were @Ignore'd
+        // benchmarks whose class javadoc says to run them by hand.
+        boolean disabled = TestMethods.isDisabled(method);
+        String message = disabled ? rf.message() + " (disabled test)" : rf.message();
+        dev.proofjava.analysis.model.Severity effectiveSeverity =
+            disabled ? dev.proofjava.analysis.model.Severity.INFO : severity;
         String signature = signature(method);
         String fingerprint = Fingerprint.compute(ruleId, file.moduleId(), file.repoRelativePath(), signature);
         Range range = method.getRange().orElse(null);
         int startLine = range != null ? range.begin.line : 1;
         int endLine = range != null ? range.end.line : startLine;
-        out.add(new Finding(ruleId, severity, rf.confidence(), file.moduleId(), file.repoRelativePath(),
+        out.add(new Finding(ruleId, effectiveSeverity, rf.confidence(), file.moduleId(), file.repoRelativePath(),
             startLine, endLine, signature, message, suggestedAction, fingerprint, null));
     }
 

@@ -20,8 +20,11 @@ L0-specific.
 A method is a test method if annotated with any of (fully resolved):
 JUnit 5 `@Test`, `@ParameterizedTest`, `@RepeatedTest`, `@TestFactory`,
 `@TestTemplate`; JUnit 4 `org.junit.Test` (D-24). `@Disabled`/`@Ignore`
-methods are still analyzed but findings carry a `disabled test` note in the
-message. Lifecycle methods (`@BeforeEach` etc.) are not test methods but are
+methods are still analyzed and still reported - suppressing them would hide a
+test someone may re-enable - but their finding is emitted at `INFO` severity
+whatever the rule's own severity is, and its message carries a `disabled test`
+note. A test that never runs cannot be why a suite is weak, so it must not
+outrank a live oracle-less test in a triage list (D-84). Lifecycle methods (`@BeforeEach` etc.) are not test methods but are
 included in helper traversal (below).
 
 ## Recognized oracle APIs (the allowlist, D-24)

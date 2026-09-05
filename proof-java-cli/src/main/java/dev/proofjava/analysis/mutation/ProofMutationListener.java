@@ -3,6 +3,9 @@ package dev.proofjava.analysis.mutation;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.io.Writer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -17,10 +20,11 @@ import dev.proofjava.analysis.subprocess.ProgressMarker;
 
 /**
  * PIT {@link MutationResultListenerFactory} SPI implementation (D-56):
- * accumulates every {@link ClassMutationResults} PIT hands it in RAM and
- * writes {@link MutationJsonWriter}'s wire format to {@code
- * proof-mutants.json} in the run's report directory once the mutation
- * phase finishes. Registered via {@code META-INF/services/
+ * accumulates every {@link ClassMutationResults} PIT hands it and writes
+ * {@link MutationJsonWriter}'s wire format to {@code proof-mutants.json} in the
+ * run's report directory. The file is rewritten as classes complete, not only
+ * at the end (D-85), so a run killed at its budget still leaves behind the
+ * classes it did measure. Registered via {@code META-INF/services/
  * org.pitest.mutationtest.MutationResultListenerFactory}.
  *
  * <p>Activation is two-gated, unlike {@code ProofLineExporter}'s single
@@ -42,6 +46,17 @@ public final class ProofMutationListener implements MutationResultListenerFactor
     /** Set by {@code MutationDriver} before calling {@code EntryPoint.execute} - the only channel available to an SPI-instantiated listener. */
     static final String MODULE_ID_PROPERTY = "proof.mutation.moduleId";
 
+    /** Set by {@code MutationDriver}, like {@link #MODULE_ID_PROPERTY} - the directory the incremental flush renames onto. */
+    static final String REPORT_DIR_PROPERTY = "proof.mutation.reportDir";
+
+    /**
+     * Minimum gap between incremental flushes. Rewriting the whole document per
+     * class is O(n^2) in bytes, which is free for a diff-scoped run and wasteful
+     * for a several-hundred-class one; throttling bounds the I/O while keeping
+     * the window of work that a kill can destroy down to seconds.
+     */
+    private static final long FLUSH_INTERVAL_MILLIS = 2_000L;
+
     @Override
     public MutationResultListener getListener(Properties props, ListenerArguments args) {
         return new AccumulatingListener(args.getOutputStrategy());
@@ -60,6 +75,7 @@ public final class ProofMutationListener implements MutationResultListenerFactor
     private static final class AccumulatingListener implements MutationResultListener {
         private final ResultOutputStrategy outputStrategy;
         private final List<ClassMutationResults> results = new ArrayList<>();
+        private long lastFlushMillis;
 
         AccumulatingListener(ResultOutputStrategy outputStrategy) {
             this.outputStrategy = outputStrategy;
@@ -78,16 +94,54 @@ public final class ProofMutationListener implements MutationResultListenerFactor
             // parent turns these into a live counter; a module that never
             // emits one never reached the mutation phase at all.
             ProgressMarker.emit(results.size());
+
+            long now = System.currentTimeMillis();
+            if (now - lastFlushMillis >= FLUSH_INTERVAL_MILLIS) {
+                lastFlushMillis = now;
+                flush();
+            }
         }
 
         @Override
         public void runEnd() {
+            flush();
+        }
+
+        /**
+         * D-85: writes to a {@code .tmp} name and moves it onto the real one, so
+         * a reader - or a kill arriving mid-write - only ever observes the file
+         * absent or complete, never truncated. Same guarantee, and the same
+         * reason, as {@code ProofLineExporter}'s D-74 rename.
+         *
+         * <p>An {@link IOException} here is swallowed rather than thrown: this
+         * runs inside PIT's own callback, and failing a flush must not abort a
+         * mutation run that is otherwise producing real evidence. The next
+         * flush, or {@link #runEnd()}, writes the accumulated results again.
+         */
+        private void flush() {
             String moduleId = System.getProperty(MODULE_ID_PROPERTY, "");
             MutationModuleEvidence evidence = MutationResultAccumulator.accumulate(moduleId, results);
-            try (Writer w = outputStrategy.createWriterForFile(OUTPUT_FILE_NAME)) {
-                MutationJsonWriter.write(w, evidence);
+            String reportDir = System.getProperty(REPORT_DIR_PROPERTY);
+            if (reportDir == null) {
+                // No MutationDriver in the loop (a test instantiating this SPI
+                // directly): nothing to rename onto, so write in place.
+                try (Writer w = outputStrategy.createWriterForFile(OUTPUT_FILE_NAME)) {
+                    MutationJsonWriter.write(w, evidence);
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+                return;
+            }
+            String tempFileName = OUTPUT_FILE_NAME + ".tmp";
+            try {
+                try (Writer w = outputStrategy.createWriterForFile(tempFileName)) {
+                    MutationJsonWriter.write(w, evidence);
+                }
+                Path dir = Path.of(reportDir);
+                Files.move(dir.resolve(tempFileName), dir.resolve(OUTPUT_FILE_NAME),
+                    StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException e) {
-                throw new UncheckedIOException(e);
+                // Deliberately not fatal - see the javadoc above.
             }
         }
     }

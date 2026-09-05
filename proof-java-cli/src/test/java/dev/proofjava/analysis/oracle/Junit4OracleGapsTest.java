@@ -14,6 +14,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import dev.proofjava.analysis.model.Finding;
 import dev.proofjava.analysis.model.ModuleDefinition;
+import dev.proofjava.analysis.model.Severity;
 
 /**
  * Two M0-specified behaviours that had no implementation and that no corpus
@@ -148,8 +149,12 @@ class Junit4OracleGapsTest {
         OracleScanResult result = OracleRuleEngine.scan(repoRoot, List.of(module()), 17, "UTF-8", null);
 
         assertEquals(1, result.findings().size(), "a disabled test is analyzed, not skipped");
-        assertTrue(result.findings().get(0).message().contains("(disabled test)"),
-            result.findings().get(0).message());
+        Finding disabledFinding = result.findings().get(0);
+        assertTrue(disabledFinding.message().contains("(disabled test)"), disabledFinding.message());
+        // A test that never runs cannot be why a suite is weak: it is reported,
+        // but as advisory, so live oracle-less tests rank above it.
+        assertEquals(Severity.INFO, disabledFinding.severity(),
+            "a disabled test's finding is advisory, not the rule's own WARNING");
     }
 
     @Test

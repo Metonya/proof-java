@@ -61,6 +61,31 @@ class ProofMutationListenerTest {
         assertTrue(written.warnings().isEmpty());
     }
 
+    /**
+     * D-85: the whole point of flushing per class is that a run stopped at its
+     * idle timeout still leaves usable evidence behind. {@code runEnd()} is
+     * never reached in that case, so the file has to be complete and readable
+     * without it. Before this, a killed run discarded everything it had
+     * measured - on google/gson, 16 classes' worth.
+     */
+    @Test
+    void aClassResultIsOnDiskBeforeRunEndSoAKilledRunKeepsIt() throws IOException {
+        System.setProperty(MODULE_ID_PROPERTY, "demo-module");
+        StringWriter captured = new StringWriter();
+        MutationResultListener listener = new ProofMutationListener().getListener(new Properties(),
+            listenerArguments(name -> captured));
+
+        listener.runStart();
+        listener.handleMutationResult(new ClassMutationResults(List.of(
+            mutationResult("com/example/Calc", "add", "(II)I", 10, DetectionStatus.SURVIVED))));
+        // deliberately no runEnd() - this is the killed-process case
+
+        MutationModuleEvidence written = MutationJsonReader.read(
+            new ByteArrayInputStream(captured.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        assertEquals("demo-module", written.moduleId());
+        assertEquals(1, written.methods().size(), "the measured class must survive a run that never ends cleanly");
+    }
+
     @Test
     void nameMatchesTheConstantUsedForOutputFormatActivation() {
         assertEquals("proof-mutation", new ProofMutationListener().name());

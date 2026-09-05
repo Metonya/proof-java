@@ -119,7 +119,10 @@ public final class PerTestCollector {
                 classpath.classPathElements(), classpath.codePaths(), targetClasses, timeout, diagnostics);
             result.ifPresent(one -> recordEvidence(module, one, acc));
         } catch (PerTestCollectionException e) {
-            acc.warnings.add(new AnalysisReason("PER_TEST_COLLECTION_FAILED",
+            // D-85: same reasoning as MutationCollector - --per-test-report was
+            // requested and produced nothing, so the run is incomplete, not
+            // complete-with-a-note.
+            acc.incompleteReasons.add(new AnalysisReason("PER_TEST_COLLECTION_FAILED",
                 MODULE_PREFIX + module.id() + "' per-test coverage collection failed (" + e.getMessage()
                     + "); per-test evidence skipped for this module.", null, module.id()));
         }
@@ -144,12 +147,14 @@ public final class PerTestCollector {
     private static final class Accumulator {
         private final List<PerTestModuleEvidence> evidence = new ArrayList<>();
         private final List<AnalysisReason> warnings = new ArrayList<>();
+        private final List<AnalysisReason> incompleteReasons = new ArrayList<>();
 
         Result toResult() {
-            return new Result(List.copyOf(evidence), List.copyOf(warnings));
+            return new Result(List.copyOf(evidence), List.copyOf(warnings), List.copyOf(incompleteReasons));
         }
     }
 
-    public record Result(List<PerTestModuleEvidence> modules, List<AnalysisReason> warnings) {
+    public record Result(List<PerTestModuleEvidence> modules, List<AnalysisReason> warnings,
+                         List<AnalysisReason> incompleteReasons) {
     }
 }

@@ -42,7 +42,7 @@ Zero or more than one of these is rejected with exit `2` before any JSON is writ
 | `--test-roots <id>=<dir>[,<dir>...]` | Module's test root(s) | `<root>/src/test/java` |
 | `--config` | Path to `proof.config.json` | auto-detected at repo root |
 | `--classpath <id>=<file>` | Jar list (one path per line) for JavaParser symbol solving. Never silently upgrades confidence — missing degrades resolution, present never guarantees HIGH | — |
-| `--language-level` | Java language level for JavaParser | `17` |
+| `--language-level` | Java language level for JavaParser, 8-21 | `17` |
 | `--encoding` | Charset for reading test sources | `UTF-8` |
 | `--coverage-exclusions` | Comma-separated `sonar.coverage.exclusions` globs — one filter layer | — |
 | `--out` | Verdict JSON output path | `proof-verdict.json` |
@@ -50,6 +50,15 @@ Zero or more than one of these is rejected with exit `2` before any JSON is writ
 
 A repeated id in `--module`/`--source-roots`/`--test-roots` is a rejected
 invocation, never a silent last-one-wins.
+
+**Set `--language-level` to the highest level any source file uses, not to the
+project's `maven.compiler.release`.** A higher level parses lower-level code
+without complaint, so raising it costs nothing; lowering it means any file using
+newer syntax cannot be parsed, which surfaces as `UNPARSEABLE_TEST_SOURCE` and an
+incomplete run. Measured on google/gson, whose core targets Java 11 but whose
+suite contains one record-based test: at level 11 the run was incomplete with one
+unparseable file, at level 17 it was complete with an identical finding set. The
+default is already 17 - the mistake is lowering it to match the build.
 
 ## `fileCoverage` — optional, whole-repo line coverage
 
@@ -86,6 +95,12 @@ Rules (full firing conditions in `docs/rules/<RULE>.md`):
 Every finding carries a confidence (`HIGH`/`MEDIUM`/`INCONCLUSIVE`; `LOW` is
 reserved but unused in v0.1). No rule at any confidence suggests deletion.
 
+One exception to the severity column: a finding on a `@Disabled`/`@Ignore` test
+is emitted at `INFO` whatever the rule's own severity is, and its message says
+`(disabled test)`. The test is still analyzed and still reported — someone may
+re-enable it — but it cannot be the reason a suite is weak today, so it must not
+outrank a live oracle-less test in a triage list (D-84).
+
 ## L2 — per-test evidence (optional, via PIT)
 
 **Cross-module dependency warning (D-67):** if the analyzed module depends
@@ -115,7 +130,7 @@ is a generic Maven multi-module property, not specific to any one repo -
 | `--mutation-report` | Collects mutation evidence (gregor `RETURNS` + `VOID_METHOD_CALLS`). Feeds `PSEUDO_TESTED_METHOD` and `SUBSUMED_TEST`. Requires a diff mode, unless `--mutation-target` is also given | — |
 | `--mutation-target <id>=<FQCN>` | Repeatable: explicit classes to mutate, independent of the diff (Plan.md M6 Faz 2 - the IDE's "mutate this class now" gesture). Requires `--mutation-report`; lifts its `--no-vcs` restriction. **All-or-nothing**: giving at least one target makes every module's diff-derived targets ignored entirely, including modules with none of their own. An unresolved class (no matching file under any declared source root) warns as `MUTATION_TARGET_UNRESOLVED` rather than failing the run; a declared module with no `--mutation-target` bound to it warns as `MUTATION_TARGET_NOT_BOUND` | — |
 | `--mutation-classpath <id>=<file>` | Same list-file shape, separate opt-in flag | — |
-| `--mutation-timeout` | Wall-clock budget in seconds before a module's mutation run is force-killed | `300` |
+| `--mutation-timeout` | **Idle** timeout in seconds: the module's mutation run is stopped when no class has completed for this long (D-85). Not a total budget — a run that keeps completing classes keeps going. A stopped run still reports the classes it measured, and the run is marked incomplete for the ones it did not | `300` |
 | `--diagnostics-dir <dir>` | Writes each L2/L3 module's whole subprocess log to `<dir>/<module>-<layer>.log` and switches the engine to verbose (D-64) — the only route to the engine's own minion-crash detail. Off by default: verbose output with nowhere to land is just a slower run | — |
 
 L2/L3 runs always print progress to **stderr** as they go (never stdout,

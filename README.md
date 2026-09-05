@@ -137,8 +137,14 @@ code 3). **Run L2/L3 on a Java 17 JDK.**
 ### The code being analysed
 
 `--language-level` accepts **8 to 21**, the range the embedded parser supports;
-anything else is rejected rather than silently parsed at a lower level. Your
-JaCoCo, not proof-java, decides which class-file versions can be measured.
+anything else is rejected rather than silently parsed at a lower level.
+
+Set it to the highest level any source file uses — not to the project's
+`maven.compiler.release`. A higher level parses older code fine, so raising it
+costs nothing, while lowering it makes newer files unparseable and the run
+incomplete. The default of 17 is usually right as-is.
+
+Your JaCoCo, not proof-java, decides which class-file versions can be measured.
 
 ## Configuration
 

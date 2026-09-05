@@ -63,6 +63,7 @@ public final class MutationDriver {
         boolean verbose = Boolean.parseBoolean(args[5]);
 
         System.setProperty(ProofMutationListener.MODULE_ID_PROPERTY, moduleId);
+        System.setProperty(ProofMutationListener.REPORT_DIR_PROPERTY, reportDir);
 
         ReportOptions options = new ReportOptions();
         options.setReportDir(reportDir);

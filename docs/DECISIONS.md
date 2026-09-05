@@ -1941,6 +1941,85 @@ format did not change, only the `tool.name` value.
 `validation/` is not rewritten. It records measurements taken under the old
 name, and renaming inside a measurement log would falsify the record.
 
+**D-84 · A disabled test's finding is advisory (INFO), not the rule's own
+severity** (2026-09-05)
+Found by running the tool against google/gson at `b3f4ca20`: 9 of 33 findings
+were `@Ignore`d methods in `metrics/PerformanceTest.java`, benchmarks whose own
+class javadoc tells you to remove the annotation to run them. They were reported
+identically to live oracle-less tests, so 27% of the list was noise that ranked
+as high as the real items.
+
+The detection already existed — the message has ended with `(disabled test)`
+since the rule was written — but nothing acted on it. Now
+`OracleRuleEngine.addIfPresent` emits `Severity.INFO` for a disabled test
+regardless of the rule's own severity.
+
+Reported, not suppressed. A disabled test with no oracle is a real thing to know
+about: someone may re-enable it, and it would then be a live gap. Hiding it would
+be its own dishonesty (hard rule 3a). But a test that does not run cannot be why
+a suite is weak today, and `INFO` is the tier that already means exactly that —
+`NULL_CHECK_ONLY` uses it for the same reason.
+
+Severity rather than confidence: the pattern match is not less certain here. The
+test really has no oracle, and `HIGH` confidence is correct. What changes is
+whether it is worth acting on, which is what severity encodes.
+
+Schema-compatible: `severity` is a free `INFO|WARNING` enum in the verdict
+schema, never constrained per rule, so no consumer contract changes.
+
+**D-85 · A mutation run that is stopped reports incomplete, keeps what it
+measured, and is stopped for going idle rather than for taking long**
+(2026-09-05)
+Found by running the tool against google/gson at `b3f4ca20`. `--mutation-report`
+over 34 changed classes hit the 300s default at 16 classes; the run was killed,
+every result was discarded, and the failure was recorded as a *warning*. Three
+separate defects in one behaviour:
+
+**1. It could report success.** `MutationCollector` put the failure in
+`warnings`, and completeness is decided only by `incompleteReasons`. So asking
+for L3, getting zero mutation evidence, and exiting 0 with `status: complete`
+was possible - in that gson run the status was only `incomplete` for an
+unrelated reason. This is the same silent-green shape as the unsupported-JDK
+gate: the user asked for evidence, none arrived, and the result looked clean.
+Collection failures for both `--mutation-report` and `--per-test-report` are now
+incomplete reasons.
+
+**2. It threw away five minutes of real work.** `ProofMutationListener`
+accumulated in RAM and wrote only in `runEnd()`, which a killed process never
+reaches. It now flushes as classes complete - throttled to at most one write
+every 2s, so a several-hundred-class module does not pay O(n^2) I/O - writing to
+a `.tmp` name and moving it into place, the same atomicity D-74 established for
+the per-test export. A stopped run's partial evidence is read back and reported,
+while the run still counts as incomplete: the classes that were never reached
+are exactly the ones a reader must not assume were clean (hard rule 3a).
+
+**3. The budget measured the wrong thing.** A fixed wall-clock total punishes a
+large module and a hung process identically - gson's core did nothing wrong, it
+simply had more classes than 300s allows. What the timeout exists to catch
+(D-59) is a run that has *stopped progressing*, and `MutationDriver` already
+emits a per-class progress marker that says exactly when that happens. So
+`--mutation-timeout` is now an idle timeout: the run is stopped when no class has
+completed for that long, and a run that keeps completing classes keeps going,
+however long the module takes.
+
+Rejected: invoking PIT once per class to get a per-class budget. PIT's coverage
+phase is shared across the whole target set and cost 4s on gson's core - paying
+it 34 times would add ~136s of pure overhead to save nothing the idle timeout
+does not already give. Also rejected: scaling the budget by class count, which
+is still a guess, since classes differ by an order of magnitude in mutant count.
+
+Not changed: L2's `--per-test-timeout`. Its runner waits for a single output
+file with no per-class signal to key an idle timeout on, so the same fix does not
+apply to it, and the measurement does not call for one - L2 finished gson's whole
+core in 4s against a 120s budget.
+
+Still open: `MUTATION_CLASSPATH_MISSING` and `PER_TEST_CLASSPATH_MISSING` are
+still warnings. By the argument above they arguably belong with the incomplete
+reasons too - requested evidence that never arrives - but they are a
+configuration mistake visible before the run rather than a silent runtime
+failure, and the distinction deserves its own decision rather than being folded
+into this one.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not
