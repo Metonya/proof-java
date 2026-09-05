@@ -127,12 +127,12 @@ class JacocoXmlParserTest {
      */
     @Test
     void missingAndNonNumericLineAttributesProduceDistinctMessages() {
-        AnalysisException missing = assertThrows(AnalysisException.class,
-            () -> parser.parse(FIXTURES.resolve("missing-line-attribute.xml")));
+        Path missingFixture = FIXTURES.resolve("missing-line-attribute.xml");
+        AnalysisException missing = assertThrows(AnalysisException.class, () -> parser.parse(missingFixture));
         assertTrue(missing.getMessage().contains("Missing required attribute 'ci'"), missing.getMessage());
 
-        AnalysisException nonNumeric = assertThrows(AnalysisException.class,
-            () -> parser.parse(FIXTURES.resolve("non-numeric-line-attribute.xml")));
+        Path nonNumericFixture = FIXTURES.resolve("non-numeric-line-attribute.xml");
+        AnalysisException nonNumeric = assertThrows(AnalysisException.class, () -> parser.parse(nonNumericFixture));
         assertTrue(nonNumeric.getMessage().contains("'mi'"), nonNumeric.getMessage());
         assertTrue(nonNumeric.getMessage().contains("not an integer"), nonNumeric.getMessage());
         assertTrue(nonNumeric.getMessage().contains("not-a-number"), nonNumeric.getMessage());
