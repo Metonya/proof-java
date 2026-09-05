@@ -2202,7 +2202,22 @@ No gson defect, no proof-java PR-worthy finding for gson's own repository -
 the stall is an interaction between PIT's minion protocol and a
 high-fan-out test suite, not a gson bug. See `campaign/gson/run-log.md`.
 
-## Rejected
+**D-93 · A shared `--test-roots` value is scanned once, not once per module
+that declares it** (2026-09-05)
+Found on junit-framework, whose own layout (documented in
+`junit-platform-commons/src/test/README.md`) puts several production
+modules' tests in one shared module, `platform-tests`. `TestSourceScanner`
+deduplicated by `module id + path`, so the identical physical test file was
+scanned - and every one of its findings reported - once per declaring
+module: 10 modules sharing one root turned 357 real findings into 3570
+reported lines, each real finding repeated exactly 10 times. Purely
+mechanical to confirm (`sort | uniq -c`), no interpretation needed.
+
+Fix: dedup by repo-relative path alone. A physical file belongs to exactly
+one module for a run's purposes; it is attributed to the first module (in
+declaration order) whose testRoot contains it. `TestSourceScannerTest`
+gained a case with two modules sharing one root, asserting exactly one
+`TestSourceFile` comes back. See `campaign/junit-framework/run-log.md` Step B.
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not
 reproducible in CI; also the crowded, undifferentiated corner of the market.

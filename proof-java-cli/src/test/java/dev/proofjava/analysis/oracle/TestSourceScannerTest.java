@@ -32,6 +32,25 @@ class TestSourceScannerTest {
         assertEquals("src/test/java/com/example/CalcTest.java", found.get(0).repoRelativePath());
     }
 
+    /**
+     * D-93: junit-framework's own layout - several production modules tested
+     * by one shared test module - turned every real finding into one copy
+     * per declaring module. A shared testRoot must be scanned once, not once
+     * per module that declares it.
+     */
+    @Test
+    void aTestRootSharedByTwoModulesIsScannedOnce() throws IOException {
+        Files.createDirectories(repoRoot.resolve("shared-tests/com/example"));
+        Files.writeString(repoRoot.resolve("shared-tests/com/example/SharedTest.java"), "class SharedTest {}\n");
+        ModuleDefinition first = new ModuleDefinition("module-a", ".", List.of(), List.of("shared-tests"));
+        ModuleDefinition second = new ModuleDefinition("module-b", ".", List.of(), List.of("shared-tests"));
+
+        List<TestSourceFile> found = TestSourceScanner.scan(repoRoot, List.of(first, second), null);
+
+        assertEquals(1, found.size(), "the same physical file must not be scanned once per declaring module");
+        assertEquals("module-a", found.get(0).moduleId(), "attributed to the first module to declare the root");
+    }
+
     @Test
     void aMissingTestRootContributesNoFilesAndIsNotAnError() {
         ModuleDefinition module = new ModuleDefinition("demo", ".", List.of(), List.of("does/not/exist"));

@@ -33,6 +33,18 @@ public final class TestSourceScanner {
      */
     public static List<TestSourceFile> scan(Path repoRoot, List<ModuleDefinition> modules, Set<String> changedPathsOrNull) {
         List<TestSourceFile> found = new ArrayList<>();
+        // Keyed by repo-relative path alone, not module + path (D-93): two
+        // modules can legitimately declare the same testRoot - a monorepo
+        // that centralizes tests for several library modules in one shared
+        // test module, exactly junit-framework's own documented layout
+        // (junit-platform-commons/src/test/README.md points at
+        // platform-tests). Keying by "module id + path" let the identical
+        // physical file through once per declaring module, so every finding
+        // in a shared test root was reported once per module: 10 modules
+        // sharing one root turned 357 real findings into 3570 reported ones.
+        // A file belongs to exactly one module for this run's purposes; the
+        // first module to declare a testRoot containing it, in the order
+        // given, is the one it is attributed to.
         Set<String> seen = new LinkedHashSet<>();
         for (ModuleDefinition module : modules) {
             for (String testRoot : module.testRoots()) {
@@ -61,7 +73,7 @@ public final class TestSourceScanner {
             }
             String relative = RepoPaths.normalizeSeparators(repoRoot.relativize(absolute).toString());
             boolean inScope = changedPathsOrNull == null || changedPathsOrNull.contains(relative);
-            if (inScope && seen.add(module.id() + " " + relative)) {
+            if (inScope && seen.add(relative)) {
                 found.add(new TestSourceFile(module.id(), relative, absolute));
             }
         }
