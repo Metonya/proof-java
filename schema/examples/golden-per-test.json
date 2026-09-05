@@ -1,7 +1,14 @@
 {
   "schemaVersion": "0.1.0",
-  "tool": { "name": "proof-java", "version": "0.1.0" },
-  "analysis": { "status": "complete", "exitCode": 0, "incompleteReasons": [] },
+  "tool": {
+    "name": "proof-java",
+    "version": "0.1.0"
+  },
+  "analysis": {
+    "status": "complete",
+    "exitCode": 0,
+    "incompleteReasons": []
+  },
   "inputs": {
     "diffMode": "working-tree",
     "findingsScope": "all",
@@ -16,24 +23,67 @@
       {
         "id": "core",
         "root": ".",
-        "sourceRoots": ["src/main/java"],
-        "testRoots": ["src/test/java"],
+        "sourceRoots": [
+          "src/main/java"
+        ],
+        "testRoots": [
+          "src/test/java"
+        ],
         "reports": [
-          { "path": "target/site/jacoco/jacoco.xml", "freshness": "unverified" }
+          {
+            "path": "target/site/jacoco/jacoco.xml",
+            "freshness": "unverified"
+          }
         ]
       }
     ]
   },
   "coverage": {
     "overall": {
-      "jacoco-line": { "numeratorName": "coveredLines", "numerator": 56, "denominatorName": "executableLines", "denominator": 71, "percent": 78.9 },
-      "strict-line": { "numeratorName": "fullyCoveredLines", "numerator": 48, "denominatorName": "executableLines", "denominator": 71, "percent": 67.6 },
-      "sonar-compatible": { "numeratorName": "coveredBranchesPlusCoveredLines", "numerator": 91, "denominatorName": "branchesPlusExecutableLines", "denominator": 125, "percent": 72.8 }
+      "jacoco-line": {
+        "numeratorName": "coveredLines",
+        "numerator": 56,
+        "denominatorName": "executableLines",
+        "denominator": 71,
+        "percent": 78.9
+      },
+      "strict-line": {
+        "numeratorName": "fullyCoveredLines",
+        "numerator": 48,
+        "denominatorName": "executableLines",
+        "denominator": 71,
+        "percent": 67.6
+      },
+      "sonar-compatible": {
+        "numeratorName": "coveredBranchesPlusCoveredLines",
+        "numerator": 91,
+        "denominatorName": "branchesPlusExecutableLines",
+        "denominator": 125,
+        "percent": 72.8
+      }
     },
     "newCode": {
-      "jacoco-line": { "numeratorName": "coveredLines", "numerator": 10, "denominatorName": "executableLines", "denominator": 14, "percent": 71.4 },
-      "strict-line": { "numeratorName": "fullyCoveredLines", "numerator": 8, "denominatorName": "executableLines", "denominator": 14, "percent": 57.1 },
-      "sonar-compatible": { "numeratorName": "coveredBranchesPlusCoveredLines", "numerator": 12, "denominatorName": "branchesPlusExecutableLines", "denominator": 18, "percent": 66.7 }
+      "jacoco-line": {
+        "numeratorName": "coveredLines",
+        "numerator": 10,
+        "denominatorName": "executableLines",
+        "denominator": 14,
+        "percent": 71.4
+      },
+      "strict-line": {
+        "numeratorName": "fullyCoveredLines",
+        "numerator": 8,
+        "denominatorName": "executableLines",
+        "denominator": 14,
+        "percent": 57.1
+      },
+      "sonar-compatible": {
+        "numeratorName": "coveredBranchesPlusCoveredLines",
+        "numerator": 12,
+        "denominatorName": "branchesPlusExecutableLines",
+        "denominator": 18,
+        "percent": 66.7
+      }
     }
   },
   "changedFiles": [
@@ -43,7 +93,16 @@
       "classification": "mapped",
       "newLines": 14,
       "coveredNewLines": 10,
-      "uncoveredNewRanges": [[42, 44], [51, 51]]
+      "uncoveredNewRanges": [
+        [
+          42,
+          44
+        ],
+        [
+          51,
+          51
+        ]
+      ]
     }
   ],
   "findings": [],
@@ -54,16 +113,28 @@
     "modules": [
       {
         "id": "core",
+        "testIds": [
+          "com.demo.core.IbanValidatorTest#acceptsAValidGermanIban()",
+          "com.demo.core.IbanValidatorTest#rejectsAnIbanWithABadChecksum()"
+        ],
         "entries": [
           {
             "className": "com.demo.core.IbanValidator",
             "methodName": "validate",
             "lines": [
-              { "line": 40, "tests": ["com.demo.core.IbanValidatorTest#rejectsAnIbanWithABadChecksum()"] },
-              { "line": 41, "tests": [
-                "com.demo.core.IbanValidatorTest#acceptsAValidGermanIban()",
-                "com.demo.core.IbanValidatorTest#rejectsAnIbanWithABadChecksum()"
-              ] }
+              {
+                "line": 40,
+                "tests": [
+                  1
+                ]
+              },
+              {
+                "line": 41,
+                "tests": [
+                  0,
+                  1
+                ]
+              }
             ]
           }
         ],
@@ -72,7 +143,12 @@
             "className": "com.demo.core.IbanValidator",
             "methodName": "<clinit>",
             "lines": [
-              { "line": 12, "tests": ["com.demo.core.IbanValidatorTest#acceptsAValidGermanIban()"] }
+              {
+                "line": 12,
+                "tests": [
+                  0
+                ]
+              }
             ]
           }
         ]

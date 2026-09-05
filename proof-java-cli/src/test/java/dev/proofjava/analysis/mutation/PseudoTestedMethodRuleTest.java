@@ -126,6 +126,52 @@ class PseudoTestedMethodRuleTest {
         assertTrue(result.warnings().isEmpty());
     }
 
+    /**
+     * D-87: a surviving mutant of hashCode proves nothing. Its contract only
+     * requires equal objects to agree, so {@code return 0;} is a legal hashCode
+     * and passes the {@code a.hashCode() == b.hashCode()} assertion a good
+     * hashCode test makes. Reported against google/gson's
+     * {@code JsonArray#hashCode}, which is tested.
+     */
+    @Test
+    void neverFiresOnHashCodeBecauseAConstantMutantIsALegalImplementation() {
+        MutatedMethod hashCode = new MutatedMethod("com.example.Calc", "hashCode", "()I", 20, 22,
+            List.of(new Mutant(RETURNS_MUTATOR, 20, "SURVIVED", List.of())));
+
+        PseudoTestedMethodRule.Result result = PseudoTestedMethodRule.evaluate("m", CLASS_NAME_TO_PATH,
+            new MutationModuleEvidence("m", List.of(hashCode), List.of()));
+
+        assertTrue(result.findings().isEmpty(), result.findings().toString());
+        assertTrue(result.warnings().isEmpty(), "silence here is the rule declining to speak, not a warning");
+    }
+
+    @Test
+    void neverFiresOnToStringForTheSameReason() {
+        MutatedMethod toString = new MutatedMethod("com.example.Calc", "toString", "()Ljava/lang/String;", 30, 32,
+            List.of(new Mutant(RETURNS_MUTATOR, 30, "SURVIVED", List.of())));
+
+        PseudoTestedMethodRule.Result result = PseudoTestedMethodRule.evaluate("m", CLASS_NAME_TO_PATH,
+            new MutationModuleEvidence("m", List.of(toString), List.of()));
+
+        assertTrue(result.findings().isEmpty(), result.findings().toString());
+    }
+
+    /**
+     * equals is deliberately not exempt: its contract is real, so a
+     * constant-returning mutant fails any test that compares two unequal
+     * objects, and a surviving one is genuine evidence.
+     */
+    @Test
+    void stillFiresOnEqualsWhoseContractAMutantCanActuallyViolate() {
+        MutatedMethod equals = new MutatedMethod("com.example.Calc", "equals", "(Ljava/lang/Object;)Z", 40, 42,
+            List.of(new Mutant(RETURNS_MUTATOR, 40, "SURVIVED", List.of())));
+
+        PseudoTestedMethodRule.Result result = PseudoTestedMethodRule.evaluate("m", CLASS_NAME_TO_PATH,
+            new MutationModuleEvidence("m", List.of(equals), List.of()));
+
+        assertEquals(1, result.findings().size());
+    }
+
     private static MutatedMethod method(List<Mutant> mutants) {
         return new MutatedMethod("com.example.Calc", "add", "(II)I", 10, 11, mutants);
     }

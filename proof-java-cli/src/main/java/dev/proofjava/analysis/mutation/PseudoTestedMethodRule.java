@@ -23,6 +23,13 @@ import dev.proofjava.analysis.model.Severity;
  * {@link MutationModuleEvidence} (already collected by {@link
  * MutationCollector}) after the fact instead.
  *
+ * <p>D-87: {@code hashCode()} and {@code toString()} never fire, whatever
+ * their mutants did. Nothing fixes their return value, so a mutant returning a
+ * constant is a legal implementation and survives any reasonable test - the
+ * rule cannot tell a weak test from a strong one there. A private helper that
+ * exists only to feed one of them has the same problem and is not detectable
+ * structurally; that limit is documented rather than pretended away.
+ *
  * <p>A method fires only when every one of its mutants is {@code SURVIVED}
  * (a mix with {@code KILLED} means at least one test does verify the
  * method; a mix with {@code NO_COVERAGE} means the method is only
@@ -42,6 +49,27 @@ final class PseudoTestedMethodRule {
 
     private static final Set<String> INCONCLUSIVE_STATUSES =
         Set.of("TIMED_OUT", "MEMORY_ERROR", "RUN_ERROR", "NON_VIABLE", "NOT_STARTED", "STARTED");
+
+    /**
+     * D-87: methods where a surviving mutant proves nothing, because the mutant
+     * is itself a legal implementation.
+     *
+     * <p>{@code hashCode()} is the clear case. Its contract requires only that
+     * equal objects agree, so {@code return 0;} is a correct - if useless -
+     * hashCode, and a test asserting {@code a.hashCode() == b.hashCode()}, which
+     * is what a good hashCode test asserts, passes against every constant
+     * mutant. The mutants were always going to survive, however thorough the
+     * tests are. Measured on google/gson: {@code JsonArray#hashCode} is
+     * {@code return elements.hashCode();} and was reported HIGH against a suite
+     * that does test it.
+     *
+     * <p>{@code toString()} is here for the same reason - no contract fixes its
+     * value, so no mutant of it is distinguishable by a reasonable test.
+     * {@code equals} is deliberately absent: its contract is real, and a
+     * constant-returning mutant fails any test that checks two unequal objects.
+     */
+    private static final Set<String> CONTRACT_FREE_RETURN_VALUES =
+        Set.of("hashCode()I", "toString()Ljava/lang/String;");
     private static final String NO_COVERAGE = "NO_COVERAGE";
     private static final String SURVIVED = "SURVIVED";
 
@@ -76,6 +104,10 @@ final class PseudoTestedMethodRule {
             return;
         }
         String signature = method.className() + "#" + method.methodName() + method.methodDescription();
+
+        if (CONTRACT_FREE_RETURN_VALUES.contains(method.methodName() + method.methodDescription())) {
+            return;
+        }
 
         if (hasStatus(mutants, INCONCLUSIVE_STATUSES::contains)) {
             warnings.add(new AnalysisReason("MUTATION_INCONCLUSIVE_STATUS",

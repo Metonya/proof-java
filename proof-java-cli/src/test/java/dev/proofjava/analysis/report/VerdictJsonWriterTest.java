@@ -1,6 +1,7 @@
 package dev.proofjava.analysis.report;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -139,6 +140,41 @@ class VerdictJsonWriterTest {
     @Test
     void perTestDocumentValidatesAgainstTheSchema() throws IOException {
         assertValid(documentWithPerTest());
+    }
+
+    /**
+     * D-86: a test id appears once per module, in {@code testIds}, and lines
+     * reference it by index. Writing it out per line is what turned a real gson
+     * run into a 312 MB document whose perTest block was 235 MB of the same
+     * strings repeated - so "written exactly once" is the property, not merely
+     * "smaller".
+     */
+    @Test
+    void aTestIdIsWrittenOncePerModuleAndReferencedByIndex() throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        VerdictJsonWriter.write(out, documentWithPerTest());
+        String json = out.toString(java.nio.charset.StandardCharsets.UTF_8);
+        JsonNode module = toNode(out.toByteArray()).at("/perTest/modules/0");
+
+        JsonNode testIds = module.at("/testIds");
+        assertTrue(testIds.isArray() && !testIds.isEmpty(), "the module must carry its own id table");
+        String onlyId = testIds.get(0).asText();
+        assertEquals(1, countOccurrences(json, "\"" + onlyId + "\""),
+            "the id belongs in testIds and nowhere else");
+
+        for (JsonNode line : module.at("/entries/0/lines")) {
+            for (JsonNode test : line.at("/tests")) {
+                assertTrue(test.isInt(), "a line references its tests by index, not by name: " + test);
+            }
+        }
+    }
+
+    private static long countOccurrences(String haystack, String needle) {
+        long count = 0;
+        for (int i = haystack.indexOf(needle); i >= 0; i = haystack.indexOf(needle, i + needle.length())) {
+            count++;
+        }
+        return count;
     }
 
     @Test

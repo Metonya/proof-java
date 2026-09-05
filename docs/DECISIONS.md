@@ -2020,6 +2020,57 @@ configuration mistake visible before the run rather than a silent runtime
 failure, and the distinction deserves its own decision rather than being folded
 into this one.
 
+**D-86 · `perTest` test ids are written once per module and referenced by
+index** (2026-09-05)
+A real gson run with `--per-test-report` produced a **312 MB** verdict document.
+The `perTest` block alone was 235 MB of it, `mutation` another 66 MB, and
+everything a person actually reads - coverage, findings, warnings - came to
+under 1 MB. The HTML report rendered from it was 67 MB, which no browser opens
+comfortably. At that size the output is not a report, and hard rule 7 says the
+JSON *is* the product.
+
+The cause is not volume of evidence, it is repetition. A PIT test id is long -
+a JUnit 4 vintage one runs past 200 characters - and the same test covers
+hundreds of lines, so the id was written out once per line it touched.
+
+Each `perTest` module now carries a sorted `testIds` array, and each line's
+`tests` holds indexes into it. The evidence is identical; only the encoding
+changed. `VerdictJsonReader` resolves the indexes back, so `render-html` and
+every other reader see what they saw before.
+
+Deliberately scoped to the verdict document. The internal sidecar
+(`proof-line-tests.json`, written by the PIT-side exporter and read straight
+back) keeps its plain shape: it lives in a temp directory for the length of one
+run, so its size costs nothing and changing it would touch the SPI boundary for
+no gain.
+
+This is a schema change and therefore a breaking one (hard rule 7). Taken
+before v0.1 rather than after, when there are no published consumers to break;
+`schema/examples/golden-per-test.json` moves with it.
+
+**D-87 · `PSEUDO_TESTED_METHOD` never fires on `hashCode` or `toString`**
+(2026-09-05)
+gson's `JsonArray#hashCode` was reported at HIGH confidence. The method is
+`return elements.hashCode();`, and gson does test it - `MoreAsserts
+.assertEqualsAndHashCode` asserts `a.hashCode() == b.hashCode()`.
+
+The finding was still wrong, and would have stayed wrong however good the test
+was. `hashCode`'s contract fixes only that equal objects agree; it says nothing
+about the value. So `return 0;` is a legal hashCode, and every constant-returning
+mutant passes an assertion about agreement. The mutants could not have been
+killed. The rule's premise - a surviving mutant means no test observes this
+method - does not hold where the mutant is itself a correct implementation.
+
+`toString` is exempt for the same reason: nothing fixes its value either.
+`equals` is deliberately not exempt - its contract is real, and a
+constant-returning mutant fails any test comparing two unequal objects, so a
+survivor there is genuine evidence.
+
+Not solved: a private helper that exists only to feed one of these inherits the
+problem, and gson has one (`JsonPrimitive#hashOfDoubleValue`). Detecting it needs
+call-graph analysis this rule does not do, so the limit is documented rather than
+papered over.
+
 ## Rejected
 
 **R-01 · LLM-as-judge for verdicts** — non-deterministic, costs per run, not

@@ -4,7 +4,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
 
 import com.fasterxml.jackson.core.JsonEncoding;
 import com.fasterxml.jackson.core.JsonFactory;
@@ -23,6 +26,7 @@ import dev.proofjava.analysis.mutation.MutatedMethod;
 import dev.proofjava.analysis.mutation.MutationJsonWriter;
 import dev.proofjava.analysis.mutation.MutationModuleEvidence;
 import dev.proofjava.analysis.pertest.PerTestEntry;
+import dev.proofjava.analysis.pertest.PerTestLine;
 import dev.proofjava.analysis.pertest.PerTestJsonWriter;
 import dev.proofjava.analysis.pertest.PerTestModuleEvidence;
 import dev.proofjava.analysis.vcs.VcsIdentity;
@@ -144,16 +148,70 @@ public final class VerdictJsonWriter {
         for (PerTestModuleEvidence module : sorted) {
             g.writeStartObject();
             g.writeStringField("id", module.moduleId());
+            List<PerTestEntry> entries = sortedPerTestEntries(module.entries());
+            List<PerTestEntry> ambient = sortedPerTestEntries(module.ambient());
+            Map<String, Integer> testIds = internTestIds(entries, ambient);
+            g.writeArrayFieldStart("testIds");
+            for (String testId : testIds.keySet()) {
+                g.writeString(testId);
+            }
+            g.writeEndArray();
             g.writeArrayFieldStart("entries");
-            PerTestJsonWriter.writeEntries(g, sortedPerTestEntries(module.entries()));
+            writeInternedEntries(g, entries, testIds);
             g.writeEndArray();
             g.writeArrayFieldStart("ambient");
-            PerTestJsonWriter.writeEntries(g, sortedPerTestEntries(module.ambient()));
+            writeInternedEntries(g, ambient, testIds);
             g.writeEndArray();
             g.writeEndObject();
         }
         g.writeEndArray();
         g.writeEndObject();
+    }
+
+    /**
+     * D-86: one table of test ids per module, referenced by index from each
+     * line, instead of the id repeated verbatim everywhere it appears.
+     *
+     * <p>A PIT test id is long - a JUnit 4 vintage one runs past 200 characters -
+     * and the same test covers hundreds of lines, so writing it out each time is
+     * what made a real gson run produce a 235 MB {@code perTest} block inside a
+     * 312 MB document, of which under 1 MB was anything a person reads.
+     *
+     * <p>Insertion order is the map's iteration order and the index order, and
+     * the ids arrive already sorted, so the output stays byte-deterministic -
+     * {@code VerdictGoldenTest} compares bytes.
+     */
+    private static Map<String, Integer> internTestIds(List<PerTestEntry> entries, List<PerTestEntry> ambient) {
+        Map<String, Integer> ids = new LinkedHashMap<>();
+        Stream.concat(entries.stream(), ambient.stream())
+            .flatMap(entry -> entry.lines().stream())
+            .flatMap(line -> line.tests().stream())
+            .distinct()
+            .sorted()
+            .forEach(testId -> ids.put(testId, ids.size()));
+        return ids;
+    }
+
+    private static void writeInternedEntries(JsonGenerator g, List<PerTestEntry> entries,
+                                              Map<String, Integer> testIds) throws IOException {
+        for (PerTestEntry entry : entries) {
+            g.writeStartObject();
+            g.writeStringField("className", entry.className());
+            g.writeStringField("methodName", entry.methodName());
+            g.writeArrayFieldStart("lines");
+            for (PerTestLine line : entry.lines()) {
+                g.writeStartObject();
+                g.writeNumberField("line", line.line());
+                g.writeArrayFieldStart("tests");
+                for (String test : line.tests()) {
+                    g.writeNumber(testIds.get(test));
+                }
+                g.writeEndArray();
+                g.writeEndObject();
+            }
+            g.writeEndArray();
+            g.writeEndObject();
+        }
     }
 
     /** Schema ordering rule: perTest entries/ambient sort by (className, methodName) - the shared writer itself stays unsorted (D-55). */

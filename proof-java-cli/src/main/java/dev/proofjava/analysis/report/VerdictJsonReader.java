@@ -455,56 +455,81 @@ public final class VerdictJsonReader {
         return modules;
     }
 
+    /**
+     * D-86: {@code tests} holds indexes into the module's own {@code testIds}
+     * table, so entries are read raw and resolved once the whole module object
+     * has been consumed - the table may appear before or after them.
+     */
     private static PerTestModuleEvidence readPerTestModule(JsonParser p) throws IOException {
         expectObjectStart(p);
         String id = null;
-        List<PerTestEntry> entries = List.of();
-        List<PerTestEntry> ambient = List.of();
+        List<String> testIds = List.of();
+        List<RawEntry> entries = List.of();
+        List<RawEntry> ambient = List.of();
         while (p.nextToken() != JsonToken.END_OBJECT) {
             String field = requireFieldName(p);
             p.nextToken();
             switch (field) {
                 case "id" -> id = p.getText();
-                case "entries" -> entries = readArray(p, VerdictJsonReader::readPerTestEntry);
-                case "ambient" -> ambient = readArray(p, VerdictJsonReader::readPerTestEntry);
+                case "testIds" -> testIds = readArray(p, JsonParser::getText);
+                case "entries" -> entries = readArray(p, VerdictJsonReader::readRawPerTestEntry);
+                case "ambient" -> ambient = readArray(p, VerdictJsonReader::readRawPerTestEntry);
                 default -> p.skipChildren();
             }
         }
-        return new PerTestModuleEvidence(id, entries, ambient);
+        return new PerTestModuleEvidence(id, resolve(entries, testIds), resolve(ambient, testIds));
     }
 
-    private static PerTestEntry readPerTestEntry(JsonParser p) throws IOException {
+    private static List<PerTestEntry> resolve(List<RawEntry> raw, List<String> testIds) {
+        return raw.stream()
+            .map(entry -> new PerTestEntry(entry.className(), entry.methodName(),
+                entry.lines().stream()
+                    .map(line -> new PerTestLine(line.line(), line.testIndexes().stream()
+                        .filter(i -> i >= 0 && i < testIds.size())
+                        .map(testIds::get)
+                        .toList()))
+                    .toList()))
+            .toList();
+    }
+
+    private static RawEntry readRawPerTestEntry(JsonParser p) throws IOException {
         expectObjectStart(p);
         String className = null;
         String methodName = null;
-        List<PerTestLine> lines = List.of();
+        List<RawLine> lines = List.of();
         while (p.nextToken() != JsonToken.END_OBJECT) {
             String field = requireFieldName(p);
             p.nextToken();
             switch (field) {
                 case "className" -> className = p.getText();
                 case "methodName" -> methodName = p.getText();
-                case "lines" -> lines = readArray(p, VerdictJsonReader::readPerTestLine);
+                case "lines" -> lines = readArray(p, VerdictJsonReader::readRawPerTestLine);
                 default -> p.skipChildren();
             }
         }
-        return new PerTestEntry(className, methodName, lines);
+        return new RawEntry(className, methodName, lines);
     }
 
-    private static PerTestLine readPerTestLine(JsonParser p) throws IOException {
+    private static RawLine readRawPerTestLine(JsonParser p) throws IOException {
         expectObjectStart(p);
         int line = 0;
-        List<String> tests = List.of();
+        List<Integer> testIndexes = List.of();
         while (p.nextToken() != JsonToken.END_OBJECT) {
             String field = requireFieldName(p);
             p.nextToken();
             switch (field) {
                 case "line" -> line = p.getIntValue();
-                case "tests" -> tests = readArray(p, JsonParser::getText);
+                case "tests" -> testIndexes = readArray(p, JsonParser::getIntValue);
                 default -> p.skipChildren();
             }
         }
-        return new PerTestLine(line, tests);
+        return new RawLine(line, testIndexes);
+    }
+
+    private record RawEntry(String className, String methodName, List<RawLine> lines) {
+    }
+
+    private record RawLine(int line, List<Integer> testIndexes) {
     }
 
     private static List<MutationModuleEvidence> readMutationBlock(JsonParser p) throws IOException {

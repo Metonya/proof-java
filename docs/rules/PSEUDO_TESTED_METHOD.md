@@ -85,3 +85,19 @@ possibility, same caution D-21 applies to coverage identity).
 - Precision against a labeled corpus is unmeasured as of M5's initial
   ship - `docs/ROADMAP.md`'s M5 kill criterion (two dogfood repos,
   manually verified precision under 90%) is the pending validation.
+
+## Methods this rule refuses to judge (D-87)
+
+`hashCode()` and `toString()` never produce a finding, whatever their mutants
+did. Neither has a contract that fixes its return value, so a mutant returning a
+constant is a legal implementation: `return 0;` is a valid `hashCode`, and it
+satisfies the `a.hashCode() == b.hashCode()` assertion that a good hashCode test
+makes. The mutants survive no matter how well the method is tested, so a
+surviving mutant is not evidence of anything here.
+
+`equals` is not exempt. Its contract is real, and a constant-returning mutant
+fails any test that compares two unequal objects.
+
+Known limit: a private helper whose only purpose is to feed `hashCode` inherits
+the same problem, and this rule cannot see that relationship - it would need a
+call graph. Such a method can still be reported wrongly.
