@@ -72,13 +72,30 @@ public final class GradleProjectScanner {
      *       wrong.</li>
      * </ul>
      *
-     * <p>Both exclusions are written as separate lookaheads on purpose. A
-     * user-defined wrapper whose name merely starts with those letters
+     * <p>{@code includeGroup}/{@code includeModule}/{@code includeVersion}
+     * (and their {@code ByRegex}/{@code AndSubgroups} variants) are excluded
+     * for a third reason: they are {@code RepositoryContentDescriptor}
+     * methods, used inside {@code repositories { content { } }} to filter
+     * which artifacts a repository may serve - nothing to do with projects.
+     * Found the hard way on Google's own Now in Android repo, whose
+     * settings file contains {@code includeGroupByRegex("com\\.android.*")}:
+     * that was read as a project, and the resulting path crashed the whole
+     * command on Windows, where {@code *} is not legal in a file name.
+     *
+     * <p>The exclusions are separate lookaheads on purpose. A user-defined
+     * wrapper whose name merely starts with an excluded word
      * ({@code includeFlattenedModules(...)}) must still be matched - the
-     * {@code \b} after each excluded word is what keeps it matched, since
-     * there is no word boundary inside {@code Flattened}.
+     * {@code \b} after {@code Build}/{@code Flat} is what keeps it matched,
+     * since there is no word boundary inside {@code Flattened}. The three
+     * repository-content names are matched more broadly (no {@code \b}),
+     * because every one of their real variants continues the word
+     * ({@code includeGroupByRegex}); a project-include wrapper named
+     * exactly {@code includeGroup...}/{@code includeModule...}/{@code
+     * includeVersion...} would be missed, which is the safer way to be
+     * wrong.
      */
-    private static final Pattern INCLUDE_KEYWORD = Pattern.compile("\\binclude(?!Build\\b)(?!Flat\\b)[A-Za-z]*\\b");
+    private static final Pattern INCLUDE_KEYWORD =
+        Pattern.compile("\\binclude(?!Build\\b)(?!Flat\\b)(?!Group)(?!Module)(?!Version)[A-Za-z]*\\b");
     private static final Pattern QUOTED_ARG = Pattern.compile("['\"]([^'\"]+)['\"]");
     private static final Pattern ROOT_PROJECT_NAME = Pattern.compile("rootProject\\.name\\s*=\\s*['\"]([^'\"]+)['\"]");
 
@@ -120,8 +137,8 @@ public final class GradleProjectScanner {
         for (String gradlePath : gradlePaths) {
             String relative = gradlePath.startsWith(":") ? gradlePath.substring(1) : gradlePath;
             String normalized = RepoPaths.normalizeSeparators(relative.replace(':', '/'));
-            if (normalized.isEmpty() || RepoPaths.isEscapingRepoRoot(normalized)) {
-                continue; // a blank or repo-escaping path is not something this scan follows
+            if (normalized.isEmpty() || RepoPaths.isEscapingRepoRoot(normalized) || !isPlausibleDirectoryPath(normalized)) {
+                continue; // blank, repo-escaping, or not something that can name a directory at all
             }
             String id = lastSegment(gradlePath);
             modules.add(new MavenModule(id, normalized));
@@ -162,6 +179,27 @@ public final class GradleProjectScanner {
     private static String directoryNameOrRoot(Path repoRoot) {
         Path fileName = repoRoot.getFileName();
         return fileName != null ? fileName.toString() : "root";
+    }
+
+    /**
+     * A quoted string on an {@code include}-ish line is not automatically a
+     * directory name. A glob or regex character means whatever was matched
+     * is something else entirely - a dependency filter, a version pattern -
+     * and on Windows those characters are not even legal in a path, so
+     * resolving one throws {@link java.nio.file.InvalidPathException} and
+     * takes the whole {@code doctor} run down. That is exactly what
+     * happened on Google's Now in Android before the keyword pattern above
+     * learned about repository-content filters; this check is the second
+     * layer, so a settings file this scan misreads can only ever cost a
+     * missing module, never the command.
+     */
+    private static boolean isPlausibleDirectoryPath(String normalizedPath) {
+        for (char c : normalizedPath.toCharArray()) {
+            if ("*?\"<>|".indexOf(c) >= 0 || c < 0x20) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static String lastSegment(String gradlePath) {

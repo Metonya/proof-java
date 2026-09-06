@@ -133,6 +133,52 @@ class GradleProjectScannerTest {
         assertTrue(GradleProjectScanner.scan(repoRoot).isEmpty());
     }
 
+    /**
+     * Real settings-file text from Google's Now in Android. These are
+     * `RepositoryContentDescriptor` methods inside `repositories { content
+     * { } }` - artifact filters, not projects. Reading them as projects
+     * produced a path containing `*`, which is not legal on Windows, so
+     * `doctor` died with an InvalidPathException before printing anything
+     * at all.
+     */
+    @Test
+    void repositoryContentFiltersAreNotProjects() throws IOException {
+        write("settings.gradle.kts", """
+            pluginManagement {
+                repositories {
+                    google {
+                        content {
+                            includeGroupByRegex("com\\\\.android.*")
+                            includeGroupByRegex("androidx.*")
+                            includeModule("com.example", "lib")
+                            includeVersionByRegex("com.example", "lib", "1\\\\..*")
+                        }
+                    }
+                }
+            }
+            rootProject.name = "demo"
+            include(":app")
+            """);
+        writeSourceDir("app/src/main/java");
+
+        assertEquals(List.of(new MavenModule("app", "app")), GradleProjectScanner.scan(repoRoot));
+    }
+
+    /**
+     * Second layer for the same failure: even if some future settings shape
+     * slips past the keyword pattern, a value that cannot name a directory
+     * must cost at most a missing module - never the whole command.
+     */
+    @Test
+    void aValueThatCannotNameADirectoryIsSkippedRatherThanCrashingTheScan() throws IOException {
+        write("settings.gradle.kts", """
+            include("glob*pattern")
+            include(":real")
+            """);
+
+        assertEquals(List.of(new MavenModule("real", "real")), GradleProjectScanner.scan(repoRoot));
+    }
+
     /** A composite build is a separate Gradle root with its own lifecycle, never a subproject of this one. */
     @Test
     void includeBuildIsNotTreatedAsASubproject() throws IOException {
