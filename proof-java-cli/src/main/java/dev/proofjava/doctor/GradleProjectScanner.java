@@ -50,17 +50,52 @@ public final class GradleProjectScanner {
      * against a real repo, not a hypothetical: junit-framework's own
      * {@code settings.gradle.kts} declares every real module through its
      * own {@code includeProject(name, ...)} helper, never a bare {@code
-     * include(...)} call. {@code includeBuild(...)} is deliberately
-     * excluded - a composite build is a separate Gradle root with its own
-     * lifecycle, not a subproject of this one, and treating it as such
-     * would generate a wrong (and wrongly nested) Gradle task path in
-     * {@link GradleClasspathFixer}. {@code includeFlat(...)} (sibling,
-     * not subdirectory, project roots - a legacy/rare API) is not
-     * special-cased and will resolve to a wrong root; accepted as a known
-     * gap, same "best-effort, never guess beyond what the text plainly
-     * says" posture as the rest of this scan.
+     * include(...)} call.
+     *
+     * <p>Two Gradle APIs are deliberately excluded, each for its own
+     * reason:
+     * <ul>
+     *   <li>{@code includeBuild(...)} - a composite build is a separate
+     *       Gradle root with its own lifecycle, not a subproject of this
+     *       one, and treating it as such would generate a wrong (and
+     *       wrongly nested) Gradle task path in {@link
+     *       GradleClasspathFixer}.</li>
+     *   <li>{@code includeFlat(...)} - names a project whose directory is
+     *       a <em>sibling</em> of the root project ({@code ../name}), not
+     *       a subdirectory. That is outside the repository root, which
+     *       this codebase's repo-relative path model cannot represent at
+     *       all ({@code RepoPaths.isEscapingRepoRoot}). Reporting it as
+     *       the plain subdirectory {@code name} - what this scan used to
+     *       do - names a directory that is either absent or, worse, some
+     *       unrelated real directory. Skipping it is the honest outcome:
+     *       a module this tool cannot address is better absent than
+     *       wrong.</li>
+     * </ul>
+     *
+     * <p>{@code includeGroup}/{@code includeModule}/{@code includeVersion}
+     * (and their {@code ByRegex}/{@code AndSubgroups} variants) are excluded
+     * for a third reason: they are {@code RepositoryContentDescriptor}
+     * methods, used inside {@code repositories { content { } }} to filter
+     * which artifacts a repository may serve - nothing to do with projects.
+     * Found the hard way on Google's own Now in Android repo, whose
+     * settings file contains {@code includeGroupByRegex("com\\.android.*")}:
+     * that was read as a project, and the resulting path crashed the whole
+     * command on Windows, where {@code *} is not legal in a file name.
+     *
+     * <p>The exclusions are separate lookaheads on purpose. A user-defined
+     * wrapper whose name merely starts with an excluded word
+     * ({@code includeFlattenedModules(...)}) must still be matched - the
+     * {@code \b} after {@code Build}/{@code Flat} is what keeps it matched,
+     * since there is no word boundary inside {@code Flattened}. The three
+     * repository-content names are matched more broadly (no {@code \b}),
+     * because every one of their real variants continues the word
+     * ({@code includeGroupByRegex}); a project-include wrapper named
+     * exactly {@code includeGroup...}/{@code includeModule...}/{@code
+     * includeVersion...} would be missed, which is the safer way to be
+     * wrong.
      */
-    private static final Pattern INCLUDE_KEYWORD = Pattern.compile("\\binclude(?!Build\\b)[A-Za-z]*\\b");
+    private static final Pattern INCLUDE_KEYWORD =
+        Pattern.compile("\\binclude(?!Build\\b)(?!Flat\\b)(?!Group)(?!Module)(?!Version)[A-Za-z]*\\b");
     private static final Pattern QUOTED_ARG = Pattern.compile("['\"]([^'\"]+)['\"]");
     private static final Pattern ROOT_PROJECT_NAME = Pattern.compile("rootProject\\.name\\s*=\\s*['\"]([^'\"]+)['\"]");
 
@@ -102,8 +137,8 @@ public final class GradleProjectScanner {
         for (String gradlePath : gradlePaths) {
             String relative = gradlePath.startsWith(":") ? gradlePath.substring(1) : gradlePath;
             String normalized = RepoPaths.normalizeSeparators(relative.replace(':', '/'));
-            if (normalized.isEmpty() || RepoPaths.isEscapingRepoRoot(normalized)) {
-                continue; // a blank or repo-escaping path is not something this scan follows
+            if (normalized.isEmpty() || RepoPaths.isEscapingRepoRoot(normalized) || !isPlausibleDirectoryPath(normalized)) {
+                continue; // blank, repo-escaping, or not something that can name a directory at all
             }
             String id = lastSegment(gradlePath);
             modules.add(new MavenModule(id, normalized));
@@ -144,6 +179,27 @@ public final class GradleProjectScanner {
     private static String directoryNameOrRoot(Path repoRoot) {
         Path fileName = repoRoot.getFileName();
         return fileName != null ? fileName.toString() : "root";
+    }
+
+    /**
+     * A quoted string on an {@code include}-ish line is not automatically a
+     * directory name. A glob or regex character means whatever was matched
+     * is something else entirely - a dependency filter, a version pattern -
+     * and on Windows those characters are not even legal in a path, so
+     * resolving one throws {@link java.nio.file.InvalidPathException} and
+     * takes the whole {@code doctor} run down. That is exactly what
+     * happened on Google's Now in Android before the keyword pattern above
+     * learned about repository-content filters; this check is the second
+     * layer, so a settings file this scan misreads can only ever cost a
+     * missing module, never the command.
+     */
+    private static boolean isPlausibleDirectoryPath(String normalizedPath) {
+        for (char c : normalizedPath.toCharArray()) {
+            if ("*?\"<>|".indexOf(c) >= 0 || c < 0x20) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static String lastSegment(String gradlePath) {

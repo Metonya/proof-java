@@ -93,6 +93,28 @@ public final class GradleClasspathFixer {
         return fix(new GradleClient(repoRoot), repoRoot, module);
     }
 
+    /**
+     * Both temp files below sit in the system temp directory, which is
+     * shared on POSIX (SonarQube java:S5443). That is deliberate and it is
+     * the safe option here, for reasons worth stating because the init
+     * script is not inert data - Gradle executes it:
+     *
+     * <ul>
+     *   <li>It cannot live inside the target repository. D-53's whole claim
+     *       is that this mechanism never writes into the repo under
+     *       analysis, verified by {@code git status} staying empty on real
+     *       repos; putting an executable script there would break exactly
+     *       that.</li>
+     *   <li>{@link Files#createTempFile} is the hardened API, not a raw
+     *       {@code /tmp/<name>} path: it creates the file atomically and,
+     *       on POSIX, with owner-only permissions, so another local user
+     *       cannot read or rewrite it. The sticky bit on {@code /tmp} stops
+     *       them unlinking it to swap in their own, and on Windows the temp
+     *       directory is per-user to begin with.</li>
+     *   <li>Both files are deleted in the {@code finally} below, so nothing
+     *       executable is left behind between runs.</li>
+     * </ul>
+     */
     static ClasspathFixer.FixResult fix(GradleClient gradle, Path repoRoot, MavenModule module) {
         Path initScript;
         try {
@@ -117,7 +139,14 @@ public final class GradleClasspathFixer {
                 "-P" + OUTPUT_FILE_PROPERTY + "=" + dumpTarget.toAbsolutePath(),
                 "-q", taskPath);
             if (!result.ok()) {
-                return new ClasspathFixer.FixResult(false, "Gradle classpath dump failed: " + result.problem());
+                // A "task not found" exit is the expected shape when the
+                // project has sources but never applies the 'java' plugin -
+                // the init script only registers the dump task where that
+                // plugin is present, so name that cause here rather than
+                // leaving a bare Gradle stack trace to interpret.
+                return new ClasspathFixer.FixResult(false, "Gradle classpath dump failed: " + result.problem()
+                    + (result.problem().contains("not found") ? " (does '" + module.root()
+                        + "' apply the 'java' plugin? the dump task is only registered where it does)" : ""));
             }
 
             List<String> entries;
@@ -151,10 +180,34 @@ public final class GradleClasspathFixer {
         }
     }
 
-    /** {@code "."} (the root project) -> {@code proofDumpClasspath}; {@code "core/sub"} -> {@code :core:sub:proofDumpClasspath}. */
+    /**
+     * {@code "."} (the root project) -> {@code :proofDumpClasspath}; {@code
+     * "core/sub"} -> {@code :core:sub:proofDumpClasspath}. Every path is
+     * project-qualified, the root one included.
+     *
+     * <p>The leading colon on the root form is load-bearing, not cosmetic.
+     * An <em>unqualified</em> task name on a Gradle command line matches
+     * that task in the current project <em>and every subproject</em> - and
+     * this class's init script registers {@code proofDumpClasspath} in
+     * every project applying the {@code java} plugin, all of them writing
+     * the single global {@code -PproofClasspathOutputFile} path. Measured
+     * on a real two-module build whose root project also has Java sources
+     * (the shape {@link GradleProjectScanner} reports a root module for):
+     * the bare name made the root module's list come back byte-identical
+     * to the subproject's - none of the root's own classes or dependencies
+     * in it - and {@code doctor} reported that as a healthy 16-entry
+     * classpath. Silent wrong evidence, the exact failure mode hard rule
+     * 3a exists to prevent.
+     *
+     * <p>A root project that has sources but never applies {@code java}
+     * now fails loudly instead ({@code Task 'proofDumpClasspath' not found
+     * in root project '<name>'}, a non-zero exit {@link #fix} surfaces),
+     * which is the honest outcome for a project this class genuinely
+     * cannot dump.
+     */
     static String taskPathFor(String moduleRoot) {
         if (moduleRoot == null || moduleRoot.isEmpty() || moduleRoot.equals(".")) {
-            return DUMP_TASK_NAME;
+            return ":" + DUMP_TASK_NAME;
         }
         String gradlePath = moduleRoot.replace('/', ':');
         return ":" + gradlePath + ":" + DUMP_TASK_NAME;

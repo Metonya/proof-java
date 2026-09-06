@@ -8,6 +8,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import dev.proofjava.analysis.model.RepoPaths;
 import dev.proofjava.analysis.subprocess.ClasspathListFile;
@@ -34,8 +35,8 @@ public final class DoctorDiagnostics {
         List<DoctorCheck> checks = new ArrayList<>();
         Path moduleRoot = repoRoot.resolve(module.root());
 
-        checkSourceRoot(checks, moduleRoot, "src/main/java", "SOURCE_ROOT");
-        checkSourceRoot(checks, moduleRoot, "src/test/java", "TEST_ROOT");
+        checkSourceRoot(checks, moduleRoot, "src/main", "SOURCE_ROOT");
+        checkSourceRoot(checks, moduleRoot, "src/test", "TEST_ROOT");
         boolean compiled = checkCompiled(checks, moduleRoot, layout);
 
         String jacocoReportPath = checkJacocoReport(checks, module, moduleRoot, compiled, layout);
@@ -49,22 +50,43 @@ public final class DoctorDiagnostics {
         return new ModuleDiagnosis(module, List.copyOf(checks), jacocoReportPath, perTestClasspath, mutationClasspath);
     }
 
+    /**
+     * A JVM module's sources are not always under {@code java/}. Measured on
+     * Google's Now in Android (35 modules): every one of them keeps its code
+     * in {@code src/main/kotlin}, and the old {@code src/main/java}-only
+     * check reported all 35 as having no sources at all - a warning that was
+     * simply false. The same is true of any Kotlin Gradle module, Android or
+     * not (junit-framework has several).
+     *
+     * <p>What proof-java can then *do* with Kotlin sources is a separate
+     * question - L0's parser is Java-only, so a Kotlin module still gets no
+     * oracle findings - but that is a documented limitation to state, not a
+     * reason to claim the sources are missing.
+     */
+    private static final List<String> SOURCE_LANGUAGE_DIRS = List.of("java", "kotlin");
+
     private static void checkSourceRoot(List<DoctorCheck> checks, Path moduleRoot, String relative, String codePrefix) {
-        Path dir = moduleRoot.resolve(relative);
-        if (Files.isDirectory(dir)) {
-            checks.add(DoctorCheck.ok(codePrefix + "_PRESENT", relative + " found"));
-        } else {
-            checks.add(DoctorCheck.warn(codePrefix + "_MISSING", relative + " not found under this module"));
+        List<String> present = SOURCE_LANGUAGE_DIRS.stream()
+            .filter(language -> Files.isDirectory(moduleRoot.resolve(relative + "/" + language)))
+            .toList();
+        if (present.isEmpty()) {
+            checks.add(DoctorCheck.warn(codePrefix + "_MISSING",
+                relative + "/{" + String.join(",", SOURCE_LANGUAGE_DIRS) + "} not found under this module"));
+            return;
         }
+        String found = present.stream().map(language -> relative + "/" + language).collect(Collectors.joining(", "));
+        checks.add(DoctorCheck.ok(codePrefix + "_PRESENT", found + " found"));
     }
 
     /** @return true if the layout's compiled-classes dir exists and is non-empty - callers need this to interpret a stale-report check meaningfully. */
     private static boolean checkCompiled(List<DoctorCheck> checks, Path moduleRoot, BuildLayout layout) {
-        String relative = layout.compiledClassesDir();
-        Path classesDir = moduleRoot.resolve(relative);
-        boolean compiled = Files.isDirectory(classesDir) && dirHasAnyFile(classesDir);
+        List<String> withOutput = layout.compiledClassesDirs().stream()
+            .filter(dir -> Files.isDirectory(moduleRoot.resolve(dir)) && dirHasAnyFile(moduleRoot.resolve(dir)))
+            .toList();
+        String relative = String.join(" / ", layout.compiledClassesDirs());
+        boolean compiled = !withOutput.isEmpty();
         if (compiled) {
-            checks.add(DoctorCheck.ok("COMPILED", relative + " has compiled output"));
+            checks.add(DoctorCheck.ok("COMPILED", String.join(", ", withOutput) + " has compiled output"));
         } else {
             checks.add(DoctorCheck.warn("NOT_COMPILED",
                 relative + " is missing or empty - run the build before analyze"));
@@ -96,7 +118,7 @@ public final class DoctorDiagnostics {
         }
         try {
             long reportTime = Files.getLastModifiedTime(report).toMillis();
-            long newestClassTime = newestFileTime(moduleRoot.resolve(layout.compiledClassesDir()));
+            long newestClassTime = newestClassFileTime(moduleRoot, layout);
             if (newestClassTime > reportTime) {
                 checks.add(DoctorCheck.blocker("JACOCO_REPORT_STALE",
                     jacocoReportRelative + " is older than the module's compiled output - rebuild with coverage "
@@ -169,6 +191,18 @@ public final class DoctorDiagnostics {
         } catch (IOException e) {
             return false;
         }
+    }
+
+    /** Newest compiled class across every output directory this layout uses - a Kotlin module's classes are just as much "newer than the report" as a Java one's. */
+    private static long newestClassFileTime(Path moduleRoot, BuildLayout layout) throws IOException {
+        long newest = 0L;
+        for (String relative : layout.compiledClassesDirs()) {
+            Path dir = moduleRoot.resolve(relative);
+            if (Files.isDirectory(dir)) {
+                newest = Math.max(newest, newestFileTime(dir));
+            }
+        }
+        return newest;
     }
 
     private static long newestFileTime(Path dir) throws IOException {

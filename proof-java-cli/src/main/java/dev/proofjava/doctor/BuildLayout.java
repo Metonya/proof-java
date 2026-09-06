@@ -1,5 +1,7 @@
 package dev.proofjava.doctor;
 
+import java.util.List;
+
 /**
  * The handful of build-tool-specific paths {@link DoctorDiagnostics} needs
  * to know before it can check a {@link MavenModule} (a build-tool-agnostic
@@ -13,7 +15,7 @@ package dev.proofjava.doctor;
  */
 public enum BuildLayout {
 
-    MAVEN("target/classes", "target/site/jacoco/jacoco.xml",
+    MAVEN(List.of("target/classes"), "target/site/jacoco/jacoco.xml",
         "target/proof-per-test-classpath.txt", "target/proof-mutation-classpath.txt", "target/generated-sources"),
 
     /**
@@ -23,16 +25,16 @@ public enum BuildLayout {
      * {@code reports { xml.required.set(true) }}, so a missing report here
      * is reported the same way a missing Maven one is, not specially.
      */
-    GRADLE("build/classes/java/main", "build/reports/jacoco/test/jacocoTestReport.xml",
+    GRADLE(List.of("build/classes/java/main", "build/classes/kotlin/main"), "build/reports/jacoco/test/jacocoTestReport.xml",
         "build/proof-per-test-classpath.txt", "build/proof-mutation-classpath.txt", "build/generated/sources");
 
-    private final String compiledClassesDir;
+    private final List<String> compiledClassesDir;
     private final String jacocoReportRelative;
     private final String perTestClasspathRelative;
     private final String mutationClasspathRelative;
     private final String generatedSourcesDir;
 
-    BuildLayout(String compiledClassesDir, String jacocoReportRelative,
+    BuildLayout(List<String> compiledClassesDir, String jacocoReportRelative,
                 String perTestClasspathRelative, String mutationClasspathRelative, String generatedSourcesDir) {
         this.compiledClassesDir = compiledClassesDir;
         this.jacocoReportRelative = jacocoReportRelative;
@@ -41,7 +43,17 @@ public enum BuildLayout {
         this.generatedSourcesDir = generatedSourcesDir;
     }
 
-    public String compiledClassesDir() {
+    /**
+     * Every directory this build tool may put compiled classes in, in the
+     * order they are worth reporting. Gradle has one per JVM language:
+     * measured on real repos, a Kotlin module's classes are under {@code
+     * build/classes/kotlin/main} and nothing lands in the {@code java} one
+     * at all, so checking only for Java's said "not compiled" about a fully
+     * built module. Maven keeps one directory regardless of language
+     * ({@code kotlin-maven-plugin} writes into {@code target/classes} too),
+     * hence the single entry there.
+     */
+    public List<String> compiledClassesDirs() {
         return compiledClassesDir;
     }
 
