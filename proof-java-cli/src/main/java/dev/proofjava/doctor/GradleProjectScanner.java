@@ -35,7 +35,17 @@ import dev.proofjava.analysis.model.RepoPaths;
  */
 public final class GradleProjectScanner {
 
-    private static final Pattern INCLUDE_CALL = Pattern.compile("include\\s*\\(?\\s*((?:['\"][^'\"]+['\"]\\s*,?\\s*)+)\\)?");
+    /**
+     * Deliberately matched per line (see {@link #scan}), not against the
+     * whole file with a repeated group - a single regex like {@code
+     * (?:['"][^'"]+['"]\s*,?\s*)+} over an unbounded string is exactly the
+     * nested-quantifier shape that risks catastrophic backtracking on a
+     * pathological input (SonarQube java:S5852). Real {@code include(...)}
+     * calls are conventionally one line each; scanning line by line keeps
+     * every match linear in that line's own length and costs nothing for
+     * the common case.
+     */
+    private static final Pattern INCLUDE_KEYWORD = Pattern.compile("\\binclude\\b");
     private static final Pattern QUOTED_ARG = Pattern.compile("['\"]([^'\"]+)['\"]");
     private static final Pattern ROOT_PROJECT_NAME = Pattern.compile("rootProject\\.name\\s*=\\s*['\"]([^'\"]+)['\"]");
 
@@ -64,9 +74,11 @@ public final class GradleProjectScanner {
         addRootModuleIfReal(repoRoot, text, modules);
 
         Set<String> gradlePaths = new LinkedHashSet<>();
-        Matcher includeCall = INCLUDE_CALL.matcher(text);
-        while (includeCall.find()) {
-            Matcher arg = QUOTED_ARG.matcher(includeCall.group(1));
+        for (String line : text.split("\n", -1)) {
+            if (!INCLUDE_KEYWORD.matcher(line).find()) {
+                continue;
+            }
+            Matcher arg = QUOTED_ARG.matcher(line);
             while (arg.find()) {
                 gradlePaths.add(arg.group(1));
             }
@@ -100,7 +112,7 @@ public final class GradleProjectScanner {
             return;
         }
         Matcher rootName = ROOT_PROJECT_NAME.matcher(settingsText);
-        String id = rootName.find() ? rootName.group(1) : repoRoot.getFileName() != null ? repoRoot.getFileName().toString() : "root";
+        String id = rootName.find() ? rootName.group(1) : directoryNameOrRoot(repoRoot);
         modules.add(new MavenModule(id, "."));
     }
 
@@ -110,8 +122,13 @@ public final class GradleProjectScanner {
         if (!hasBuildFile) {
             return List.of();
         }
-        String id = repoRoot.getFileName() != null ? repoRoot.getFileName().toString() : "root";
-        return List.of(new MavenModule(id, "."));
+        return List.of(new MavenModule(directoryNameOrRoot(repoRoot), "."));
+    }
+
+    /** Gradle's own fallback when {@code rootProject.name} is never set: the containing directory's name, or the literal {@code "root"} for a filesystem root with no name segment of its own. */
+    private static String directoryNameOrRoot(Path repoRoot) {
+        Path fileName = repoRoot.getFileName();
+        return fileName != null ? fileName.toString() : "root";
     }
 
     private static String lastSegment(String gradlePath) {
