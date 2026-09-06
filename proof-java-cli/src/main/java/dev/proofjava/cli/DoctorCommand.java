@@ -130,10 +130,18 @@ class DoctorCommand implements Callable<Integer> {
         if (!looksLikeGradle) {
             return "";
         }
-        return " This looks like a Gradle project - 'doctor' does not discover Gradle modules or generate their "
-            + "L2/L3 classpaths. 'analyze' itself is build-tool-agnostic: wire it by hand with "
-            + "--source-roots/--test-roots/--report (and --mutation-classpath/--per-test-classpath for L2/L3, "
-            + "built from your own build's test runtime classpath).";
+        return """
+             This looks like a Gradle project - 'doctor' does not discover Gradle modules or generate their \
+            L2/L3 classpaths yet. 'analyze' itself is build-tool-agnostic and can be wired by hand:
+              --source-roots <id>=src/main/java --test-roots <id>=src/test/java
+              --report <id>=build/reports/jacoco/test/jacocoTestReport.xml
+            (XML output is off by default in Gradle's jacoco plugin - add \
+            'reports { xml.required.set(true) }' to the jacocoTestReport task, or run \
+            'gradle jacocoTestReport -Djacoco.xml=true' if your build already conditions on that property.) \
+            For L2/L3, --mutation-classpath/--per-test-classpath each take a plain text file, one \
+            classpath entry per line - build it from your own 'gradle <module>:dependencies \
+            --configuration testRuntimeClasspath' output, or a custom task that writes \
+            configurations.testRuntimeClasspath.files. See docs/CLI-REFERENCE.md.""";
     }
 
     private void printErr(String message) {

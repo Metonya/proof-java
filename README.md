@@ -172,6 +172,38 @@ incomplete. The default of 17 is usually right as-is.
 
 Your JaCoCo, not proof-java, decides which class-file versions can be measured.
 
+### Build tools
+
+`analyze` itself reads a JaCoCo XML report, a git diff, and (for L2/L3) a
+plain-text classpath file. None of that is Maven-specific. What's Maven-only
+today is the *convenience layer*: `doctor`'s module auto-discovery and its
+`--fix` classpath generation (`mvn dependency:build-classpath`).
+
+| Build tool | L0/L1 (coverage, oracle findings) | `doctor` auto-discovery | L2/L3 (per-test, mutation) |
+|---|---|---|---|
+| Maven | yes | yes | yes |
+| Gradle (plain Java) | yes, wired by hand (see below) | not yet | not yet |
+| Gradle/Android (AGP) | yes for unit tests, wired by hand | not yet | **not supported** (PIT has no AGP support) |
+
+For a Gradle project, point `analyze` at the report and roots directly:
+
+```bash
+java -jar proof-java.jar analyze --repo . --no-vcs \
+  --report build/reports/jacoco/test/jacocoTestReport.xml \
+  --source-roots src/main/java --test-roots src/test/java
+```
+
+Gradle's `jacocoTestReport` task does not write XML by default; add
+`reports { xml.required.set(true) }` to it first. `doctor` prints this same
+guidance (with the exact flags for your layout) when it finds a
+`build.gradle(.kts)`/`settings.gradle(.kts)` and no `pom.xml`.
+
+Two honest gaps, not yet worked around: Kotlin test sources are invisible to
+the L0 assertion analysis (it parses Java; JaCoCo still measures Kotlin
+coverage correctly, so L1 numbers are unaffected), and PIT's mutation engine
+has no supported integration with the Android Gradle Plugin, so L3 is not
+available for Android modules regardless of how the classpath is supplied.
+
 ## Configuration
 
 Every flag also has a config-file equivalent in `proof.config.json` at your repo
