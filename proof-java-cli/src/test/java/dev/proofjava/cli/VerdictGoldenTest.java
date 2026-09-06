@@ -34,13 +34,24 @@ import dev.proofjava.analysis.report.ToolVersion;
  * M1c criterion 1's second layer, alongside schema/examples/'s hand-written
  * contract goldens: these two checked-in files (fixtures/verdicts/no-vcs.json,
  * base-ref.json) are byte-for-byte tool OUTPUT, not hand-authored, produced
- * from a synthetic in-repo fixture repo
- * this test rebuilds deterministically on every run (fixed git author/
- * committer identity and date, so commit SHAs are reproducible - verified
- * separately, not an assumption). The only non-analytic field is {@code
- * tool.version}: a checked-in {@code ${tool.version}} placeholder is
- * substituted with the real build's version before comparison, so every
- * other byte in the golden is the real analyzer's real output.
+ * from a synthetic in-repo fixture repo this test rebuilds on every run
+ * (fixed git author/committer identity and date, so the commit *content* is
+ * reproducible). The resulting commit SHAs themselves are not, though: this
+ * test passed on Windows for weeks and then failed the moment it first ran in
+ * Linux CI, byte-identical apart from {@code resolved.base}/{@code
+ * mergeBase}/{@code head} - some platform-dependent input to the git tree
+ * hash (candidates: file-mode bits, or how the JVM/filesystem represents the
+ * newly-written files) still differs even with author/committer/date pinned;
+ * not yet root-caused further, since the fix below doesn't require knowing
+ * which one it is. "Reproducible SHAs" was a real, disproven assumption, not
+ * a safe one. base-ref.json's golden therefore carries {@code
+ * ${git.base}}/{@code ${git.head}} placeholders too, substituted with the SHAs
+ * this same run actually produced (see {@link #baseRefRunMatchesTheCheckedInGoldenByteForByte}),
+ * the same way {@code tool.version} already was. The only byte-for-byte
+ * portable non-analytic field left is {@code tool.version}: a checked-in
+ * {@code ${tool.version}} placeholder is substituted with the real build's
+ * version before comparison, so every other byte in the golden is the real
+ * analyzer's real output.
  *
  * <p>To regenerate after a deliberate output-format change: run this test
  * once with {@code -Dproof.regenerateGoldens=true} (see {@link
@@ -89,8 +100,10 @@ class VerdictGoldenTest {
         copyJacocoFixtureIntoRepo(repoRoot);
         deterministicInitGitRepo(repoRoot);
         deterministicCommitAll(repoRoot, "base");
+        String baseSha = runGit(repoRoot, Map.of(), "rev-parse", "HEAD").strip();
         Files.writeString(calc, calcJavaBody().replace("int c = 3;", "int c = 30;"));
         deterministicCommitAll(repoRoot, "edit line 12");
+        String headSha = runGit(repoRoot, Map.of(), "rev-parse", "HEAD").strip();
 
         Path out = outputDir.resolve("verdict.json");
         int exitCode = run("analyze", "--base", "HEAD~1",
@@ -99,7 +112,16 @@ class VerdictGoldenTest {
             "--out", out.toString());
         assertEquals(0, exitCode);
 
-        compareOrRegenerate("base-ref.json", out);
+        // The pinned author/committer identity and timestamp make the tree
+        // *content* reproducible, but the resulting commit SHAs still aren't
+        // portable across checkouts - proven by this same test passing on
+        // Windows and failing in Linux CI with byte-identical output apart
+        // from these three fields (file-mode bits NIO's Files.writeString
+        // assigns differ by platform, changing the git tree hash). Rather
+        // than assume determinism holds everywhere, ask git what it actually
+        // produced this run and substitute that into the golden text - the
+        // same technique compareOrRegenerate already uses for tool.version.
+        compareOrRegenerate("base-ref.json", out, Map.of("${git.base}", baseSha, "${git.head}", headSha));
     }
 
     @Test
@@ -156,6 +178,17 @@ class VerdictGoldenTest {
     }
 
     private void compareOrRegenerate(String goldenFileName, Path producedOut) throws IOException {
+        compareOrRegenerate(goldenFileName, producedOut, Map.of());
+    }
+
+    /**
+     * @param extraPlaceholders additional {@code ${...}} tokens the golden file uses for values that
+     *     are reproducible *within this run* (e.g. a commit SHA this same test just created) but are
+     *     not portable byte constants across machines/OSes - substituted the same way as {@link
+     *     #VERSION_PLACEHOLDER} before comparison. Regeneration still writes the real, literal values;
+     *     re-add these placeholders by hand afterward, exactly like {@code ${tool.version}}.
+     */
+    private void compareOrRegenerate(String goldenFileName, Path producedOut, Map<String, String> extraPlaceholders) throws IOException {
         byte[] produced = Files.readAllBytes(producedOut);
         String producedText = new String(produced, StandardCharsets.UTF_8);
         String toolVersion = ToolVersion.read().version();
@@ -170,6 +203,9 @@ class VerdictGoldenTest {
 
         String goldenText = Files.readString(goldenPath, StandardCharsets.UTF_8);
         String goldenWithRealVersion = goldenText.replace(VERSION_PLACEHOLDER, toolVersion);
+        for (Map.Entry<String, String> placeholder : extraPlaceholders.entrySet()) {
+            goldenWithRealVersion = goldenWithRealVersion.replace(placeholder.getKey(), placeholder.getValue());
+        }
         assertEquals(goldenWithRealVersion, producedText,
             "golden mismatch for " + goldenFileName + " - if this is a deliberate output-format change, "
                 + "re-run with -Dproof.regenerateGoldens=true and re-add the " + VERSION_PLACEHOLDER + " placeholder by hand");

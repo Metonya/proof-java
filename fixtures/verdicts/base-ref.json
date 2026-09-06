@@ -14,9 +14,9 @@
     "findingsScope" : "all",
     "baseRef" : "HEAD~1",
     "resolved" : {
-      "base" : "75ca0b4b39fc3e7c301f6eb5fb6b313ee46b2055",
-      "mergeBase" : "75ca0b4b39fc3e7c301f6eb5fb6b313ee46b2055",
-      "head" : "5fcf23d1caab57e0ffbad968e79522fcf47df1c4",
+      "base" : "${git.base}",
+      "mergeBase" : "${git.base}",
+      "head" : "${git.head}",
       "dirty" : false
     },
     "languageLevel" : 17,
