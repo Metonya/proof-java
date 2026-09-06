@@ -187,7 +187,7 @@ dependency:build-classpath`.
 |---|---|---|---|
 | Maven | yes | yes | yes |
 | Gradle (plain Java) | yes | yes (requires a committed Gradle Wrapper) | yes (requires a committed Gradle Wrapper) |
-| Gradle/Android (AGP) | yes for unit tests, wired by hand | not yet | **not supported** (PIT has no AGP support) |
+| Gradle/Android (AGP) | L1 only in practice (see below) | modules yes, report path no | **not supported** (PIT has no AGP support) |
 
 `doctor` only ever invokes a repo's own committed `gradlew`/`gradlew.bat`,
 never a bare `gradle` on PATH - a repo without a wrapper committed needs
@@ -206,21 +206,47 @@ from it (no `include(...)` subprojects, no sources under the root).
 
 Module discovery reads `settings.gradle(.kts)`'s `include(...)` calls,
 including a same-purpose wrapper function (e.g. `includeProject(name)`) -
-not only a bare `include(...)`. `includeBuild(...)` (composite builds, a
-separate Gradle root) is never treated as a subproject; `includeFlat(...)`
-(sibling, not subdirectory, project roots) is not specially handled and is
-a known gap. Verified against a real, complex multi-module project
-([junit-framework](https://github.com/junit-team/junit-framework), Gradle
-9.7.1, Isolated Projects + Configuration Cache both enabled): `doctor`
-finds all 22 real modules, and `--fix` generates a valid classpath for a
-mixed Kotlin+Java module, with the target repo's own build files
-untouched throughout.
+not only a bare `include(...)`. Three real Gradle APIs that are not
+subprojects are excluded: `includeBuild(...)` (a composite build - a
+separate Gradle root), `includeFlat(...)` (a project whose directory is a
+*sibling* of the repo root, which a repo-relative path cannot express), and
+`includeGroup`/`includeModule`/`includeVersion` (repository content
+filters, not projects at all). Source roots are read as
+`src/{main,test}/{java,kotlin}`, since a Gradle module's code is as likely
+to be Kotlin as Java.
 
-Two honest gaps, not yet worked around: Kotlin test sources are invisible to
-the L0 assertion analysis (it parses Java; JaCoCo still measures Kotlin
-coverage correctly, so L1 numbers are unaffected), and PIT's mutation engine
-has no supported integration with the Android Gradle Plugin, so L3 is not
-available for Android modules regardless of how the classpath is supplied.
+Verified against two real multi-module projects, not constructed fixtures:
+[junit-framework](https://github.com/junit-team/junit-framework) (Gradle
+9.7.1, Isolated Projects + Configuration Cache) - all 22 modules found,
+`--fix` generates a valid classpath for a mixed Kotlin+Java module, target
+repo's build files untouched throughout - and
+[Now in Android](https://github.com/android/nowinandroid) (AGP 9.3.2,
+Kotlin 2.3.0) - all 35 modules found, with correct nested roots.
+
+### What you actually get on Android today
+
+Two limitations that are individually small combine into one that is not,
+so it is worth stating plainly rather than leaving to be inferred:
+
+- **L0 (the oracle findings - what this tool is actually for) produces
+  nothing on a Kotlin codebase.** The assertion analysis parses Java;
+  Kotlin sources are skipped silently. Now in Android has 310 Kotlin files
+  and zero Java ones, which is typical of a modern Android app.
+- **L3 (mutation) is impossible.** PIT has no supported Android Gradle
+  Plugin integration - a third-party limit, not something proof-java can
+  work around.
+
+What is left is **L1, coverage**, which JaCoCo measures correctly for
+Kotlin. That is a real number, but "this line ran" is exactly the claim
+this tool exists to say is not enough. Treat Android support as
+coverage-only until Kotlin reaches the oracle analysis.
+
+Auto-binding the report is also still missing on AGP: there is no
+`jacocoTestReport` task to find. Android projects define their own
+variant-named task instead (Google's own sample uses
+`create<Variant>CombinedCoverageReport`, with execution data under
+`build/outputs/unit_test_code_coverage/`), so the report path has to be
+passed by hand with `--report`. Module discovery itself works.
 
 ## Configuration
 
