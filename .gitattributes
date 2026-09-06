@@ -6,7 +6,3 @@ schema/** text eol=lf
 # the same hash must hold on Windows, macOS, and Linux checkouts).
 fixtures/** text eol=lf
 validation/** text eol=lf
-
-# A CRLF shebang line breaks bash on Linux/macOS - this script must always
-# check out with LF, regardless of the cloning machine's autocrlf setting.
-src/release/bin/proof-java text eol=lf

@@ -4,11 +4,9 @@ A deterministic CLI that reads the evidence your build already produces — JaCo
 coverage, the git diff, PIT mutation results — and reports which of your Java
 tests actually verify something.
 
-**Status: pre-v0.1, feature-complete.** All six rules and all four evidence
-levels are implemented, tested, and have been run against real repositories.
-What's left before the first tagged release is hardening: precision numbers
-per rule are still being measured (`docs/VALIDATION.md`), and remaining work
-from here is expected to be fixes rather than new features.
+**Status: early development, pre-v0.1.** It runs, it is tested, and it has been
+pointed at real repositories, but no release is cut yet. Precision numbers per
+rule are still being measured (`docs/VALIDATION.md`).
 
 ## The problem
 
@@ -42,13 +40,11 @@ are one file per rule in [`docs/rules/`](docs/rules/).
 ## Quick start
 
 Requires a JDK (see [Requirements](#requirements)) and a JaCoCo XML report from
-your build. The commands below assume `proof-java` is on your PATH (see
-[Installing](#installing)) — swap in `java -jar proof-java.jar` if you're
-running the bare jar instead.
+your build.
 
 ```bash
 mvn verify                      # produces target/site/jacoco/jacoco.xml
-proof-java analyze --repo . --no-vcs \
+java -jar proof-java.jar analyze --repo . --no-vcs \
   --report target/site/jacoco/jacoco.xml
 ```
 
@@ -74,7 +70,7 @@ To scope the analysis to what you actually changed — the fast, everyday mode �
 replace `--no-vcs` with a diff mode:
 
 ```bash
-proof-java analyze --repo . --base main \
+java -jar proof-java.jar analyze --repo . --base main \
   --report target/site/jacoco/jacoco.xml \
   --html-report proof-report.html
 ```
@@ -84,18 +80,15 @@ proof-java analyze --repo . --base main \
 No release is published yet. Build it from source:
 
 ```bash
-mvn -q -Prelease -DskipTests package
-# produces target/proof-java-<version>.zip (jar + proof-java/proof-java.cmd wrappers)
-# and the bare jar at proof-java-cli/target/proof-java.jar
+mvn -q verify
+# produces proof-java-cli/target/proof-java.jar
 ```
 
-When v0.1 is cut, `proof-java-<version>.zip` will be attached to a GitHub
-Release ([`docs/RELEASE-CONTRACT.md`](docs/RELEASE-CONTRACT.md)). Unzip it,
-add the folder to your `PATH`, and `proof-java` runs directly — no `java -jar`
-needed, though a JDK is still required underneath. The bare jar, `NOTICE`,
-`LICENSE`, and `SHA-256SUMS` ship alongside it for anyone who wants those
-individually. Nothing to install beyond a JDK, and no plugin to add to your
-build.
+When v0.1 is cut it will be a single executable jar attached to a GitHub
+Release, with `NOTICE`, `LICENSE` and `SHA-256SUMS` alongside it
+([`docs/RELEASE-CONTRACT.md`](docs/RELEASE-CONTRACT.md)). One jar is the whole
+distribution on every platform — nothing to install beyond a JDK, and no plugin
+to add to your build.
 
 ## How it works
 

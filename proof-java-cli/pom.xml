@@ -213,16 +213,6 @@
                     <copy file="${project.build.directory}/proof-java.jar" todir="${releaseDir}"/>
                     <copy file="${maven.multiModuleProjectDirectory}/LICENSE" todir="${releaseDir}"/>
 
-                    <!-- Thin `proof-java`/`proof-java.cmd` wrappers so the
-                         bundle is invoked as `proof-java <args>` like any
-                         other CLI, not `java -jar proof-java.jar <args>`.
-                         They resolve the jar next to themselves, so they
-                         only work when kept side by side with it - exactly
-                         what the zip below guarantees. -->
-                    <copy file="${basedir}/../src/release/bin/proof-java" todir="${releaseDir}"/>
-                    <copy file="${basedir}/../src/release/bin/proof-java.cmd" todir="${releaseDir}"/>
-                    <chmod file="${releaseDir}/proof-java" perm="755"/>
-
                     <!-- Integrity: every artifact ships a SHA-256SUMS file.
                          Ant's <checksum> writes the bare digest with no file
                          name, which is not a verifiable sumfile - `sha256sum
@@ -234,23 +224,9 @@
                     <checksum algorithm="SHA-256" property="notice.sha256" file="${releaseDir}/NOTICE"/>
                     <checksum algorithm="SHA-256" property="thirdparty.sha256" file="${releaseDir}/THIRD-PARTY.txt"/>
                     <checksum algorithm="SHA-256" property="license.sha256" file="${releaseDir}/LICENSE"/>
-                    <checksum algorithm="SHA-256" property="wrapper.sha256" file="${releaseDir}/proof-java"/>
-                    <checksum algorithm="SHA-256" property="wrappercmd.sha256" file="${releaseDir}/proof-java.cmd"/>
-                    <echo file="${releaseDir}/SHA-256SUMS" encoding="UTF-8" append="false">${license.sha256} *LICENSE${line.separator}${notice.sha256} *NOTICE${line.separator}${thirdparty.sha256} *THIRD-PARTY.txt${line.separator}${jar.sha256} *proof-java.jar${line.separator}${wrapper.sha256} *proof-java${line.separator}${wrappercmd.sha256} *proof-java.cmd${line.separator}</echo>
-
-                    <!-- A single archive is the actual point: download one
-                         file, unzip, add the folder to PATH, run
-                         `proof-java analyze ...` - no `java -jar` in sight.
-                         The individual files above still ship too, for
-                         anyone who only wants the bare jar. -->
-                    <zip destfile="${maven.multiModuleProjectDirectory}/target/proof-java-${project.version}.zip">
-                      <zipfileset dir="${releaseDir}" includes="proof-java" filemode="755" prefix="proof-java-${project.version}"/>
-                      <zipfileset dir="${releaseDir}" excludes="proof-java" prefix="proof-java-${project.version}"/>
-                    </zip>
-                    <checksum algorithm="SHA-256" file="${maven.multiModuleProjectDirectory}/target/proof-java-${project.version}.zip"/>
+                    <echo file="${releaseDir}/SHA-256SUMS" encoding="UTF-8" append="false">${license.sha256} *LICENSE${line.separator}${notice.sha256} *NOTICE${line.separator}${thirdparty.sha256} *THIRD-PARTY.txt${line.separator}${jar.sha256} *proof-java.jar${line.separator}</echo>
 
                     <echo message="Release bundle ready: ${releaseDir}"/>
-                    <echo message="Portable archive ready: ${maven.multiModuleProjectDirectory}/target/proof-java-${project.version}.zip"/>
                   </target>
                 </configuration>
               </execution>

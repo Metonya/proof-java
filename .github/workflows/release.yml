@@ -37,10 +37,7 @@ jobs:
           test -f LICENSE
           test -f NOTICE
           test -f THIRD-PARTY.txt
-          test -x proof-java
-          test -f proof-java.cmd
           sha256sum -c SHA-256SUMS
-          test -f ../proof-java-*.zip
 
       - name: Publish the GitHub Release
         uses: softprops/action-gh-release@v2
@@ -48,11 +45,7 @@ jobs:
           draft: true
           generate_release_notes: true
           files: |
-            target/proof-java-*.zip
-            target/proof-java-*.zip.SHA-256
             target/release/proof-java.jar
-            target/release/proof-java
-            target/release/proof-java.cmd
             target/release/LICENSE
             target/release/NOTICE
             target/release/THIRD-PARTY.txt
