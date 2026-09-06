@@ -80,7 +80,8 @@ import dev.proofjava.analysis.vcs.GitClient;
  * overall coverage phase before it already succeeded, and that real data is
  * preserved in the resulting document rather than discarded (D-26).
  */
-@Command(name = "analyze", description = "Analyze coverage and test-oracle evidence for a repository.")
+@Command(name = "analyze", mixinStandardHelpOptions = true,
+    description = "Analyze coverage and test-oracle evidence for a repository.")
 class AnalyzeCommand implements Callable<Integer> {
 
     private static final String DIFF_MODE_NO_VCS = "no-vcs";

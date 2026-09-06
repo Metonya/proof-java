@@ -76,7 +76,11 @@ CJ analyze --repo . --uncommitted \
   --mutation-timeout 300 --diagnostics-dir .proof-java-diag
 ```
 
-`--mutation-timeout` is a per-module wall-clock budget in seconds, default `300`.
+`--mutation-timeout` is an **idle** timeout in seconds, default `300` (D-85) —
+a module is stopped once no class has completed for this long, not a total
+budget. A run that keeps completing classes keeps going regardless of length;
+raise it only if one class legitimately needs longer than the default between
+completions.
 `--mutation-target`/`--per-test-target` are **all-or-nothing**: giving at least
 one makes every module's diff-derived targets ignored entirely, including modules
 that had targets of their own.

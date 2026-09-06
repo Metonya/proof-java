@@ -122,8 +122,10 @@ Per-rule detail, including the known false-positive shapes, is in
 
 ## Escalating to L2/L3 — expensive, opt in deliberately
 
-L0+L1 takes seconds. `--mutation-report` runs a real PIT subprocess with a
-default budget of 300s **per module**.
+L0+L1 takes seconds. `--mutation-report` runs a real PIT subprocess;
+`--mutation-timeout` (default 300s) is an **idle** timeout — a module is only
+stopped once no class has completed for that long (D-85), not a total budget.
+A run that keeps completing classes keeps going however long it takes.
 
 - **Never on the first pass.** Get L0 clean first.
 - Then target one named class: `--mutation-target <id>=<FQCN>` (and
