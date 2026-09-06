@@ -90,13 +90,24 @@ class GradleClasspathFixerTest {
         assertTrue(perTest.contains(dependencyJar));
     }
 
+    /**
+     * The root module's task path must be project-qualified ({@code
+     * :proofDumpClasspath}), never the bare task name. Measured on a real
+     * two-module Gradle build whose root project also has Java sources:
+     * the bare name ran the dump task in every project - all of them
+     * writing the single {@code -PproofClasspathOutputFile} path - and the
+     * root module's list came back byte-identical to the subproject's,
+     * carrying none of the root's own classes or dependencies, while
+     * {@code doctor} reported a healthy 16-entry classpath. Silent wrong
+     * evidence (hard rule 3a), not a cosmetic path preference.
+     */
     @Test
-    void theRootModuleUsesTheBareTaskNameNotAGradlePath() {
+    void theRootModuleUsesTheRootQualifiedTaskPathNotTheBareTaskName() {
         FakeGradleClient client = new FakeGradleClient(true, List.of(repoRoot.resolve("build/classes/java/main").toString()));
 
         GradleClasspathFixer.fix(client, repoRoot, ROOT_MODULE);
 
-        assertEquals(GradleClasspathFixer.DUMP_TASK_NAME, client.lastTaskPath);
+        assertEquals(":" + GradleClasspathFixer.DUMP_TASK_NAME, client.lastTaskPath);
     }
 
     @Test

@@ -50,17 +50,35 @@ public final class GradleProjectScanner {
      * against a real repo, not a hypothetical: junit-framework's own
      * {@code settings.gradle.kts} declares every real module through its
      * own {@code includeProject(name, ...)} helper, never a bare {@code
-     * include(...)} call. {@code includeBuild(...)} is deliberately
-     * excluded - a composite build is a separate Gradle root with its own
-     * lifecycle, not a subproject of this one, and treating it as such
-     * would generate a wrong (and wrongly nested) Gradle task path in
-     * {@link GradleClasspathFixer}. {@code includeFlat(...)} (sibling,
-     * not subdirectory, project roots - a legacy/rare API) is not
-     * special-cased and will resolve to a wrong root; accepted as a known
-     * gap, same "best-effort, never guess beyond what the text plainly
-     * says" posture as the rest of this scan.
+     * include(...)} call.
+     *
+     * <p>Two Gradle APIs are deliberately excluded, each for its own
+     * reason:
+     * <ul>
+     *   <li>{@code includeBuild(...)} - a composite build is a separate
+     *       Gradle root with its own lifecycle, not a subproject of this
+     *       one, and treating it as such would generate a wrong (and
+     *       wrongly nested) Gradle task path in {@link
+     *       GradleClasspathFixer}.</li>
+     *   <li>{@code includeFlat(...)} - names a project whose directory is
+     *       a <em>sibling</em> of the root project ({@code ../name}), not
+     *       a subdirectory. That is outside the repository root, which
+     *       this codebase's repo-relative path model cannot represent at
+     *       all ({@code RepoPaths.isEscapingRepoRoot}). Reporting it as
+     *       the plain subdirectory {@code name} - what this scan used to
+     *       do - names a directory that is either absent or, worse, some
+     *       unrelated real directory. Skipping it is the honest outcome:
+     *       a module this tool cannot address is better absent than
+     *       wrong.</li>
+     * </ul>
+     *
+     * <p>Both exclusions are written as separate lookaheads on purpose. A
+     * user-defined wrapper whose name merely starts with those letters
+     * ({@code includeFlattenedModules(...)}) must still be matched - the
+     * {@code \b} after each excluded word is what keeps it matched, since
+     * there is no word boundary inside {@code Flattened}.
      */
-    private static final Pattern INCLUDE_KEYWORD = Pattern.compile("\\binclude(?!Build\\b)[A-Za-z]*\\b");
+    private static final Pattern INCLUDE_KEYWORD = Pattern.compile("\\binclude(?!Build\\b)(?!Flat\\b)[A-Za-z]*\\b");
     private static final Pattern QUOTED_ARG = Pattern.compile("['\"]([^'\"]+)['\"]");
     private static final Pattern ROOT_PROJECT_NAME = Pattern.compile("rootProject\\.name\\s*=\\s*['\"]([^'\"]+)['\"]");
 
