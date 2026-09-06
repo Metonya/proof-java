@@ -21,7 +21,7 @@ in the test method body or its same-compilation-unit helpers.
 
 **Known false-positive shapes — waive, do not weaken the test:**
 - The real assertion lives in a helper in **another file**. proof-java only
-  traverses same-compilation-unit helpers by design (D-17). Register the helper
+  traverses same-compilation-unit helpers by design. Register the helper
   via `customOracles` in `proof.config.json`
   (`fully.qualified.Type#methodPattern`, glob `*` allowed).
 - The assertion library is not on the allowlist. Recognized: JUnit 4 & 5,
@@ -96,7 +96,7 @@ whose mutants is `NO_COVERAGE` (that is a coverage gap, not a pseudo-tested
 finding). A mix of `SURVIVED` and `KILLED` never fires either — at least one test
 does verify it.
 
-**Known limit (D-56):** the mutator set is gregor `RETURNS` + `VOID_METHOD_CALLS`,
+**Known limit:** the mutator set is gregor `RETURNS` + `VOID_METHOD_CALLS`,
 an approximation of Descartes' extreme mutation. `RETURNS` mutators replace the
 return *value*, not the method body, so side effects before a `return` still run;
 and no gregor mutator approximates extreme mutation for a `void` method.
@@ -120,7 +120,7 @@ regression), document why both exist.
 **Never fires on:** a test with an empty kill-set (the empty set is a subset of
 everything), nor on an essential test (one that solely kills some mutant).
 
-**Known limit (D-61):** the narrow mutator set likely **overstates** redundancy —
+**Known limit:** the narrow mutator set likely **overstates** redundancy —
 a richer mutator set would show fewer tests as subsumed. The finding is always
 scoped to "under the mutators this run exercised", never an unqualified
 redundancy verdict.

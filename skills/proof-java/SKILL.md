@@ -124,7 +124,7 @@ Per-rule detail, including the known false-positive shapes, is in
 
 L0+L1 takes seconds. `--mutation-report` runs a real PIT subprocess;
 `--mutation-timeout` (default 300s) is an **idle** timeout — a module is only
-stopped once no class has completed for that long (D-85), not a total budget.
+stopped once no class has completed for that long, not a total budget.
 A run that keeps completing classes keeps going however long it takes.
 
 - **Never on the first pass.** Get L0 clean first.

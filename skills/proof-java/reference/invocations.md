@@ -76,7 +76,7 @@ CJ analyze --repo . --uncommitted \
   --mutation-timeout 300 --diagnostics-dir .proof-java-diag
 ```
 
-`--mutation-timeout` is an **idle** timeout in seconds, default `300` (D-85) —
+`--mutation-timeout` is an **idle** timeout in seconds, default `300` —
 a module is stopped once no class has completed for this long, not a total
 budget. A run that keeps completing classes keeps going regardless of length;
 raise it only if one class legitimately needs longer than the default between
@@ -87,8 +87,7 @@ that had targets of their own.
 
 ## Traps
 
-- **Cross-module test dependencies need `mvn clean install`, not `verify`
-  (D-67).** `dependency:build-classpath` always resolves a sibling reactor module
+- **Cross-module test dependencies need `mvn clean install`, not `verify`.** `dependency:build-classpath` always resolves a sibling reactor module
   through its **installed** jar in `~/.m2`, never through its freshly built
   `target/classes`. `verify` never installs, so a stale or missing jar produces a
   real `NoClassDefFoundError` inside PIT's own minion — visible only under
@@ -96,7 +95,7 @@ that had targets of their own.
 - **`mvn clean` deletes the L2/L3 classpath list file.** The next L2/L3 run then
   fails with `PER_TEST_CLASSPATH_MISSING`. Regenerate with `doctor --fix`.
 - **A module stuck at `0/N` in the stderr heartbeat never reached the mutation
-  phase at all** (D-64) — a completely different problem from a mutation phase
+  phase at all** — a completely different problem from a mutation phase
   that is merely slow. Do not raise the timeout to "fix" it.
 - **A stale JaCoCo report silently produces optimistic numbers.** `doctor` treats
   a report older than the newest `.class` as a BLOCKER for exactly this reason.
