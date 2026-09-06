@@ -90,6 +90,31 @@ Release, with `NOTICE`, `LICENSE` and `SHA-256SUMS` alongside it
 distribution on every platform — nothing to install beyond a JDK, and no plugin
 to add to your build.
 
+### Optional: run it as `proof-java` instead of `java -jar ...`
+
+The jar is the actual distribution; there's no separate installer. If you'd
+rather type `proof-java analyze ...` than `java -jar
+/path/to/proof-java.jar analyze ...`, put the jar somewhere stable and point
+your own shell at it - a one-time, local setup, the same idea on every OS:
+save a fixed path to the jar as a shell alias/function. A common convention
+is `~/.proof-java/proof-java.jar` (`%USERPROFILE%\.proof-java\proof-java.jar`
+on Windows), but any path you like works.
+
+**macOS / Linux** — add to `~/.bashrc` or `~/.zshrc`:
+
+```bash
+alias proof-java='java -jar "$HOME/.proof-java/proof-java.jar"'
+```
+
+**Windows (PowerShell)** — add to your profile (`notepad $PROFILE`):
+
+```powershell
+function proof-java { java -jar "$HOME\.proof-java\proof-java.jar" @args }
+```
+
+Reload your shell (or open a new terminal) and `proof-java analyze ...` runs
+the jar directly.
+
 ## How it works
 
 Four evidence levels, each proving more and costing more. L0 and L1 always run;
