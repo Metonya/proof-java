@@ -31,39 +31,51 @@ class DoctorCommandTest {
     }
 
     /**
-     * D-96: before this, a Gradle-only repository (no pom.xml anywhere) got
-     * the same bare "no Maven module found" message as a directory with no
-     * build file of any kind - no hint that Gradle projects need `analyze`
-     * wired by hand instead of through `doctor`. Found on junit-framework.
+     * D-96 (superseded): before Gradle support, a Gradle-only repository
+     * (no pom.xml anywhere, a bare build.gradle.kts) got the same bare "no
+     * Maven module found" message as a directory with no build file at
+     * all. {@code doctor} now discovers and actually diagnoses a real
+     * Gradle module instead of just hinting - this exercises that end to
+     * end: a real (if minimal) Gradle project with a source root but no
+     * build output/report yet, so it must be found, diagnosed, and
+     * reported as blocked, never mistaken for "no module found".
      */
     @Test
-    void aGradleOnlyRepoGetsAHintInsteadOfABareMavenMessage() throws IOException {
-        Files.writeString(repoRoot.resolve("build.gradle.kts"), "// a Gradle build\n");
+    void aGradleOnlyRepoIsDiscoveredAndDiagnosedNotJustHintedAt() throws IOException {
+        Files.writeString(repoRoot.resolve("build.gradle.kts"), "plugins { java }\n");
+        Files.createDirectories(repoRoot.resolve("src/main/java"));
+
+        int exitCode = run("doctor", "--repo", repoRoot.toString());
+
+        assertEquals(ExitCode.INCOMPLETE.value(), exitCode, err.toString());
+        assertFalse(out.toString().contains("no Maven or Gradle module found"), out.toString());
+        assertTrue(out.toString().contains("build/reports/jacoco/test/jacocoTestReport.xml not found"), out.toString());
+    }
+
+    /**
+     * A settings.gradle(.kts) with no source directories and no declared
+     * subprojects is a real Gradle marker with genuinely nothing to
+     * diagnose yet - the narrower remaining case the old D-96 hint now
+     * covers (DoctorCommand's own noModuleHint).
+     */
+    @Test
+    void aGradleMarkerWithNoResolvableModuleStillGetsAGradleAwareMessage() throws IOException {
+        Files.writeString(repoRoot.resolve("settings.gradle"), "rootProject.name = 'demo'\n");
 
         int exitCode = run("doctor", "--repo", repoRoot.toString());
 
         assertEquals(ExitCode.INCOMPLETE.value(), exitCode);
-        assertTrue(err.toString().contains("no Maven module found"), err.toString());
-        assertTrue(err.toString().contains("Gradle"), err.toString());
-        assertTrue(err.toString().contains("--source-roots"), err.toString());
+        assertTrue(err.toString().contains("no Maven or Gradle module found"), err.toString());
+        assertTrue(err.toString().contains("no module could be resolved from it"), err.toString());
     }
 
-    @Test
-    void settingsGradleAloneAlsoTriggersTheHint() throws IOException {
-        Files.writeString(repoRoot.resolve("settings.gradle"), "rootProject.name = 'demo'\n");
-
-        run("doctor", "--repo", repoRoot.toString());
-
-        assertTrue(err.toString().contains("Gradle"), err.toString());
-    }
-
-    /** A directory with no build file of any kind must not get an irrelevant Gradle suggestion. */
+    /** A directory with no build file of any kind must not get an irrelevant Gradle-specific hint appended. */
     @Test
     void aDirectoryWithNoBuildFileAtAllGetsNoGradleHint() {
         int exitCode = run("doctor", "--repo", repoRoot.toString());
 
         assertEquals(ExitCode.INCOMPLETE.value(), exitCode);
-        assertTrue(err.toString().contains("no Maven module found"), err.toString());
-        assertFalse(err.toString().contains("Gradle"), err.toString());
+        assertTrue(err.toString().contains("no Maven or Gradle module found"), err.toString());
+        assertFalse(err.toString().contains("no module could be resolved from it"), err.toString());
     }
 }

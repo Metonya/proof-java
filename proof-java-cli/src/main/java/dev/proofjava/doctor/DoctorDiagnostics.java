@@ -20,29 +20,31 @@ import dev.proofjava.analysis.subprocess.ClasspathListFile;
  */
 public final class DoctorDiagnostics {
 
-    private static final String JACOCO_REPORT_RELATIVE = "target/site/jacoco/jacoco.xml";
     private static final String JACOCO_REPORT_PRESENT = "JACOCO_REPORT_PRESENT";
-    private static final String PER_TEST_CLASSPATH_NAME = "target/proof-per-test-classpath.txt";
-    private static final String MUTATION_CLASSPATH_NAME = "target/proof-mutation-classpath.txt";
 
     private DoctorDiagnostics() {
     }
 
+    /** Maven modules (the original, still-default shape): {@code target/}-based paths. */
     public static ModuleDiagnosis diagnose(Path repoRoot, MavenModule module) {
+        return diagnose(repoRoot, module, BuildLayout.MAVEN);
+    }
+
+    public static ModuleDiagnosis diagnose(Path repoRoot, MavenModule module, BuildLayout layout) {
         List<DoctorCheck> checks = new ArrayList<>();
         Path moduleRoot = repoRoot.resolve(module.root());
 
         checkSourceRoot(checks, moduleRoot, "src/main/java", "SOURCE_ROOT");
         checkSourceRoot(checks, moduleRoot, "src/test/java", "TEST_ROOT");
-        boolean compiled = checkCompiled(checks, moduleRoot);
+        boolean compiled = checkCompiled(checks, moduleRoot, layout);
 
-        String jacocoReportPath = checkJacocoReport(checks, module, moduleRoot, compiled);
-        checkGeneratedSources(checks, moduleRoot);
+        String jacocoReportPath = checkJacocoReport(checks, module, moduleRoot, compiled, layout);
+        checkGeneratedSources(checks, moduleRoot, layout);
 
         String perTestClasspath = checkClasspathList(checks, repoRoot, module, moduleRoot,
-            PER_TEST_CLASSPATH_NAME, "PER_TEST_CLASSPATH", "--per-test-classpath");
+            layout.perTestClasspathRelative(), "PER_TEST_CLASSPATH", "--per-test-classpath");
         String mutationClasspath = checkClasspathList(checks, repoRoot, module, moduleRoot,
-            MUTATION_CLASSPATH_NAME, "MUTATION_CLASSPATH", "--mutation-classpath");
+            layout.mutationClasspathRelative(), "MUTATION_CLASSPATH", "--mutation-classpath");
 
         return new ModuleDiagnosis(module, List.copyOf(checks), jacocoReportPath, perTestClasspath, mutationClasspath);
     }
@@ -56,15 +58,16 @@ public final class DoctorDiagnostics {
         }
     }
 
-    /** @return true if target/classes exists and is non-empty - callers need this to interpret a stale-report check meaningfully. */
-    private static boolean checkCompiled(List<DoctorCheck> checks, Path moduleRoot) {
-        Path classesDir = moduleRoot.resolve("target/classes");
+    /** @return true if the layout's compiled-classes dir exists and is non-empty - callers need this to interpret a stale-report check meaningfully. */
+    private static boolean checkCompiled(List<DoctorCheck> checks, Path moduleRoot, BuildLayout layout) {
+        String relative = layout.compiledClassesDir();
+        Path classesDir = moduleRoot.resolve(relative);
         boolean compiled = Files.isDirectory(classesDir) && dirHasAnyFile(classesDir);
         if (compiled) {
-            checks.add(DoctorCheck.ok("COMPILED", "target/classes has compiled output"));
+            checks.add(DoctorCheck.ok("COMPILED", relative + " has compiled output"));
         } else {
             checks.add(DoctorCheck.warn("NOT_COMPILED",
-                "target/classes is missing or empty - run the build before analyze"));
+                relative + " is missing or empty - run the build before analyze"));
         }
         return compiled;
     }
@@ -78,30 +81,31 @@ public final class DoctorDiagnostics {
      * on stale evidence.
      */
     private static String checkJacocoReport(List<DoctorCheck> checks, MavenModule module,
-                                             Path moduleRoot, boolean compiled) {
-        Path report = moduleRoot.resolve(JACOCO_REPORT_RELATIVE);
+                                             Path moduleRoot, boolean compiled, BuildLayout layout) {
+        String jacocoReportRelative = layout.jacocoReportRelative();
+        Path report = moduleRoot.resolve(jacocoReportRelative);
         if (!Files.isRegularFile(report)) {
             checks.add(DoctorCheck.blocker("JACOCO_REPORT_MISSING",
-                JACOCO_REPORT_RELATIVE + " not found - run the build with coverage enabled before analyze"));
+                jacocoReportRelative + " not found - run the build with coverage enabled before analyze"));
             return null;
         }
-        String repoRelative = RepoPaths.join(module.root(), JACOCO_REPORT_RELATIVE);
+        String repoRelative = RepoPaths.join(module.root(), jacocoReportRelative);
         if (!compiled) {
-            checks.add(DoctorCheck.ok(JACOCO_REPORT_PRESENT, JACOCO_REPORT_RELATIVE + " found"));
+            checks.add(DoctorCheck.ok(JACOCO_REPORT_PRESENT, jacocoReportRelative + " found"));
             return repoRelative;
         }
         try {
             long reportTime = Files.getLastModifiedTime(report).toMillis();
-            long newestClassTime = newestFileTime(moduleRoot.resolve("target/classes"));
+            long newestClassTime = newestFileTime(moduleRoot.resolve(layout.compiledClassesDir()));
             if (newestClassTime > reportTime) {
                 checks.add(DoctorCheck.blocker("JACOCO_REPORT_STALE",
-                    JACOCO_REPORT_RELATIVE + " is older than the module's compiled output - rebuild with coverage "
+                    jacocoReportRelative + " is older than the module's compiled output - rebuild with coverage "
                         + "before analyze, or its new-code numbers will be silently incomplete"));
             } else {
-                checks.add(DoctorCheck.ok(JACOCO_REPORT_PRESENT, JACOCO_REPORT_RELATIVE + " found and up to date"));
+                checks.add(DoctorCheck.ok(JACOCO_REPORT_PRESENT, jacocoReportRelative + " found and up to date"));
             }
         } catch (IOException e) {
-            checks.add(DoctorCheck.ok(JACOCO_REPORT_PRESENT, JACOCO_REPORT_RELATIVE + " found (freshness unverified)"));
+            checks.add(DoctorCheck.ok(JACOCO_REPORT_PRESENT, jacocoReportRelative + " found (freshness unverified)"));
         }
         return repoRelative;
     }
@@ -113,11 +117,12 @@ public final class DoctorDiagnostics {
      * ({@code MISSING_SOURCE_FILE} for {@code *Impl.java} mappers) traces
      * directly to this.
      */
-    private static void checkGeneratedSources(List<DoctorCheck> checks, Path moduleRoot) {
-        Path generated = moduleRoot.resolve("target/generated-sources");
+    private static void checkGeneratedSources(List<DoctorCheck> checks, Path moduleRoot, BuildLayout layout) {
+        String relative = layout.generatedSourcesDir();
+        Path generated = moduleRoot.resolve(relative);
         if (Files.isDirectory(generated) && dirHasAnyJavaFile(generated)) {
             checks.add(DoctorCheck.warn("GENERATED_SOURCES_FOUND",
-                "target/generated-sources contains .java files not under src/main/java - add them with "
+                relative + " contains .java files not under src/main/java - add them with "
                     + "--source-roots or JaCoCo-reported classes there will warn MISSING_SOURCE_FILE"));
         }
     }
