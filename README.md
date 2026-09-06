@@ -245,9 +245,20 @@ this is confident nonsense:
 tests: it runs the analysis, reads the verdict JSON, and acts on the findings in
 a loop. It renders proof-java's output and never authors a finding of its own.
 
+Install it without cloning the repo:
+
 ```bash
-cp -r skills/proof-java ~/.claude/skills/proof-java
+mkdir -p ~/.claude/skills/proof-java && curl -sL https://github.com/Metonya/proof-java/archive/refs/heads/main.tar.gz | tar -xz --strip-components=3 -C ~/.claude/skills/proof-java "proof-java-main/skills/proof-java"
 ```
+
+Swap the destination for your tool's own skills directory — `.windsurf/skills/proof-java`
+for Windsurf, `~/.gemini/antigravity-cli/skills/proof-java` for Antigravity,
+or `.agents/skills/proof-java` (repo root) for the portable convention Cursor,
+OpenAI Codex CLI, Gemini CLI, and GitHub Copilot all read directly.
+
+Using the [VS Code extension](https://github.com/Metonya/proof-vscode)? Run
+**Proof: Install Skill for AI Agent** instead — same content, picks the right
+location and scope for you.
 
 ## Documentation
 
