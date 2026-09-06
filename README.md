@@ -172,6 +172,56 @@ incomplete. The default of 17 is usually right as-is.
 
 Your JaCoCo, not proof-java, decides which class-file versions can be measured.
 
+### Build tools
+
+`analyze` itself reads a JaCoCo XML report, a git diff, and (for L2/L3) a
+plain-text classpath file. None of that is Maven-specific, and neither is
+the convenience layer anymore: `doctor` auto-discovers plain-Java Gradle
+modules from `settings.gradle(.kts)` the same way it walks a Maven
+reactor's `<modules>`, and `doctor --fix` generates their L2/L3 classpath
+lists too, via a `--init-script` run through the repo's own Gradle Wrapper
+(never touches `build.gradle(.kts)`) instead of `mvn
+dependency:build-classpath`.
+
+| Build tool | L0/L1 (coverage, oracle findings) | `doctor` auto-discovery | L2/L3 (per-test, mutation) |
+|---|---|---|---|
+| Maven | yes | yes | yes |
+| Gradle (plain Java) | yes | yes (requires a committed Gradle Wrapper) | yes (requires a committed Gradle Wrapper) |
+| Gradle/Android (AGP) | yes for unit tests, wired by hand | not yet | **not supported** (PIT has no AGP support) |
+
+`doctor` only ever invokes a repo's own committed `gradlew`/`gradlew.bat`,
+never a bare `gradle` on PATH - a repo without a wrapper committed needs
+`analyze` wired by hand instead:
+
+```bash
+java -jar proof-java.jar analyze --repo . --no-vcs \
+  --report build/reports/jacoco/test/jacocoTestReport.xml \
+  --source-roots src/main/java --test-roots src/test/java
+```
+
+Gradle's `jacocoTestReport` task does not write XML by default; add
+`reports { xml.required.set(true) }` to it first. `doctor` prints this same
+guidance when it finds a Gradle marker file but cannot resolve a module
+from it (no `include(...)` subprojects, no sources under the root).
+
+Module discovery reads `settings.gradle(.kts)`'s `include(...)` calls,
+including a same-purpose wrapper function (e.g. `includeProject(name)`) -
+not only a bare `include(...)`. `includeBuild(...)` (composite builds, a
+separate Gradle root) is never treated as a subproject; `includeFlat(...)`
+(sibling, not subdirectory, project roots) is not specially handled and is
+a known gap. Verified against a real, complex multi-module project
+([junit-framework](https://github.com/junit-team/junit-framework), Gradle
+9.7.1, Isolated Projects + Configuration Cache both enabled): `doctor`
+finds all 22 real modules, and `--fix` generates a valid classpath for a
+mixed Kotlin+Java module, with the target repo's own build files
+untouched throughout.
+
+Two honest gaps, not yet worked around: Kotlin test sources are invisible to
+the L0 assertion analysis (it parses Java; JaCoCo still measures Kotlin
+coverage correctly, so L1 numbers are unaffected), and PIT's mutation engine
+has no supported integration with the Android Gradle Plugin, so L3 is not
+available for Android modules regardless of how the classpath is supplied.
+
 ## Configuration
 
 Every flag also has a config-file equivalent in `proof.config.json` at your repo

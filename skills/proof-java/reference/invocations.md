@@ -3,7 +3,7 @@
 `CJ` below means `java -jar <path-to>/proof-java.jar`. Flag reference:
 `docs/CLI-REFERENCE.md`; input model: `docs/INPUT-MODEL.md`.
 
-## Preflight (Maven)
+## Preflight (Maven or Gradle)
 
 ```bash
 CJ doctor --repo .                        # read-only: checks + a suggested analyze command
@@ -12,7 +12,14 @@ CJ doctor --repo . --fix                  # regenerates a broken L2/L3 classpath
 ```
 
 Exit `0` = every module clean, `3` = at least one BLOCKER. `--fix` is the only
-place proof-java shells out to a build tool.
+place proof-java shells out to a build tool — `mvn dependency:build-classpath`
+for Maven, or a `--init-script`-driven run of the repo's own committed
+`gradlew`/`gradlew.bat` for Gradle (never a bare `gradle` on PATH; a Gradle
+repo with no committed wrapper needs the classpath built by hand, see below).
+Paths in every example below are Maven's (`target/...`); a Gradle module uses
+`build/...` instead (`build/reports/jacoco/test/jacocoTestReport.xml`,
+`build/proof-per-test-classpath.txt`) — `doctor`'s own suggested command
+already uses the right one for the module it found.
 
 ## L0 + L1 — the default loop pass
 
@@ -91,9 +98,12 @@ that had targets of their own.
   through its **installed** jar in `~/.m2`, never through its freshly built
   `target/classes`. `verify` never installs, so a stale or missing jar produces a
   real `NoClassDefFoundError` inside PIT's own minion — visible only under
-  `--diagnostics-dir`. `doctor` cannot detect this today.
-- **`mvn clean` deletes the L2/L3 classpath list file.** The next L2/L3 run then
-  fails with `PER_TEST_CLASSPATH_MISSING`. Regenerate with `doctor --fix`.
+  `--diagnostics-dir`. `doctor` cannot detect this today. (Gradle's own
+  `testRuntimeClasspath` resolution is already reactor-aware — `doctor --fix`
+  needs no equivalent "install the reactor first" retry on the Gradle side.)
+- **`mvn clean` (or `./gradlew clean`) deletes the L2/L3 classpath list file.**
+  The next L2/L3 run then fails with `PER_TEST_CLASSPATH_MISSING`. Regenerate
+  with `doctor --fix`.
 - **A module stuck at `0/N` in the stderr heartbeat never reached the mutation
   phase at all** — a completely different problem from a mutation phase
   that is merely slow. Do not raise the timeout to "fix" it.
