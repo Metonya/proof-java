@@ -18,6 +18,12 @@ What every proof-java release ships and promises. Applies from v0.1.
 
 - **GitHub Releases** is the only channel for v0.x: one executable jar (D-01)
   per release plus `NOTICE`, dependency inventory, and checksums.
+- The same release also ships `proof-java-<version>.zip`: the jar alongside
+  thin `proof-java`/`proof-java.cmd` wrapper scripts, so the tool is invoked
+  as `proof-java analyze ...` on PATH rather than `java -jar proof-java.jar
+  ...`. This is the recommended download; the bare jar stays available for
+  anyone who only wants it. The wrappers add nothing but argv passthrough to
+  `java -jar` - a JDK is still required, this is not a native binary.
 - Maven Central publication is deferred until the M3 build plugin exists and
   needs it; adding a channel is a DECISIONS entry.
 
