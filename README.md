@@ -175,17 +175,23 @@ Your JaCoCo, not proof-java, decides which class-file versions can be measured.
 ### Build tools
 
 `analyze` itself reads a JaCoCo XML report, a git diff, and (for L2/L3) a
-plain-text classpath file. None of that is Maven-specific. What's Maven-only
-today is the *convenience layer*: `doctor`'s module auto-discovery and its
-`--fix` classpath generation (`mvn dependency:build-classpath`).
+plain-text classpath file. None of that is Maven-specific, and neither is
+the convenience layer anymore: `doctor` auto-discovers plain-Java Gradle
+modules from `settings.gradle(.kts)` the same way it walks a Maven
+reactor's `<modules>`, and `doctor --fix` generates their L2/L3 classpath
+lists too, via a `--init-script` run through the repo's own Gradle Wrapper
+(never touches `build.gradle(.kts)`) instead of `mvn
+dependency:build-classpath`.
 
 | Build tool | L0/L1 (coverage, oracle findings) | `doctor` auto-discovery | L2/L3 (per-test, mutation) |
 |---|---|---|---|
 | Maven | yes | yes | yes |
-| Gradle (plain Java) | yes, wired by hand (see below) | not yet | not yet |
+| Gradle (plain Java) | yes | yes (requires a committed Gradle Wrapper) | yes (requires a committed Gradle Wrapper) |
 | Gradle/Android (AGP) | yes for unit tests, wired by hand | not yet | **not supported** (PIT has no AGP support) |
 
-For a Gradle project, point `analyze` at the report and roots directly:
+`doctor` only ever invokes a repo's own committed `gradlew`/`gradlew.bat`,
+never a bare `gradle` on PATH - a repo without a wrapper committed needs
+`analyze` wired by hand instead:
 
 ```bash
 java -jar proof-java.jar analyze --repo . --no-vcs \
@@ -195,8 +201,8 @@ java -jar proof-java.jar analyze --repo . --no-vcs \
 
 Gradle's `jacocoTestReport` task does not write XML by default; add
 `reports { xml.required.set(true) }` to it first. `doctor` prints this same
-guidance (with the exact flags for your layout) when it finds a
-`build.gradle(.kts)`/`settings.gradle(.kts)` and no `pom.xml`.
+guidance when it finds a Gradle marker file but cannot resolve a module
+from it (no `include(...)` subprojects, no sources under the root).
 
 Two honest gaps, not yet worked around: Kotlin test sources are invisible to
 the L0 assertion analysis (it parses Java; JaCoCo still measures Kotlin
