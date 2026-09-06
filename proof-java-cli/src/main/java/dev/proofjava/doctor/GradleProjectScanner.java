@@ -44,8 +44,23 @@ public final class GradleProjectScanner {
      * calls are conventionally one line each; scanning line by line keeps
      * every match linear in that line's own length and costs nothing for
      * the common case.
+     *
+     * <p>Matches plain {@code include(} and any same-purpose wrapper
+     * function whose name starts with {@code include} - found necessary
+     * against a real repo, not a hypothetical: junit-framework's own
+     * {@code settings.gradle.kts} declares every real module through its
+     * own {@code includeProject(name, ...)} helper, never a bare {@code
+     * include(...)} call. {@code includeBuild(...)} is deliberately
+     * excluded - a composite build is a separate Gradle root with its own
+     * lifecycle, not a subproject of this one, and treating it as such
+     * would generate a wrong (and wrongly nested) Gradle task path in
+     * {@link GradleClasspathFixer}. {@code includeFlat(...)} (sibling,
+     * not subdirectory, project roots - a legacy/rare API) is not
+     * special-cased and will resolve to a wrong root; accepted as a known
+     * gap, same "best-effort, never guess beyond what the text plainly
+     * says" posture as the rest of this scan.
      */
-    private static final Pattern INCLUDE_KEYWORD = Pattern.compile("\\binclude\\b");
+    private static final Pattern INCLUDE_KEYWORD = Pattern.compile("\\binclude(?!Build\\b)[A-Za-z]*\\b");
     private static final Pattern QUOTED_ARG = Pattern.compile("['\"]([^'\"]+)['\"]");
     private static final Pattern ROOT_PROJECT_NAME = Pattern.compile("rootProject\\.name\\s*=\\s*['\"]([^'\"]+)['\"]");
 

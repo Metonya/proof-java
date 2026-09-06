@@ -53,16 +53,21 @@ public final class GradleClasspathFixer {
                 }
                 // Captured now (configuration time) - Configuration Cache forbids
                 // touching `project`/`configurations` again from inside doLast.
+                // This includes `project.findProperty(...)` - found live against
+                // a real Isolated-Projects repo (junit-framework): leaving that
+                // call inside doLast fails with "cannot serialize object of type
+                // DefaultProject" even though every other capture here was
+                // already configuration-time-only.
                 def dependencyFiles = testRuntime
                 def mainOutputDirs = project.sourceSets.main.output.classesDirs.files
                 def mainResourcesDir = project.sourceSets.main.output.resourcesDir
                 def testOutputDirs = project.sourceSets.test.output.classesDirs.files
                 def testResourcesDir = project.sourceSets.test.output.resourcesDir
+                def outputProperty = project.findProperty('proofClasspathOutputFile')
 
                 project.tasks.register('proofDumpClasspath') {
                     dependsOn testRuntime
                     doLast {
-                        def outputProperty = project.findProperty('proofClasspathOutputFile')
                         if (outputProperty == null) {
                             return
                         }
