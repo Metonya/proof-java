@@ -19,7 +19,9 @@ or a diff — **findings are evidence, never opinion**.
 ## The loop
 
 1. Write or repair tests.
-2. Build with JaCoCo XML output (`mvn verify` with the JaCoCo plugin bound).
+2. Build with JaCoCo XML output (`mvn verify` for Maven, or `./gradlew test
+   jacocoTestReport` for Gradle — enable `reports { xml.required.set(true) }`
+   first, since Gradle's own default is off).
 3. Run `proof-java analyze`.
 4. Read the verdict JSON.
 5. Act on each finding, then go back to step 2.
@@ -32,21 +34,26 @@ instead of grinding.
 
 1. **Jar present?** `ls proof-java-cli/target/proof-java.jar`, else `mvn -q verify`
    in the proof-java repo. Below, `CJ` means `java -jar <path-to>/proof-java.jar`.
-2. **Maven repo? Run `doctor` first and use what it prints:**
+2. **Maven or Gradle repo? Run `doctor` first and use what it prints:**
    ```
    CJ doctor --repo .
    ```
-   It checks source/test roots, compiled output, JaCoCo report presence **and
-   freshness** (a report older than the newest `.class` is a BLOCKER), generated
-   sources outside `src/main/java`, and L2/L3 classpath validity — then prints a
-   copy-pasteable `analyze` invocation. **Use that invocation** rather than
-   assembling flags by hand. `doctor` exits `3` when any module has a BLOCKER:
-   that is stop-and-fix, not a warning.
+   Maven is discovered from `pom.xml`'s `<modules>`; Gradle from
+   `settings.gradle(.kts)`'s `include(...)` (or a bare `build.gradle(.kts)`
+   for a single-project build) — Maven takes priority when a repo somehow has
+   both. It checks source/test roots, compiled output, JaCoCo report presence
+   **and freshness** (a report older than the newest compiled class is a
+   BLOCKER), generated sources outside `src/main/java`, and L2/L3 classpath
+   validity — then prints a copy-pasteable `analyze` invocation. **Use that
+   invocation** rather than assembling flags by hand. `doctor` exits `3` when
+   any module has a BLOCKER: that is stop-and-fix, not a warning.
 3. **Once per repo:** `CJ doctor --repo . --write-config` writes
    `proof.config.json`, after which `analyze` needs no `--module`/`--report`
-   flags at all. Add `--fix` to regenerate a broken L2/L3 classpath list.
-4. **Not a Maven repo?** `doctor` is Maven-only. Build the binding by hand — see
-   `reference/invocations.md`.
+   flags at all. Add `--fix` to regenerate a broken L2/L3 classpath list —
+   for Gradle this needs a committed wrapper (`gradlew`/`gradlew.bat`); a
+   repo without one needs the classpath built by hand (see below).
+4. **Neither Maven nor Gradle discoverable a module?** Build the binding by
+   hand — see `reference/invocations.md`.
 
 ## Diff mode — exactly one, or exit 2
 
@@ -145,7 +152,8 @@ A run that keeps completing classes keeps going however long it takes.
 - **Never weaken a test to silence a finding** (dropping an `expected=`, asserting
   a constant, `@Disabled`/`@Ignore`).
 - **Never add a suppression without a written `reason` and human sign-off.**
-- **Never run `mvn clean` mid-loop** — it deletes the L2/L3 classpath list.
+- **Never run `mvn clean` (or `./gradlew clean`) mid-loop** — both wipe the
+  L2/L3 classpath list along with the rest of the build output.
 - **Never judge a test by reading it and record that as a finding.** Findings come
   from proof-java only (hard rule 1: evidence over judgment).
 

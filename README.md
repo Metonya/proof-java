@@ -204,6 +204,18 @@ Gradle's `jacocoTestReport` task does not write XML by default; add
 guidance when it finds a Gradle marker file but cannot resolve a module
 from it (no `include(...)` subprojects, no sources under the root).
 
+Module discovery reads `settings.gradle(.kts)`'s `include(...)` calls,
+including a same-purpose wrapper function (e.g. `includeProject(name)`) -
+not only a bare `include(...)`. `includeBuild(...)` (composite builds, a
+separate Gradle root) is never treated as a subproject; `includeFlat(...)`
+(sibling, not subdirectory, project roots) is not specially handled and is
+a known gap. Verified against a real, complex multi-module project
+([junit-framework](https://github.com/junit-team/junit-framework), Gradle
+9.7.1, Isolated Projects + Configuration Cache both enabled): `doctor`
+finds all 22 real modules, and `--fix` generates a valid classpath for a
+mixed Kotlin+Java module, with the target repo's own build files
+untouched throughout.
+
 Two honest gaps, not yet worked around: Kotlin test sources are invisible to
 the L0 assertion analysis (it parses Java; JaCoCo still measures Kotlin
 coverage correctly, so L1 numbers are unaffected), and PIT's mutation engine
