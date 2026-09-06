@@ -93,6 +93,28 @@ public final class GradleClasspathFixer {
         return fix(new GradleClient(repoRoot), repoRoot, module);
     }
 
+    /**
+     * Both temp files below sit in the system temp directory, which is
+     * shared on POSIX (SonarQube java:S5443). That is deliberate and it is
+     * the safe option here, for reasons worth stating because the init
+     * script is not inert data - Gradle executes it:
+     *
+     * <ul>
+     *   <li>It cannot live inside the target repository. D-53's whole claim
+     *       is that this mechanism never writes into the repo under
+     *       analysis, verified by {@code git status} staying empty on real
+     *       repos; putting an executable script there would break exactly
+     *       that.</li>
+     *   <li>{@link Files#createTempFile} is the hardened API, not a raw
+     *       {@code /tmp/<name>} path: it creates the file atomically and,
+     *       on POSIX, with owner-only permissions, so another local user
+     *       cannot read or rewrite it. The sticky bit on {@code /tmp} stops
+     *       them unlinking it to swap in their own, and on Windows the temp
+     *       directory is per-user to begin with.</li>
+     *   <li>Both files are deleted in the {@code finally} below, so nothing
+     *       executable is left behind between runs.</li>
+     * </ul>
+     */
     static ClasspathFixer.FixResult fix(GradleClient gradle, Path repoRoot, MavenModule module) {
         Path initScript;
         try {
