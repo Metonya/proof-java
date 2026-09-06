@@ -25,9 +25,14 @@ class MainTest {
 
     @Test
     void versionReportsToolAndSchemaVersion() {
+        // The tool version is project.version, filtered in at build time -
+        // it moves with every release/snapshot bump (VersionProviderTest
+        // covers the filtering itself), so this only checks the two lines
+        // are present, not a specific version number that would go stale
+        // the moment pom.xml's <version> changes again.
         assertEquals(ExitCode.COMPLETE.value(), run("--version"));
         String output = out.toString();
-        assertTrue(output.contains("proof-java 0.1.0"), output);
+        assertTrue(output.contains("proof-java "), output);
         assertTrue(output.contains("verdict schema 0.1.0"), output);
     }
 
