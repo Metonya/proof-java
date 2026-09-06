@@ -1,23 +1,23 @@
 # proof-java
 
-A deterministic CLI that reads the evidence your build already produces — JaCoCo
-coverage, the git diff, PIT mutation results — and reports which of your Java
-tests actually verify something.
+A deterministic CLI that reads the evidence your build already produces
+(JaCoCo coverage, the git diff, PIT mutation results) and reports which of
+your Java tests actually verify something.
 
-**Status: early development, pre-v0.1.** It runs, it is tested, and it has been
-pointed at real repositories, but no release is cut yet. Precision numbers per
-rule are still being measured (`docs/VALIDATION.md`).
+**Status: v0.1.1, early development.** It runs, it is tested, and it has
+been pointed at real repositories. Precision numbers per rule are still
+being measured (`docs/VALIDATION.md`).
 
 ## The problem
 
 Coverage tells you a line executed. It does not tell you that anything checked
 what the line did. A test with no assertion, a test that asserts a constant
 equals the same constant, or a test whose every check sits inside a `try` block
-that swallows the exception — all three run green and all three raise coverage.
+that swallows the exception: all three run green and all three raise coverage.
 
 This gets worse when tests are generated rather than written, because coverage is
 the visible target and an assertion-free test hits it perfectly. The engines that
-could expose this — JaCoCo, PIT — produce raw evidence, not verdicts, and the
+could expose this, JaCoCo and PIT, produce raw evidence, not verdicts, and the
 server-side gate answers after the merge.
 
 proof-java is the layer in between: it consumes that evidence locally and turns
@@ -28,10 +28,10 @@ it into specific, actionable findings.
 | Rule | Reads as | What it means |
 |---|---|---|
 | `NO_RECOGNIZED_ORACLE` | Test with no assertion | No assertion, verification or expected exception anywhere in the test. |
-| `TAUTOLOGICAL_ORACLE` | Self-proving test | The assertion cannot depend on the code under test — constant vs. constant, a value vs. itself, a literal boolean. |
+| `TAUTOLOGICAL_ORACLE` | Self-proving test | The assertion cannot depend on the code under test: constant vs. constant, a value vs. itself, a literal boolean. |
 | `CATCH_ORACLE_WITHOUT_FAIL` | catch block without fail() | Every assertion sits inside the `try`; if the code throws, they are all skipped and the test still passes. |
 | `NULL_CHECK_ONLY` | Null check only | Every assertion checks non-nullness and nothing else. Advisory, not a defect. |
-| `PSEUDO_TESTED_METHOD` | Pseudo-tested method | Tests execute this method, but every mutant of it survived — nothing observes what it does. |
+| `PSEUDO_TESTED_METHOD` | Pseudo-tested method | Tests execute this method, but every mutant of it survived: nothing observes what it does. |
 | `SUBSUMED_TEST` | Subsumed test | This test's killed-mutant set is contained in another's. The broader test is the suspicious one, not this one. |
 
 Full firing conditions, including what each rule deliberately does *not* flag,
@@ -66,7 +66,7 @@ Three coverage numbers, never one: the same run measured three defensible ways,
 each shown with its own numerator and denominator. A percentage without them
 hides how much it rests on.
 
-To scope the analysis to what you actually changed — the fast, everyday mode —
+To scope the analysis to what you actually changed, the fast, everyday mode,
 replace `--no-vcs` with a diff mode:
 
 ```bash
@@ -77,36 +77,37 @@ java -jar proof-java.jar analyze --repo . --base main \
 
 ### Installing
 
-No release is published yet. Build it from source:
+Grab the latest jar from [Releases](https://github.com/Metonya/proof-java/releases/latest),
+or build it from source:
 
 ```bash
 mvn -q verify
 # produces proof-java-cli/target/proof-java.jar
 ```
 
-When v0.1 is cut it will be a single executable jar attached to a GitHub
-Release, with `NOTICE`, `LICENSE` and `SHA-256SUMS` alongside it
-([`docs/RELEASE-CONTRACT.md`](docs/RELEASE-CONTRACT.md)). One jar is the whole
-distribution on every platform — nothing to install beyond a JDK, and no plugin
-to add to your build.
+Each release is a single executable jar attached to a GitHub Release, with
+`NOTICE`, `LICENSE`, `THIRD-PARTY.txt`, and `SHA-256SUMS` alongside it
+([`docs/RELEASE-CONTRACT.md`](docs/RELEASE-CONTRACT.md)). **One jar is the
+whole distribution on every platform**: nothing to install beyond a JDK, and
+no plugin to add to your build.
 
 ### Optional: run it as `proof-java` instead of `java -jar ...`
 
 The jar is the actual distribution; there's no separate installer. If you'd
 rather type `proof-java analyze ...` than `java -jar
 /path/to/proof-java.jar analyze ...`, put the jar somewhere stable and point
-your own shell at it - a one-time, local setup, the same idea on every OS:
-save a fixed path to the jar as a shell alias/function. A common convention
+your own shell at it: a one-time, local setup, the same idea on every OS,
+saving a fixed path to the jar as a shell alias/function. A common convention
 is `~/.proof-java/proof-java.jar` (`%USERPROFILE%\.proof-java\proof-java.jar`
 on Windows), but any path you like works.
 
-**macOS / Linux** — add to `~/.bashrc` or `~/.zshrc`:
+**macOS / Linux**: add to `~/.bashrc` or `~/.zshrc`:
 
 ```bash
 alias proof-java='java -jar "$HOME/.proof-java/proof-java.jar"'
 ```
 
-**Windows (PowerShell)** — add to your profile (`notepad $PROFILE`):
+**Windows (PowerShell)**: add to your profile (`notepad $PROFILE`):
 
 ```powershell
 function proof-java { java -jar "$HOME\.proof-java\proof-java.jar" @args }
@@ -154,7 +155,7 @@ it reads**.
 
 Why L2/L3 stop: the embedded mutation engine (PIT 1.15.8) bundles a bytecode
 reader that understands class files up to Java 22. On a newer JDK it cannot read
-the JDK's own classes. It does not fail loudly when this happens — every mutant
+the JDK's own classes. It does not fail loudly when this happens: every mutant
 comes back "never executed", so the run would report zero findings and look
 clean. proof-java refuses to collect that evidence instead, and says why (exit
 code 3). **Run L2/L3 on a Java 17 JDK.**
@@ -164,7 +165,7 @@ code 3). **Run L2/L3 on a Java 17 JDK.**
 `--language-level` accepts **8 to 21**, the range the embedded parser supports;
 anything else is rejected rather than silently parsed at a lower level.
 
-Set it to the highest level any source file uses — not to the project's
+Set it to the highest level any source file uses, not to the project's
 `maven.compiler.release`. A higher level parses older code fine, so raising it
 costs nothing, while lowering it makes newer files unparseable and the run
 incomplete. The default of 17 is usually right as-is.
@@ -179,7 +180,7 @@ flags most runs need:
 
 | Flag | Purpose |
 |---|---|
-| `--base <ref>` / `--uncommitted` / `--no-vcs` | Exactly one required — what counts as "changed" |
+| `--base <ref>` / `--uncommitted` / `--no-vcs` | Exactly one required: what counts as "changed" |
 | `--report <path>` | The JaCoCo XML. Repeatable as `<module-id>=<path>` for multi-module builds |
 | `--out` | Verdict JSON path (default `proof-verdict.json`) |
 | `--html-report <path>` | Also write a self-contained, offline HTML report |
@@ -212,7 +213,7 @@ Exit codes are the part to wire into a script:
 
 | Code | Meaning |
 |---|---|
-| `0` | The analysis completed — with or without findings |
+| `0` | The analysis completed, with or without findings |
 | `2` | The invocation was invalid. No JSON is written |
 | `3` | Evidence was missing, ambiguous or unusable. **Never a false green** |
 | `4` | Internal failure |
@@ -220,7 +221,7 @@ Exit codes are the part to wire into a script:
 Findings do not fail the run. Exit `1` is reserved for a future opt-in quality
 gate and is deliberately unused today.
 
-Unfamiliar terms — oracle, mutant, subsumed, pseudo-tested, ambient line — and
+Unfamiliar terms (oracle, mutant, subsumed, pseudo-tested, ambient line) and
 every warning code the report can show are defined in
 [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
 
@@ -236,7 +237,7 @@ this is confident nonsense:
 - **It never asks a model whether a test is good.** Every finding traces to a
   parsed AST, a diff, or an executed mutant. There is no LLM in the loop.
 - **Missing evidence is reported, never absorbed.** An unparseable test file, a
-  module with no report, an unusable JDK — each produces a named reason and an
+  module with no report, an unusable JDK: each produces a named reason and an
   incomplete result, never a quietly cleaner number.
 
 ## For AI coding agents
@@ -251,14 +252,14 @@ Install it without cloning the repo:
 mkdir -p ~/.claude/skills/proof-java && curl -sL https://github.com/Metonya/proof-java/archive/refs/heads/main.tar.gz | tar -xz --strip-components=3 -C ~/.claude/skills/proof-java "proof-java-main/skills/proof-java"
 ```
 
-Swap the destination for your tool's own skills directory — `.windsurf/skills/proof-java`
+Swap the destination for your tool's own skills directory: `.windsurf/skills/proof-java`
 for Windsurf, `~/.gemini/antigravity-cli/skills/proof-java` for Antigravity,
 or `.agents/skills/proof-java` (repo root) for the portable convention Cursor,
 OpenAI Codex CLI, Gemini CLI, and GitHub Copilot all read directly.
 
 Using the [VS Code extension](https://github.com/Metonya/proof-vscode)? Run
-**Proof: Install Skill for AI Agent** instead — same content, picks the right
-location and scope for you.
+**Proof: Install Skill for AI Agent** instead. Same content, and it picks the
+right location and scope for you.
 
 ## Documentation
 
