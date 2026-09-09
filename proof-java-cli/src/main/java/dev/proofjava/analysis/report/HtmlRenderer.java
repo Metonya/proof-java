@@ -441,6 +441,16 @@ public final class HtmlRenderer {
           var DATA = JSON.parse(document.getElementById('proof-data').textContent);
           var PRINT_STATE = [];
 
+          // The first coverage mode is named after the engine that produced
+          // the document - jacoco-line here, coverage-line from proof-python
+          // (D-99) - and render-html accepts either (D-78). DATA.meta.engineMode
+          // says which, so nothing below hardcodes one engine's spelling.
+          function engineLineMetric(metrics) {
+            var list = metrics || DATA.coverage.overall;
+            if (!list || !list.filter) { return undefined; }
+            return list.filter(function (m) { return m.mode === DATA.meta.engineMode; })[0];
+          }
+
           function el(tag, attrs, children) {
             var e = document.createElement(tag);
             if (attrs) {
@@ -543,7 +553,7 @@ public final class HtmlRenderer {
             card.appendChild(head);
             card.appendChild(el('p', { class: 'card-sub', text: 'Three counts of the same run. No percentage is shown anywhere without its numerator and denominator.' }));
             var body = el('div', { class: 'coverage-body' });
-            var jacoco = DATA.coverage.overall.filter(function (m) { return m.mode === 'jacoco-line'; })[0];
+            var jacoco = engineLineMetric();
             body.appendChild(donut(jacoco ? jacoco.pct : null));
             var right = el('div', { style: 'flex:1 1 320px;min-width:0' });
             var list = el('div', { class: 'metric-list' });
@@ -1209,7 +1219,7 @@ public final class HtmlRenderer {
             top.appendChild(el('span', { class: 'summary-time', text: DATA.meta.diffMode + ' \\u00b7 ' + DATA.meta.generatedAt }));
             section.appendChild(top);
 
-            var jacoco = DATA.coverage.overall.filter(function (m) { return m.mode === 'jacoco-line'; })[0];
+            var jacoco = engineLineMetric();
             var t = DATA.mutation ? mutationTotals() : null;
             var zeroFiles = DATA.fileCoverage ? DATA.fileCoverage.files.filter(function (f) { return f.pct === 0; }).length : 0;
 
@@ -1236,7 +1246,7 @@ public final class HtmlRenderer {
             var grid = el('div', { class: 'grid' });
 
             grid.appendChild(buildCoverageCard());
-            var jacocoNav = DATA.coverage.overall.filter(function (m) { return m.mode === 'jacoco-line'; })[0];
+            var jacocoNav = engineLineMetric();
             navItems.push({ id: 'coverage', label: 'Coverage', count: jacocoNav ? jacocoNav.pctText : '', group: 'OVERVIEW' });
 
             var concern = findConcernMutant();

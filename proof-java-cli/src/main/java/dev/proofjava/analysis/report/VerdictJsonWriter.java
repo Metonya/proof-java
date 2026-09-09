@@ -461,7 +461,7 @@ public final class VerdictJsonWriter {
     }
 
     private static void writeMetricSet(JsonGenerator g, MetricSet metrics) throws IOException {
-        writeMetric(g, "jacoco-line", metrics.jacocoLine());
+        writeMetric(g, metrics.engineModeId(), metrics.engineLine());
         writeMetric(g, "strict-line", metrics.strictLine());
         writeMetric(g, "sonar-compatible", metrics.sonarCompatible());
     }

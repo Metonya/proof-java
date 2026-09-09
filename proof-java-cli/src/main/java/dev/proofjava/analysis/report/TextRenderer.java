@@ -19,13 +19,13 @@ public final class TextRenderer {
         sb.append("proof-java: analysis ").append(doc.complete() ? "complete" : "incomplete")
             .append(" (").append(doc.diffMode()).append(")\n");
 
-        sb.append(metricLine("jacoco-line", doc.overallMetrics().jacocoLine()));
+        sb.append(metricLine(doc.overallMetrics().engineModeId(), doc.overallMetrics().engineLine()));
         sb.append(metricLine("strict-line", doc.overallMetrics().strictLine()));
         sb.append(metricLine("sonar-compatible", doc.overallMetrics().sonarCompatible()));
 
         if (doc.newCode().metrics() != null) {
             sb.append("  new code:\n");
-            sb.append(metricLine("jacoco-line", doc.newCode().metrics().jacocoLine()));
+            sb.append(metricLine(doc.newCode().metrics().engineModeId(), doc.newCode().metrics().engineLine()));
             sb.append(metricLine("strict-line", doc.newCode().metrics().strictLine()));
             sb.append(metricLine("sonar-compatible", doc.newCode().metrics().sonarCompatible()));
         } else {

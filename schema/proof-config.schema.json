@@ -33,11 +33,12 @@
       ]
     },
     "customOracles": {
-      "description": "fully.qualified.Type#methodPattern entries; glob * is allowed in the method part only (docs/rules/README.md). A resolved call matching an entry is an oracle.",
+      "description": "proof-java: fully.qualified.Type#methodPattern, glob * allowed in the method part only. proof-python: the dotted path you would import, pkg.helpers.assert_valid - Python has no Type#member boundary, since a name is resolved through the import that introduced it (D-99).",
       "type": "array",
       "items": {
         "type": "string",
-        "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)*#[A-Za-z0-9_$*]+$"
+        "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)*(#[A-Za-z0-9_$*]+)?$",
+        "minLength": 1
       }
     },
     "modules": {

@@ -129,7 +129,8 @@ public final class ReportLabels {
 
         // Coverage metric modes (hard rule 5: id kept, name is additive)
         entry("jacoco-line", "Line coverage (JaCoCo)", "Matches JaCoCo's own LINE counter exactly: the share of lines where at least one instruction ran."),
-        entry("strict-line", "Strict line coverage", "A line counts as covered only if every instruction on it ran; stricter than jacoco-line."),
+        entry("coverage-line", "Line coverage (coverage.py)", "Matches coverage.py's own statement percentage exactly: the share of statements that ran. proof-python's counterpart to jacoco-line."),
+        entry("strict-line", "Strict line coverage", "A line counts as covered only if every instruction on it ran, and no branch on it was missed; stricter than the engine's own line counter."),
         entry("sonar-compatible", "Line + branch coverage (Sonar)", "Matches SonarQube's coverage percentage within 0.1 points: line and branch coverage combined.")
     );
 

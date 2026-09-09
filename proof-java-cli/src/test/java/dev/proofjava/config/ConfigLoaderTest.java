@@ -220,11 +220,19 @@ class ConfigLoaderTest {
             "{\"supressions\": []}",
             "{\"languageLevel\": \"17\"}",
             "{\"findingsScope\": \"everything\"}",
-            "{\"customOracles\": [\"NoHashHere\"]}",
             "{\"suppressions\": [{\"rule\": \"NULL_CHECK_ONLY\", \"pathGlob\": \"**\"}]}",
             "{\"suppressions\": [{\"rule\": \"NOT_A_RULE\", \"pathGlob\": \"**\", \"reason\": \"r\"}]}",
             "{\"modules\": [{\"id\": \"app\"}]}",
             "{\"modules\": [{\"id\": \"app\", \"root\": \"app\", \"typoRoot\": \"x\"}]}");
+
+        // Valid against the shared contract, rejected by this engine: the
+        // schema is shared with proof-python (D-99), which spells a custom
+        // oracle as the dotted path you would import because Python has no
+        // Type#member boundary. The schema cannot tell the two engines apart,
+        // and this reader must - so these are neither "valid" nor "invalid"
+        // above, and the divergence is asserted rather than left implicit.
+        List<String> validForSiblingEngineOnly = List.of(
+            "{\"customOracles\": [\"pkg.helpers.assert_valid\"]}");
 
         for (String json : valid) {
             assertTrue(schema.validate(mapper.readTree(json)).isEmpty(), "schema should accept: " + json);
@@ -235,6 +243,12 @@ class ConfigLoaderTest {
             assertTrue(!schema.validate(mapper.readTree(json)).isEmpty(), "schema should reject: " + json);
             writeConfig(json);
             assertThrows(ConfigException.class, () -> ConfigLoader.load(repoRoot, null), "reader should reject: " + json);
+        }
+        for (String json : validForSiblingEngineOnly) {
+            assertTrue(schema.validate(mapper.readTree(json)).isEmpty(), "schema should accept: " + json);
+            writeConfig(json);
+            assertThrows(ConfigException.class, () -> ConfigLoader.load(repoRoot, null),
+                "this engine should reject the sibling's spelling: " + json);
         }
     }
 }

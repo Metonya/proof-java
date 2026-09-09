@@ -174,8 +174,17 @@ public final class ConfigLoader {
         for (String entry : entries) {
             int hash = entry.indexOf('#');
             if (hash <= 0 || hash == entry.length() - 1 || entry.indexOf('#', hash + 1) >= 0) {
+                // The shared schema accepts proof-python's dotted spelling too
+                // (D-99), so a config written for that engine reaches here as
+                // valid JSON. Say which engine it belongs to rather than
+                // repeating the syntax rule at someone who already knows it.
+                String hint = entry.indexOf('#') < 0
+                    ? " That is proof-python's spelling; this engine resolves a call through the"
+                        + " type that declares it, so the '#' is what says where the type ends."
+                    : "";
                 throw new ConfigException("customOracles entry '" + entry
-                    + "' must be fully.qualified.Type#methodPattern (exactly one '#', both sides non-empty).");
+                    + "' must be fully.qualified.Type#methodPattern (exactly one '#', both sides non-empty)."
+                    + hint);
             }
         }
         return entries;

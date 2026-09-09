@@ -275,11 +275,12 @@ public final class VerdictJsonReader {
         return new CoverageBlock(overall, newCode);
     }
 
-    /** {@code newCode} is a schema {@code oneOf}: a real {@link MetricSet} (has {@code jacoco-line} etc.), or {@code {status: "unavailable_*"}}. Distinguished by which fields actually appear - never guessed from context. */
+    /** {@code newCode} is a schema {@code oneOf}: a real {@link MetricSet} (has an engine-line mode etc.), or {@code {status: "unavailable_*"}}. Distinguished by which fields actually appear - never guessed from context. */
     private static NewCodeCoverage readNewCode(JsonParser p) throws IOException {
         expectObjectStart(p);
         String status = null;
-        Metric jacocoLine = null;
+        String engineModeId = null;
+        Metric engineLine = null;
         Metric strictLine = null;
         Metric sonarCompatible = null;
         while (p.nextToken() != JsonToken.END_OBJECT) {
@@ -287,34 +288,52 @@ public final class VerdictJsonReader {
             p.nextToken();
             switch (field) {
                 case FIELD_STATUS -> status = p.getText();
-                case "jacoco-line" -> jacocoLine = readMetric(p);
-                case "strict-line" -> strictLine = readMetric(p);
-                case "sonar-compatible" -> sonarCompatible = readMetric(p);
+                case MetricSet.JACOCO_LINE, MetricSet.COVERAGE_LINE -> {
+                    engineModeId = field;
+                    engineLine = readMetric(p);
+                }
+                case MetricSet.STRICT_LINE -> strictLine = readMetric(p);
+                case MetricSet.SONAR_COMPATIBLE -> sonarCompatible = readMetric(p);
                 default -> p.skipChildren();
             }
         }
         if (status != null) {
             return NewCodeCoverage.unavailable(status);
         }
-        return NewCodeCoverage.available(new MetricSet(jacocoLine, strictLine, sonarCompatible));
+        return NewCodeCoverage.available(new MetricSet(
+                engineModeId == null ? MetricSet.JACOCO_LINE : engineModeId,
+                engineLine, strictLine, sonarCompatible));
     }
 
+    /**
+     * The first mode is named after the engine that produced the document, so
+     * both spellings are accepted and the one actually seen is remembered -
+     * {@code render-html} takes any file matching the schema (D-78), and a
+     * sibling engine's verdict must render as itself rather than be relabelled
+     * with this engine's name.
+     */
     private static MetricSet readMetricSet(JsonParser p) throws IOException {
         expectObjectStart(p);
-        Metric jacocoLine = null;
+        String engineModeId = null;
+        Metric engineLine = null;
         Metric strictLine = null;
         Metric sonarCompatible = null;
         while (p.nextToken() != JsonToken.END_OBJECT) {
             String field = requireFieldName(p);
             p.nextToken();
             switch (field) {
-                case "jacoco-line" -> jacocoLine = readMetric(p);
-                case "strict-line" -> strictLine = readMetric(p);
-                case "sonar-compatible" -> sonarCompatible = readMetric(p);
+                case MetricSet.JACOCO_LINE, MetricSet.COVERAGE_LINE -> {
+                    engineModeId = field;
+                    engineLine = readMetric(p);
+                }
+                case MetricSet.STRICT_LINE -> strictLine = readMetric(p);
+                case MetricSet.SONAR_COMPATIBLE -> sonarCompatible = readMetric(p);
                 default -> p.skipChildren();
             }
         }
-        return new MetricSet(jacocoLine, strictLine, sonarCompatible);
+        return new MetricSet(
+                engineModeId == null ? MetricSet.JACOCO_LINE : engineModeId,
+                engineLine, strictLine, sonarCompatible);
     }
 
     private static Metric readMetric(JsonParser p) throws IOException {

@@ -2393,3 +2393,49 @@ repo (M0 item 1) forces it.
 
 Resolved: O-01 is settled by D-83 (the project is **proof-java**); O-03 is D-13/D-18; O-04 is D-23; O-05 is
 D-60; O-06 is D-04.
+
+**D-99 - The shared contract admits a second engine; the first metric mode is
+named after the engine that produced it** (2026-09-09)
+proof-python (D-83's sibling) exists and produces verdicts. Measured against
+the checked-in schema, one could not validate at all: `additionalProperties`
+is false throughout and `languageLevel` was a required integer. Five
+amendments, none of them a wire-format change for this engine:
+
+- `tool.name` was a `const`, so no second engine could ever validate. Now an
+  enum of the two.
+- `languageLevel` is no longer required, and `pythonVersion` sits beside it.
+  Neither is globally required: each engine states its own and a consumer
+  reads whichever is present.
+- The metric set's first mode is named after the engine whose headline counter
+  it reproduces exactly - `jacoco-line` here, `coverage-line` there - and the
+  schema requires exactly one of the two. **proof-java's own output does not
+  change**; what changes is that a document from the sibling is readable.
+- `finding.rule` learns the seven rules that only make sense in Python (a
+  `Test*` class with `__init__` is never collected, `parametrize` over an
+  empty list silently skips, and so on).
+- `perTest.engine` accepts `coverage.py`.
+
+`MetricSet` now carries `engineModeId` so the renderers print the id the
+document actually has. `VerdictJsonReader` accepts either spelling and
+remembers which it saw; `ReportDataWriter` emits it as `meta.engineMode`, and
+the HTML page's own script reads that instead of the three hardcoded
+`'jacoco-line'` comparisons it had - without which a proof-python verdict
+rendered its donut, its headline tile and its nav entry as `n/a`. This is what
+makes D-78's claim - `render-html` takes any file matching the schema - true
+rather than aspirational.
+
+The config schema's `customOracles` pattern is widened for proof-python's
+dotted form (`pkg.helpers.assert_valid`): Python resolves a name through the
+import that introduced it, so there is no `Type#member` boundary to mark.
+**This engine's reader still requires the `#`**, and says which engine the
+dotted form belongs to rather than repeating the syntax rule. Schema and
+reader now legitimately disagree on that one input, so `ConfigLoaderTest`
+gained a third list asserting exactly that divergence instead of leaving it
+implicit.
+
+Known limit, disclosed rather than fixed: the HTML footer reads
+`proof-java <version>` unconditionally. `VerdictDocument` carries no tool
+name, and adding a twenty-first component to that record across 25
+construction sites to correct a footer string is not proportionate. The
+numbers, labels and mode ids are all correct; only that one line names this
+binary rather than the document's producer.

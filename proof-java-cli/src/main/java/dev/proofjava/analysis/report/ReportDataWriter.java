@@ -103,6 +103,11 @@ final class ReportDataWriter {
     private static void writeMeta(JsonGenerator g, VerdictDocument doc) throws IOException {
         g.writeObjectFieldStart("meta");
         g.writeStringField("toolVersion", doc.toolVersion());
+        // Which of the two engine-line mode ids this document uses, so the
+        // page's own script never has to hardcode one engine's spelling
+        // (D-99). render-html takes any document matching the schema, so the
+        // one it is given may not be this engine's.
+        g.writeStringField("engineMode", doc.overallMetrics().engineModeId());
         g.writeStringField("schemaVersion", doc.schemaVersion());
         g.writeStringField("generatedAt", GENERATED_AT_FORMAT.format(Instant.now().atZone(ZoneId.systemDefault())));
         g.writeBooleanField("complete", doc.complete());
@@ -219,7 +224,7 @@ final class ReportDataWriter {
     }
 
     private static void writeMetricSet(JsonGenerator g, MetricSet metrics) throws IOException {
-        writeMetric(g, "jacoco-line", metrics.jacocoLine());
+        writeMetric(g, metrics.engineModeId(), metrics.engineLine());
         writeMetric(g, "strict-line", metrics.strictLine());
         writeMetric(g, "sonar-compatible", metrics.sonarCompatible());
     }

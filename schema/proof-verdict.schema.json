@@ -29,7 +29,10 @@
       ],
       "properties": {
         "name": {
-          "const": "proof-java"
+          "enum": [
+            "proof-java",
+            "proof-python"
+          ]
         },
         "version": {
           "type": "string",
@@ -73,7 +76,6 @@
       "required": [
         "diffMode",
         "findingsScope",
-        "languageLevel",
         "encoding",
         "exclusions",
         "modules"
@@ -140,6 +142,11 @@
           "items": {
             "$ref": "#/$defs/module"
           }
+        },
+        "pythonVersion": {
+          "type": "string",
+          "minLength": 1,
+          "description": "proof-python only: the interpreter that read the sources, e.g. '3.13.1'. Mutually exclusive with languageLevel in practice; neither is required, and a consumer reads whichever the producing engine wrote."
         }
       }
     },
@@ -207,7 +214,10 @@
       ],
       "properties": {
         "engine": {
-          "const": "pitest"
+          "enum": [
+            "pitest",
+            "coverage.py"
+          ]
         },
         "engineVersion": {
           "type": "string",
@@ -232,7 +242,9 @@
       ],
       "properties": {
         "engine": {
-          "const": "pitest"
+          "enum": [
+            "pitest"
+          ]
         },
         "engineVersion": {
           "type": "string",
@@ -409,7 +421,6 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "jacoco-line",
         "strict-line",
         "sonar-compatible"
       ],
@@ -422,8 +433,24 @@
         },
         "sonar-compatible": {
           "$ref": "#/$defs/metric"
+        },
+        "coverage-line": {
+          "$ref": "#/$defs/metric"
         }
-      }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "jacoco-line"
+          ]
+        },
+        {
+          "required": [
+            "coverage-line"
+          ]
+        }
+      ],
+      "description": "The three modes D-04 requires side by side. The first is named after the engine whose headline counter it reproduces exactly - jacoco-line for proof-java, coverage-line for proof-python - and exactly one of the two is present (D-99)."
     },
     "changedFile": {
       "type": "object",
@@ -497,12 +524,19 @@
       "properties": {
         "rule": {
           "enum": [
-            "NO_RECOGNIZED_ORACLE",
-            "TAUTOLOGICAL_ORACLE",
+            "BROAD_RAISES_WITHOUT_MATCH",
             "CATCH_ORACLE_WITHOUT_FAIL",
+            "EMPTY_PARAMETRIZE",
+            "MOCK_ONLY_ORACLE",
+            "NON_STRICT_XFAIL",
+            "NO_RECOGNIZED_ORACLE",
             "NULL_CHECK_ONLY",
             "PSEUDO_TESTED_METHOD",
-            "SUBSUMED_TEST"
+            "RETURN_IN_TEST",
+            "SUBSUMED_TEST",
+            "TAUTOLOGICAL_ORACLE",
+            "UNCALLED_ORACLE",
+            "UNCOLLECTED_TEST_CLASS"
           ]
         },
         "severity": {

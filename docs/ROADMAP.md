@@ -86,3 +86,6 @@ defended:
   `RETURNS`+`VOID_METHOD_CALLS` approximation of Descartes (D-56) is an
   unvalidated substitution until measured against real findings, not merely
   against the mechanism working.
+
+- `render-html` on a sibling engine's verdict prints `proof-java <version>` in
+  its footer; `VerdictDocument` carries no tool name (D-99).
