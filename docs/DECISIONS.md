@@ -2439,3 +2439,34 @@ name, and adding a twenty-first component to that record across 25
 construction sites to correct a footer string is not proportionate. The
 numbers, labels and mode ids are all correct; only that one line names this
 binary rather than the document's producer.
+
+**D-100 - The mutation block admits cosmic-ray as a second `mutation.engine`,
+PSEUDO_TESTED_METHOD only** (2026-09-10)
+proof-python's own L3 decision (DP-31): a Python mutation tool with a stable,
+documented, per-test kill matrix does not exist (measured against mutmut 3.x
+and cosmic-ray directly - mutmut's fail-fast is hardwired into its worker
+process with no override, and even cosmic-ray's own `dump` records only an
+aggregate `test_outcome` per mutant, never which test produced it). proof-java
+computes `SUBSUMED_TEST` from exactly that per-test matrix (PIT's
+`setFullMutationMatrix(true)`), so proof-python does not attempt
+`SUBSUMED_TEST` at all - user decision, 2026-09-10: "SUBSUMED_TEST umrumda
+değil" (I don't care about SUBSUMED_TEST). `PSEUDO_TESTED_METHOD` needs only
+"did every mutant for this method survive", which cosmic-ray's aggregate
+status already answers.
+
+Three amendments, the same shape as D-99's:
+
+- `mutation.engine` gains `"cosmic-ray"` alongside `"pitest"`.
+- `mutant.status` gains `"INCOMPETENT"` - cosmic-ray's own `TestOutcome` word
+  for "the worker crashed or the mutation could not be applied", kept
+  verbatim rather than mapped onto a PIT status it does not mean.
+- `mutatedMethod.methodDescription` (a JVM descriptor) is no longer required -
+  Python has no descriptor to report, so proof-python omits the field rather
+  than inventing one. `className` here is proof-python's repo-relative source
+  path (same posture as `finding.testMethod`'s own DP-12), not a FQCN.
+
+proof-python never invokes cosmic-ray itself (same posture as coverage.py):
+it reads a `cosmic-ray dump <session.sqlite>` JSON-lines file the user
+produces beforehand, exactly like a coverage.py JSON report. `killingTests`
+and the module's `testIds` are always empty arrays for a proof-python-sourced
+mutation block - there is nothing to index into without the matrix.

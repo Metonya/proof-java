@@ -243,7 +243,8 @@
       "properties": {
         "engine": {
           "enum": [
-            "pitest"
+            "pitest",
+            "cosmic-ray"
           ]
         },
         "engineVersion": {
@@ -257,7 +258,7 @@
           }
         }
       },
-      "description": "Opt-in L3 evidence (--mutation-report, D-56/M5): present only when the flag was set, absent (never null) otherwise. Mutants come from PIT's own RETURNS+VOID_METHOD_CALLS gregor mutators, a gregor approximation of Descartes' extreme mutation (Descartes itself is never a dependency, hard rule 9). Never a finding source on its own - COVERAGE_EQUIVALENT_CANDIDATE requires L0+L2+L3 together (D-46)."
+      "description": "Opt-in L3 evidence (--mutation-report, D-56/M5): present only when the flag was set, absent (never null) otherwise. Mutants come from PIT's own RETURNS+VOID_METHOD_CALLS gregor mutators, a gregor approximation of Descartes' extreme mutation (Descartes itself is never a dependency, hard rule 9). D-100: proof-python sources the same block from a `cosmic-ray dump` session, read (never invoked) exactly like coverage.py's own JSON report - PSEUDO_TESTED_METHOD only, since cosmic-ray gives no per-test kill attribution (see proof-python DP-31). Never a finding source on its own - COVERAGE_EQUIVALENT_CANDIDATE requires L0+L2+L3 together (D-46)."
     },
     "fileCoverage": {
       "type": "object",
@@ -724,7 +725,6 @@
       "required": [
         "className",
         "methodName",
-        "methodDescription",
         "firstLine",
         "lastLine",
         "mutants"
@@ -732,7 +732,8 @@
       "properties": {
         "className": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "A JVM FQCN for proof-java. proof-python has no such concept (D-100, same posture as finding.testMethod's own DP-12): it puts the repo-relative source path here instead."
         },
         "methodName": {
           "type": "string",
@@ -741,7 +742,7 @@
         "methodDescription": {
           "type": "string",
           "minLength": 1,
-          "description": "JVM method descriptor (e.g. '(II)I') - disambiguates overloads sharing a name"
+          "description": "JVM method descriptor (e.g. '(II)I') - disambiguates overloads sharing a name. D-100: not required, since Python has no descriptor; proof-python omits this field entirely rather than inventing one."
         },
         "firstLine": {
           "type": "integer",
@@ -788,9 +789,10 @@
             "NOT_STARTED",
             "STARTED",
             "RUN_ERROR",
-            "NO_COVERAGE"
+            "NO_COVERAGE",
+            "INCOMPETENT"
           ],
-          "description": "PIT's own DetectionStatus name, verified via javap against pitest 1.15.8"
+          "description": "PIT's own DetectionStatus name, verified via javap against pitest 1.15.8. D-100: INCOMPETENT is cosmic-ray's own TestOutcome value verbatim (its worker crashed or the mutation itself could not be applied) - kept as its own word rather than force-mapped onto a PIT status it does not actually mean."
         },
         "killingTests": {
           "type": "array",
@@ -798,7 +800,7 @@
             "type": "integer",
             "minimum": 0
           },
-          "description": "D-86: indexes into the enclosing module's testIds array."
+          "description": "D-86: indexes into the enclosing module's testIds array. D-100: proof-python always writes this as an empty array - cosmic-ray gives no per-test kill attribution (see DP-31), so testIds is empty too and there is nothing to index into."
         }
       }
     },
